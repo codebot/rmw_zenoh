@@ -56,6 +56,8 @@
 #include "rmw/validate_namespace.h"
 #include "rmw/validate_node_name.h"
 
+#include "tracetools/tracetools.h"
+
 namespace
 {
 //==============================================================================
@@ -454,6 +456,14 @@ rmw_create_publisher(
   free_topic_name.cancel();
   free_rmw_publisher.cancel();
 
+  if (TRACETOOLS_TRACEPOINT_ENABLED(rmw_publisher_init)) {
+    rmw_gid_t gid{};
+    // Trigger tracepoint even if we cannot get the GID
+    rmw_ret_t gid_ret = rmw_get_gid_for_publisher(rmw_publisher, &gid);
+    static_cast<void>(gid_ret);
+    TRACETOOLS_DO_TRACEPOINT(
+      rmw_publisher_init, static_cast<const void *>(rmw_publisher), gid.data);
+  }
   return rmw_publisher;
 }
 
@@ -990,6 +1000,11 @@ rmw_create_subscription(
   free_topic_name.cancel();
   free_rmw_subscription.cancel();
 
+  // rmw does not require GIDs for subscriptions, and GIDs in rmw_zenoh are not based on any ID of
+  // the underlying zenoh objects, so there is no need to collect a GID here
+  rmw_gid_t gid{};
+  TRACETOOLS_TRACEPOINT(
+    rmw_subscription_init, static_cast<const void *>(rmw_subscription), gid.data);
   return rmw_subscription;
 }
 
@@ -1134,7 +1149,18 @@ rmw_take(
     static_cast<rmw_zenoh_cpp::SubscriptionData *>(subscription->data);
   RMW_CHECK_ARGUMENT_FOR_NULL(sub_data, RMW_RET_INVALID_ARGUMENT);
 
-  return sub_data->take_one_message(ros_message, nullptr, taken);
+  if (!TRACETOOLS_TRACEPOINT_ENABLED(rmw_take)) {
+    return sub_data->take_one_message(ros_message, nullptr, taken);
+  }
+  rmw_message_info_t message_info{};
+  rmw_ret_t ret = sub_data->take_one_message(ros_message, &message_info, taken);
+  TRACETOOLS_DO_TRACEPOINT(
+    rmw_take,
+    static_cast<const void *>(subscription),
+    static_cast<const void *>(ros_message),
+    message_info.source_timestamp,
+    *taken);
+  return ret;
 }
 
 //==============================================================================
@@ -1163,7 +1189,14 @@ rmw_take_with_info(
     static_cast<rmw_zenoh_cpp::SubscriptionData *>(subscription->data);
   RMW_CHECK_ARGUMENT_FOR_NULL(sub_data, RMW_RET_INVALID_ARGUMENT);
 
-  return sub_data->take_one_message(ros_message, message_info, taken);
+  rmw_ret_t ret = sub_data->take_one_message(ros_message, message_info, taken);
+  TRACETOOLS_TRACEPOINT(
+    rmw_take,
+    static_cast<const void *>(subscription),
+    static_cast<const void *>(ros_message),
+    message_info->source_timestamp,
+    *taken);
+  return ret;
 }
 
 //==============================================================================
@@ -1269,11 +1302,18 @@ __rmw_take_serialized(
     static_cast<rmw_zenoh_cpp::SubscriptionData *>(subscription->data);
   RMW_CHECK_ARGUMENT_FOR_NULL(sub_data, RMW_RET_INVALID_ARGUMENT);
 
-  return sub_data->take_serialized_message(
+  rmw_ret_t ret = sub_data->take_serialized_message(
     serialized_message,
     taken,
     message_info
   );
+  TRACETOOLS_TRACEPOINT(
+    rmw_take,
+    static_cast<const void *>(subscription),
+    static_cast<const void *>(serialized_message),
+    message_info->source_timestamp,
+    *taken);
+  return ret;
 }
 }  // namespace
 
@@ -1467,6 +1507,11 @@ rmw_create_client(
   free_rmw_client.cancel();
   free_service_name.cancel();
 
+  if (TRACETOOLS_TRACEPOINT_ENABLED(rmw_client_init)) {
+    auto client_data = static_cast<rmw_zenoh_cpp::ClientData *>(rmw_client->data);
+    auto gid = client_data->copy_gid();
+    TRACETOOLS_DO_TRACEPOINT(rmw_client_init, static_cast<const void *>(rmw_client), gid.data());
+  }
   return rmw_client;
 }
 
@@ -1561,7 +1606,15 @@ rmw_take_response(
     client->data, "Unable to retrieve client_data from client.", RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(ros_response, RMW_RET_INVALID_ARGUMENT);
 
-  return client_data->take_response(request_header, ros_response, taken);
+  rmw_ret_t ret = client_data->take_response(request_header, ros_response, taken);
+  TRACETOOLS_TRACEPOINT(
+    rmw_take_response,
+    static_cast<const void *>(client),
+    static_cast<const void *>(ros_response),
+    (nullptr != request_header ? request_header->request_id.sequence_number : 0LL),
+    (nullptr != request_header ? request_header->source_timestamp : 0LL),
+    *taken);
+  return ret;
 }
 
 //==============================================================================
@@ -1779,10 +1832,18 @@ rmw_take_request(
   RMW_CHECK_ARGUMENT_FOR_NULL(request_header, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(ros_request, RMW_RET_INVALID_ARGUMENT);
 
-  return service_data->take_request(
+  rmw_ret_t ret = service_data->take_request(
     request_header,
     ros_request,
     taken);
+  TRACETOOLS_TRACEPOINT(
+    rmw_take_request,
+    static_cast<const void *>(service),
+    static_cast<const void *>(ros_request),
+    request_header->request_id.writer_guid,
+    request_header->request_id.sequence_number,
+    *taken);
+  return ret;
 }
 
 //==============================================================================
