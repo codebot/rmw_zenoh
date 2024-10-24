@@ -47,9 +47,6 @@ public:
     const rosidl_message_type_support_t * type_support,
     const rmw_qos_profile_t * qos_profile);
 
-  // Get a copy of the actual qos_profile used by this publisher.
-  rmw_qos_profile_t adapted_qos_profile() const;
-
   // Publish a ROS message.
   rmw_ret_t publish(
     const void * ros_message,
@@ -60,8 +57,8 @@ public:
     const rmw_serialized_message_t * serialized_message,
     std::optional<z_owned_shm_provider_t> & shm_provider);
 
-  // Get a copy of the GUID of this PublisherData's liveliness::Entity.
-  std::size_t guid() const;
+  // Get a copy of the keyexpr_hash of this PublisherData's liveliness::Entity.
+  std::size_t keyexpr_hash() const;
 
   // Get a copy of the TopicInfo of this PublisherData.
   liveliness::TopicInfo topic_info() const;
@@ -98,8 +95,6 @@ private:
   const rmw_node_t * rmw_node_;
   // The Entity generated for the publisher.
   std::shared_ptr<liveliness::Entity> entity_;
-  // The GID for this publisher.
-  uint8_t gid_[RMW_GID_STORAGE_SIZE];
   // An owned publisher.
   z_owned_publisher_t pub_;
   // Optional publication cache when durability is transient_local.

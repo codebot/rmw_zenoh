@@ -17,6 +17,9 @@
 
 #include <zenoh.h>
 
+#include <functional>
+#include <optional>
+
 #include "rmw/types.h"
 
 namespace rmw_zenoh_cpp

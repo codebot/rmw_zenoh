@@ -112,8 +112,7 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
   auto callbacks = static_cast<const message_type_support_callbacks_t *>(type_support->data);
   auto message_type_support = std::make_unique<MessageTypeSupport>(callbacks);
 
-  // Convert the type hash to a string so that it can be included in
-  // the keyexpr.
+  // Convert the type hash to a string so that it can be included in the keyexpr.
   char * type_hash_c_str = nullptr;
   rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
     type_hash,
@@ -161,16 +160,49 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
       std::move(message_type_support)
     });
 
+  if (!sub_data->init()) {
+    // init() already set the error
+    return nullptr;
+  }
+
+  return sub_data;
+}
+
+///=============================================================================
+SubscriptionData::SubscriptionData(
+  const rmw_node_t * rmw_node,
+  std::shared_ptr<GraphCache> graph_cache,
+  std::shared_ptr<liveliness::Entity> entity,
+  const void * type_support_impl,
+  std::unique_ptr<MessageTypeSupport> type_support)
+: rmw_node_(rmw_node),
+  graph_cache_(std::move(graph_cache)),
+  entity_(std::move(entity)),
+  type_support_impl_(type_support_impl),
+  type_support_(std::move(type_support)),
+  last_known_published_msg_({}),
+  total_messages_lost_(0),
+  wait_set_data_(nullptr),
+  is_shutdown_(false),
+  initialized_(false)
+{
+  events_mgr_ = std::make_shared<EventsManager>();
+}
+
+// We have to use an "init" function here, rather than do this in the constructor, because we use
+// enable_shared_from_this, which is not available in constructors.
+bool SubscriptionData::init()
+{
   // TODO(Yadunund): Instead of passing a rawptr, rely on capturing weak_ptr<SubscriptionData>
   // in the closure callback once we switch to zenoh-cpp.
   z_owned_closure_sample_t callback;
-  z_closure(&callback, sub_data_handler, nullptr, sub_data.get());
+  z_closure(&callback, sub_data_handler, nullptr, this);
 
   std::string topic_keyexpr = sub_data->entity_->topic_info()->topic_keyexpr_;
   z_view_keyexpr_t sub_ke;
   if (z_view_keyexpr_from_str(&sub_ke, topic_keyexpr.c_str()) != Z_OK) {
     RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
-    return nullptr;
+    return false;
   }
 
   if (adapted_qos_profile.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
@@ -202,8 +234,7 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
     ze_querying_subscriber_options_default(&sub_options);
     // Make the initial query to hit all the PublicationCaches, using a query_selector with
     // '*' in place of the queryable_prefix of each PublicationCache
-    const std::string selector = "*/" +
-      sub_data->entity_->topic_info()->topic_keyexpr_;
+    const std::string selector = "*/" + entity_->topic_info()->topic_keyexpr_;
     z_view_keyexpr_t selector_ke;
     z_view_keyexpr_from_str(&selector_ke, selector.c_str());
     sub_options.query_selector = z_loan(selector_ke);
@@ -218,21 +249,21 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
     // from a number of publishers. Eg: To receive TF data published over /tf_static
     // by various publishers.
     sub_options.query_consolidation = z_query_consolidation_none();
-    ze_owned_querying_subscriber_t sub;
+    ze_owned_querying_subscriber_t sub_;
     if (ze_declare_querying_subscriber(
-        session, &sub, z_loan(sub_ke), z_move(callback), &sub_options))
+        context_impl->session(), &sub_, z_loan(sub_ke), z_move(callback), &sub_options))
     {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
-      return nullptr;
+      return false;
     }
     sub_data->sub_ = sub;
 
     // Register the querying subscriber with the graph cache to get latest
     // messages from publishers that were discovered after their first publication.
-    std::weak_ptr<SubscriptionData> data_wp = sub_data;
-    graph_cache->set_querying_subscriber_callback(
-      sub_data->entity_->topic_info().value().topic_keyexpr_,
-      sub_data->entity_->guid(),
+    std::weak_ptr<SubscriptionData> data_wp = shared_from_this();
+    graph_cache_->set_querying_subscriber_callback(
+      entity_->topic_info().value().topic_keyexpr_,
+      entity_->keyexpr_hash(),
       [data_wp](const std::string & queryable_prefix) -> void
       {
         auto sub_data = data_wp.lock();
@@ -274,11 +305,11 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
 
     z_owned_subscriber_t sub;
     if (z_declare_subscriber(
-        session, &sub, z_loan(sub_ke), z_move(callback),
+        context_impl->session(), &sub_, z_loan(sub_ke), z_move(callback),
         &sub_options) != Z_OK)
     {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
-      return nullptr;
+      return false;
     }
     sub_data->sub_ = sub;
   }
@@ -291,49 +322,31 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
   auto free_token = rcpputils::make_scope_exit(
     [sub_data]() {
       if (sub_data != nullptr) {
-        z_drop(z_move(sub_data->token_));
+        z_drop(z_move(token_));
       }
     });
   if (zc_liveliness_declare_token(
-      session, &sub_data->token_, z_loan(liveliness_ke), NULL) != Z_OK)
+      context_impl->session(), &token_, z_loan(liveliness_ke), NULL) != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the subscription.");
-    return nullptr;
+    return false;
   }
 
   undeclare_z_sub.cancel();
   free_token.cancel();
 
-  return sub_data;
+  initialized_ = true;
+
+  return true;
 }
 
 ///=============================================================================
-SubscriptionData::SubscriptionData(
-  const rmw_node_t * rmw_node,
-  std::shared_ptr<GraphCache> graph_cache,
-  std::shared_ptr<liveliness::Entity> entity,
-  const void * type_support_impl,
-  std::unique_ptr<MessageTypeSupport> type_support)
-: rmw_node_(rmw_node),
-  graph_cache_(std::move(graph_cache)),
-  entity_(std::move(entity)),
-  type_support_impl_(type_support_impl),
-  type_support_(std::move(type_support)),
-  last_known_published_msg_({}),
-  total_messages_lost_(0),
-  wait_set_data_(nullptr),
-  is_shutdown_(false)
-{
-  events_mgr_ = std::make_shared<EventsManager>();
-}
-
-///=============================================================================
-std::size_t SubscriptionData::guid() const
+std::size_t SubscriptionData::keyexpr_hash() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
-  return entity_->guid();
+  return entity_->keyexpr_hash();
 }
 
 ///=============================================================================
@@ -368,11 +381,19 @@ rmw_ret_t SubscriptionData::shutdown()
 {
   rmw_ret_t ret = RMW_RET_OK;
   std::lock_guard<std::mutex> lock(mutex_);
-  if (is_shutdown_) {
+  if (is_shutdown_ || !initialized_) {
     return ret;
   }
 
-  // Unregister this node from the ROS graph.
+  // Remove the registered callback from the GraphCache if any.
+  graph_cache_->remove_querying_subscriber_callback(
+    entity_->topic_info().value().topic_keyexpr_,
+    entity_->keyexpr_hash()
+  );
+  // Remove any event callbacks registered to this subscription.
+  graph_cache_->remove_qos_event_callbacks(entity_->keyexpr_hash());
+
+  // Unregister this subscription from the ROS graph.
   zc_liveliness_undeclare_token(z_move(token_));
 
   z_owned_subscriber_t * sub = std::get_if<z_owned_subscriber_t>(&sub_);
@@ -393,7 +414,8 @@ rmw_ret_t SubscriptionData::shutdown()
   }
 
   is_shutdown_ = true;
-  return RMW_RET_OK;
+  initialized_ = false;
+  return ret;
 }
 
 ///=============================================================================
@@ -589,7 +611,7 @@ void SubscriptionData::set_on_new_message_callback(
   const void * user_data)
 {
   std::lock_guard<std::mutex> lock(mutex_);
-  data_callback_mgr_.set_callback(user_data, callback);
+  data_callback_mgr_.set_callback(user_data, std::move(callback));
 }
 
 //==============================================================================

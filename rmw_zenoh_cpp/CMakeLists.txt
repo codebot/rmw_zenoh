@@ -38,8 +38,10 @@ add_library(rmw_zenoh_cpp SHARED
   src/detail/rmw_data_types.cpp
   src/detail/rmw_publisher_data.cpp
   src/detail/rmw_node_data.cpp
+  src/detail/rmw_service_data.cpp
   src/detail/rmw_subscription_data.cpp
   src/detail/service_type_support.cpp
+  src/detail/simplified_xxhash3.cpp
   src/detail/type_support.cpp
   src/detail/type_support_common.cpp
   src/detail/zenoh_config.cpp
@@ -93,7 +95,7 @@ if(BUILD_TESTING)
 
   set(_linter_excludes src/detail/ordered_hash.hpp src/detail/ordered_map.hpp)
 
-  ament_copyright()
+  ament_copyright(EXCLUDE src/detail/simplified_xxhash3.cpp src/detail/simplified_xxhash3.hpp)
   ament_cpplint(EXCLUDE ${_linter_excludes})
   ament_lint_cmake()
   ament_uncrustify(EXCLUDE ${_linter_excludes})
@@ -117,6 +119,7 @@ add_executable(rmw_zenohd
   src/detail/liveliness_utils.cpp
   src/detail/logging.cpp
   src/detail/qos.cpp
+  src/detail/simplified_xxhash3.cpp
   src/detail/zenoh_config.cpp
   src/zenohd/main.cpp
 )

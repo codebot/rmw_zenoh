@@ -218,15 +218,7 @@ PublisherData::PublisherData(
   sequence_number_(1),
   is_shutdown_(false)
 {
-  generate_random_gid(gid_);
   events_mgr_ = std::make_shared<EventsManager>();
-}
-
-///=============================================================================
-rmw_qos_profile_t PublisherData::adapted_qos_profile() const
-{
-  std::lock_guard<std::mutex> lock(mutex_);
-  return entity_->topic_info()->qos_;
 }
 
 ///=============================================================================
@@ -305,6 +297,29 @@ rmw_ret_t PublisherData::publish(
 
   const size_t data_length = ser.get_serialized_data_length();
 
+  z_owned_bytes_map_t map =
+    create_map_and_set_sequence_num(
+    sequence_number_++,
+    [this](z_owned_bytes_map_t * map, const char * key)
+    {
+      uint8_t local_gid[RMW_GID_STORAGE_SIZE];
+      entity_->copy_gid(local_gid);
+      // Mutex already locked.
+      z_bytes_t gid_bytes;
+      gid_bytes.len = RMW_GID_STORAGE_SIZE;
+      gid_bytes.start = local_gid;
+      z_bytes_map_insert_by_copy(map, z_bytes_new(key), gid_bytes);
+    });
+  if (!z_check(map)) {
+    // create_map_and_set_sequence_num already set the error
+    return RMW_RET_ERROR;
+  }
+  auto always_free_attachment_map = rcpputils::make_scope_exit(
+    [&map]() {
+      z_bytes_map_drop(z_move(map));
+    });
+
+  int ret;
   // The encoding is simply forwarded and is useful when key expressions in the
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
@@ -351,6 +366,29 @@ rmw_ret_t PublisherData::publish_serialized_message(
 
   std::lock_guard<std::mutex> lock(mutex_);
 
+  z_owned_bytes_map_t map = rmw_zenoh_cpp::create_map_and_set_sequence_num(
+    sequence_number_++,
+    [this](z_owned_bytes_map_t * map, const char * key)
+    {
+      uint8_t local_gid[RMW_GID_STORAGE_SIZE];
+      entity_->copy_gid(local_gid);
+
+      // Mutex already locked.
+      z_bytes_t gid_bytes;
+      gid_bytes.len = RMW_GID_STORAGE_SIZE;
+      gid_bytes.start = local_gid;
+      z_bytes_map_insert_by_copy(map, z_bytes_new(key), gid_bytes);
+    });
+
+  if (!z_check(map)) {
+    // create_map_and_set_sequence_num already set the error
+    return RMW_RET_ERROR;
+  }
+  auto free_attachment_map = rcpputils::make_scope_exit(
+    [&map]() {
+      z_bytes_map_drop(z_move(map));
+    });
+
   const size_t data_length = ser.get_serialized_data_length();
 
   // The encoding is simply forwarded and is useful when key expressions in the
@@ -382,10 +420,10 @@ rmw_ret_t PublisherData::publish_serialized_message(
 }
 
 ///=============================================================================
-std::size_t PublisherData::guid() const
+std::size_t PublisherData::keyexpr_hash() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
-  return entity_->guid();
+  return entity_->keyexpr_hash();
 }
 
 ///=============================================================================
@@ -399,7 +437,7 @@ liveliness::TopicInfo PublisherData::topic_info() const
 void PublisherData::copy_gid(rmw_gid_t * gid) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
-  memcpy(gid->data, gid_, RMW_GID_STORAGE_SIZE);
+  entity_->copy_gid(gid->data);
 }
 
 ///=============================================================================
@@ -430,7 +468,7 @@ rmw_ret_t PublisherData::shutdown()
     return RMW_RET_OK;
   }
 
-  // Unregister this node from the ROS graph.
+  // Unregister this publisher from the ROS graph.
   zc_liveliness_undeclare_token(z_move(token_));
   if (pub_cache_.has_value()) {
     z_drop(z_move(pub_cache_.value()));
