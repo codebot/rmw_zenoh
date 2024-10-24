@@ -1859,6 +1859,8 @@ rmw_take_response(
     return RMW_RET_ERROR;
   }
 
+  memcpy(request_header->request_id.writer_guid, attachment.source_gid, RMW_GID_STORAGE_SIZE);
+
   request_header->source_timestamp = attachment.source_timestamp;
   if (request_header->source_timestamp < 0) {
     RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
