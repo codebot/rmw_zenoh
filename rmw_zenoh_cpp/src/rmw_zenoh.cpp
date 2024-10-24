@@ -1756,16 +1756,12 @@ rmw_send_request(
   rmw_zenoh_cpp::create_map_and_set_sequence_num(
     &attachment, *sequence_id,
     local_gid);
-  auto free_attachment = rcpputils::make_scope_exit(
-    [&attachment]() {
-      z_drop(z_move(attachment));
-    });
+  opts.attachment = z_move(attachment);
 
   // See the comment about the "num_in_flight" class variable in the
   // rmw_client_data_t class for why we need to do this.
   client_data->increment_in_flight_callbacks();
 
-  opts.attachment = z_move(attachment);
 
   opts.target = Z_QUERY_TARGET_ALL_COMPLETE;
   // The default timeout for a z_get query is 10 seconds and if a response is not received within

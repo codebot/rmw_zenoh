@@ -305,13 +305,8 @@ rmw_ret_t PublisherData::publish(
   z_owned_bytes_t attachment;
   uint8_t local_gid[RMW_GID_STORAGE_SIZE];
   entity_->copy_gid(local_gid);
-  auto always_free_attachment = rcpputils::make_scope_exit(
-    [&attachment]() {
-      z_drop(z_move(attachment));
-    });
   create_map_and_set_sequence_num(&attachment, sequence_number_++, local_gid);
   options.attachment = z_move(attachment);
-  always_free_attachment.cancel();
 
   z_owned_bytes_t payload;
   if (shmbuf.has_value()) {
