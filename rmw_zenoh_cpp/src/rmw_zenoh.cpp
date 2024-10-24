@@ -1780,7 +1780,8 @@ rmw_send_request(
   opts.payload = z_move(payload);
 
   z_owned_closure_reply_t callback;
-  z_closure(&callback, rmw_zenoh_cpp::client_data_handler, rmw_zenoh_cpp::client_data_drop, client_data);
+  z_closure(&callback, rmw_zenoh_cpp::client_data_handler, rmw_zenoh_cpp::client_data_drop,
+      client_data);
   z_get(
     context_impl->session(),
     z_loan(client_data->keyexpr), "",
