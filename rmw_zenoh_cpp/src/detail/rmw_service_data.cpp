@@ -15,6 +15,7 @@
 #include "rmw_service_data.hpp"
 
 #include <fastcdr/FastBuffer.h>
+#include <zenoh.h>
 
 #include <memory>
 #include <mutex>
@@ -154,8 +155,8 @@ std::shared_ptr<ServiceData> ServiceData::make(
   z_owned_closure_query_t callback;
   z_closure(&callback, service_data_handler, nullptr, service_data.get());
   z_view_keyexpr_t service_ke;
-  std::string topic_keyexpr = service_data->entity_->topic_info()->topic_keyexpr_;
-  if (z_view_keyexpr_from_str(&service_ke, topic_keyexpr.c_str()) != Z_OK) {
+  service_data->keyexpr_ = service_data->entity_->topic_info()->topic_keyexpr_;
+  if (z_view_keyexpr_from_str(&service_ke, service_data->keyexpr_.c_str()) != Z_OK) {
     RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
     return nullptr;
   }
@@ -248,14 +249,12 @@ void ServiceData::add_new_query(std::unique_ptr<ZenohQuery> query)
     query_queue_.size() >= adapted_qos_profile.depth)
   {
     // Log warning if message is discarded due to hitting the queue depth
-    z_view_string_t keystr;
-    z_keyexpr_as_view_string(z_loan(keyexpr_), &keystr);
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Query queue depth of %ld reached, discarding oldest Query "
       "for service for %s",
       adapted_qos_profile.depth,
-      z_loan(keystr));
+      keyexpr_.c_str());
     query_queue_.pop_front();
   }
   query_queue_.emplace_back(std::move(query));
@@ -432,8 +431,10 @@ rmw_ret_t ServiceData::send_response(
   z_owned_bytes_t payload;
   z_bytes_copy_from_buf(
     &payload, reinterpret_cast<const uint8_t *>(response_bytes), data_length);
+  z_view_keyexpr_t service_ke;
+  z_view_keyexpr_from_str(&service_ke, keyexpr_.c_str());
   z_query_reply(
-    loaned_query, z_loan(keyexpr_), z_move(payload), &options);
+    loaned_query, z_loan(service_ke), z_move(payload), &options);
 
   return RMW_RET_OK;
 }
@@ -493,7 +494,6 @@ rmw_ret_t ServiceData::shutdown()
 
   // Unregister this node from the ROS graph.
   zc_liveliness_undeclare_token(z_move(token_));
-  z_drop(z_move(keyexpr_));
   z_undeclare_queryable(z_move(qable_));
 
   is_shutdown_ = true;

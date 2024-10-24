@@ -108,8 +108,8 @@ private:
   const rmw_node_t * rmw_node_;
   // The Entity generated for the service.
   std::shared_ptr<liveliness::Entity> entity_;
-  // An owned keyexpression.
-  z_owned_keyexpr_t keyexpr_;
+  // The keyexpr string.
+  std::string keyexpr_;
   // An owned queryable.
   z_owned_queryable_t qable_;
   // Liveliness token for the service.
