@@ -32,6 +32,7 @@
 #include "service_type_support.hpp"
 #include "type_support_common.hpp"
 #include "zenoh_utils.hpp"
+#include "rmw_data_types.hpp"
 
 #include "rcutils/allocator.h"
 
@@ -47,7 +48,7 @@ class ServiceData final
 public:
   // Make a shared_ptr of ServiceData.
   static std::shared_ptr<ServiceData> make(
-    z_session_t session,
+    const z_loaned_session_t * session,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,
     std::size_t node_id,
@@ -58,9 +59,6 @@ public:
 
   // Get a copy of the TopicInfo of this ServiceData.
   liveliness::TopicInfo topic_info() const;
-
-  // Returns true if liveliness token is still valid.
-  bool liveliness_is_valid() const;
 
   // Add a new ZenohQuery to the queue.
   void add_new_query(std::unique_ptr<ZenohQuery> query);

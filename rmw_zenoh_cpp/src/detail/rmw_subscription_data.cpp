@@ -29,6 +29,8 @@
 #include "message_type_support.hpp"
 #include "logging_macros.hpp"
 #include "qos.hpp"
+// Use the implemented rmw_context_impl_t
+#include "rmw_context_impl_s.hpp"
 
 #include "rcpputils/scope_exit.hpp"
 
@@ -193,32 +195,34 @@ SubscriptionData::SubscriptionData(
 // enable_shared_from_this, which is not available in constructors.
 bool SubscriptionData::init()
 {
+  if (entity_->topic_info()->qos_.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
+    RMW_ZENOH_LOG_WARN_NAMED(
+      "rmw_zenoh_cpp",
+      "`reliability` no longer supported on subscriber. Ignoring...");
+  }
+
   // TODO(Yadunund): Instead of passing a rawptr, rely on capturing weak_ptr<SubscriptionData>
   // in the closure callback once we switch to zenoh-cpp.
   z_owned_closure_sample_t callback;
   z_closure(&callback, sub_data_handler, nullptr, this);
 
-  std::string topic_keyexpr = sub_data->entity_->topic_info()->topic_keyexpr_;
+  std::string topic_keyexpr = entity_->topic_info()->topic_keyexpr_;
   z_view_keyexpr_t sub_ke;
   if (z_view_keyexpr_from_str(&sub_ke, topic_keyexpr.c_str()) != Z_OK) {
     RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
     return false;
   }
 
-  if (adapted_qos_profile.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
-    RMW_ZENOH_LOG_WARN_NAMED(
-      "rmw_zenoh_cpp",
-      "`reliability` no longer supported on subscriber. Ignoring...");
-  }
+  rmw_context_impl_t * context_impl = static_cast<rmw_context_impl_t *>(rmw_node_->context->impl);
 
   auto undeclare_z_sub = rcpputils::make_scope_exit(
-    [sub_data]() {
-      z_owned_subscriber_t * sub = std::get_if<z_owned_subscriber_t>(&sub_data->sub_);
+    [this]() {
+      z_owned_subscriber_t * sub = std::get_if<z_owned_subscriber_t>(&sub_);
       if (sub == nullptr || z_undeclare_subscriber(z_move(*sub))) {
         RMW_SET_ERROR_MSG("failed to undeclare sub");
       } else {
         ze_owned_querying_subscriber_t * querying_sub =
-        std::get_if<ze_owned_querying_subscriber_t>(&sub_data->sub_);
+        std::get_if<ze_owned_querying_subscriber_t>(&sub_);
         if (querying_sub == nullptr || ze_undeclare_querying_subscriber(z_move(*querying_sub))) {
           RMW_SET_ERROR_MSG("failed to undeclare sub");
         }
@@ -229,7 +233,7 @@ bool SubscriptionData::init()
   // adapted_qos_profile.
   // TODO(Yadunund): Rely on a separate function to return the sub
   // as we start supporting more qos settings.
-  if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
+  if (entity_->topic_info()->qos_.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
     ze_querying_subscriber_options_t sub_options;
     ze_querying_subscriber_options_default(&sub_options);
     // Make the initial query to hit all the PublicationCaches, using a query_selector with
@@ -249,14 +253,14 @@ bool SubscriptionData::init()
     // from a number of publishers. Eg: To receive TF data published over /tf_static
     // by various publishers.
     sub_options.query_consolidation = z_query_consolidation_none();
-    ze_owned_querying_subscriber_t sub_;
+    ze_owned_querying_subscriber_t sub;
     if (ze_declare_querying_subscriber(
-        context_impl->session(), &sub_, z_loan(sub_ke), z_move(callback), &sub_options))
+        context_impl->session(), &sub, z_loan(sub_ke), z_move(callback), &sub_options))
     {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
       return false;
     }
-    sub_data->sub_ = sub;
+    sub_ = sub;
 
     // Register the querying subscriber with the graph cache to get latest
     // messages from publishers that were discovered after their first publication.
@@ -305,25 +309,23 @@ bool SubscriptionData::init()
 
     z_owned_subscriber_t sub;
     if (z_declare_subscriber(
-        context_impl->session(), &sub_, z_loan(sub_ke), z_move(callback),
+        context_impl->session(), &sub, z_loan(sub_ke), z_move(callback),
         &sub_options) != Z_OK)
     {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
       return false;
     }
-    sub_data->sub_ = sub;
+    sub_ = sub;
   }
 
   // Publish to the graph that a new subscription is in town.
-  std::string liveliness_keyexpr = sub_data->entity_->liveliness_keyexpr();
+  std::string liveliness_keyexpr = entity_->liveliness_keyexpr();
   z_view_keyexpr_t liveliness_ke;
   z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
 
   auto free_token = rcpputils::make_scope_exit(
-    [sub_data]() {
-      if (sub_data != nullptr) {
-        z_drop(z_move(token_));
-      }
+    [this]() {
+      z_drop(z_move(token_));
     });
   if (zc_liveliness_declare_token(
       context_impl->session(), &token_, z_loan(liveliness_ke), NULL) != Z_OK)

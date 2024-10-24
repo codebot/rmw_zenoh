@@ -20,17 +20,11 @@
 #include <deque>
 #include <memory>
 #include <mutex>
-#include <string>
-#include <utility>
-
-#include "rcutils/allocator.h"
-
-#include "rmw/rmw.h"
 
 #include "rosidl_runtime_c/type_hash.h"
 
 #include "event.hpp"
-#include "message_type_support.hpp"
+#include "liveliness_utils.hpp"
 #include "rmw_wait_set_data.hpp"
 #include "service_type_support.hpp"
 #include "zenoh_utils.hpp"
@@ -39,7 +33,7 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-void client_data_handler(z_owned_reply_t * reply, void * client_data);
+void client_data_handler(z_loaned_reply_t * reply, void * client_data);
 void client_data_drop(void * data);
 
 ///=============================================================================

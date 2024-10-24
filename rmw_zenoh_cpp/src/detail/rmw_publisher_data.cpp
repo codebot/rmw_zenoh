@@ -297,37 +297,21 @@ rmw_ret_t PublisherData::publish(
 
   const size_t data_length = ser.get_serialized_data_length();
 
-  z_owned_bytes_map_t map =
-    create_map_and_set_sequence_num(
-    sequence_number_++,
-    [this](z_owned_bytes_map_t * map, const char * key)
-    {
-      uint8_t local_gid[RMW_GID_STORAGE_SIZE];
-      entity_->copy_gid(local_gid);
-      // Mutex already locked.
-      z_bytes_t gid_bytes;
-      gid_bytes.len = RMW_GID_STORAGE_SIZE;
-      gid_bytes.start = local_gid;
-      z_bytes_map_insert_by_copy(map, z_bytes_new(key), gid_bytes);
-    });
-  if (!z_check(map)) {
-    // create_map_and_set_sequence_num already set the error
-    return RMW_RET_ERROR;
-  }
-  auto always_free_attachment_map = rcpputils::make_scope_exit(
-    [&map]() {
-      z_bytes_map_drop(z_move(map));
-    });
-
-  int ret;
   // The encoding is simply forwarded and is useful when key expressions in the
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
   z_publisher_put_options_t options;
   z_publisher_put_options_default(&options);
   z_owned_bytes_t attachment;
-  create_map_and_set_sequence_num(&attachment, sequence_number_++, gid_);
+  uint8_t local_gid[RMW_GID_STORAGE_SIZE];
+  entity_->copy_gid(local_gid);
+  auto always_free_attachment = rcpputils::make_scope_exit(
+    [&attachment]() {
+      z_drop(z_move(attachment));
+    });
+  create_map_and_set_sequence_num(&attachment, sequence_number_++, local_gid);
   options.attachment = z_move(attachment);
+  always_free_attachment.cancel();
 
   z_owned_bytes_t payload;
   if (shmbuf.has_value()) {
@@ -366,28 +350,6 @@ rmw_ret_t PublisherData::publish_serialized_message(
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  z_owned_bytes_map_t map = rmw_zenoh_cpp::create_map_and_set_sequence_num(
-    sequence_number_++,
-    [this](z_owned_bytes_map_t * map, const char * key)
-    {
-      uint8_t local_gid[RMW_GID_STORAGE_SIZE];
-      entity_->copy_gid(local_gid);
-
-      // Mutex already locked.
-      z_bytes_t gid_bytes;
-      gid_bytes.len = RMW_GID_STORAGE_SIZE;
-      gid_bytes.start = local_gid;
-      z_bytes_map_insert_by_copy(map, z_bytes_new(key), gid_bytes);
-    });
-
-  if (!z_check(map)) {
-    // create_map_and_set_sequence_num already set the error
-    return RMW_RET_ERROR;
-  }
-  auto free_attachment_map = rcpputils::make_scope_exit(
-    [&map]() {
-      z_bytes_map_drop(z_move(map));
-    });
 
   const size_t data_length = ser.get_serialized_data_length();
 
@@ -396,8 +358,10 @@ rmw_ret_t PublisherData::publish_serialized_message(
   // will be encoded with CDR so it does not really matter.
   z_publisher_put_options_t options;
   z_publisher_put_options_default(&options);
+  uint8_t local_gid[RMW_GID_STORAGE_SIZE];
+  entity_->copy_gid(local_gid);
   z_owned_bytes_t attachment;
-  create_map_and_set_sequence_num(&attachment, sequence_number_++, gid_);
+  create_map_and_set_sequence_num(&attachment, sequence_number_++, local_gid);
 
   options.attachment = z_move(attachment);
 

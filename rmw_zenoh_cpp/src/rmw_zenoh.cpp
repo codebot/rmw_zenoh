@@ -27,7 +27,6 @@
 
 #include "detail/attachment_helpers.hpp"
 #include "detail/cdr.hpp"
-#include "detail/graph_cache.hpp"
 #include "detail/guard_condition.hpp"
 #include "detail/identifier.hpp"
 #include "detail/liveliness_utils.hpp"
@@ -1711,8 +1710,6 @@ rmw_send_request(
   rmw_context_impl_s * context_impl = static_cast<rmw_context_impl_s *>(
     client_data->context->impl);
 
-  // Serialize data
-
   rcutils_allocator_t * allocator = &(client_data->context->options.allocator);
 
   size_t max_data_length = (
@@ -1754,9 +1751,11 @@ rmw_send_request(
   z_get_options_default(&opts);
 
   z_owned_bytes_t attachment;
+  uint8_t local_gid[RMW_GID_STORAGE_SIZE];
+  client_data->entity->copy_gid(local_gid);
   rmw_zenoh_cpp::create_map_and_set_sequence_num(
     &attachment, *sequence_id,
-    client_data->client_gid);
+    local_gid);
   auto free_attachment = rcpputils::make_scope_exit(
     [&attachment]() {
       z_drop(z_move(attachment));
@@ -1785,7 +1784,7 @@ rmw_send_request(
   opts.payload = z_move(payload);
 
   z_owned_closure_reply_t callback;
-  z_closure(&callback, rmw_zenoh_cpp::client_data_handler, NULL, client_data);
+  z_closure(&callback, rmw_zenoh_cpp::client_data_handler, rmw_zenoh_cpp::client_data_drop, client_data);
   z_get(
     context_impl->session(),
     z_loan(client_data->keyexpr), "",
@@ -1829,7 +1828,7 @@ rmw_take_response(
     return RMW_RET_OK;
   }
 
-  const z_loaned_sample_t * sample = z_reply_ok(latest_reply->get_reply());
+  const z_loaned_sample_t * sample = latest_reply->get_sample().value();
   if (sample == NULL) {
     RMW_SET_ERROR_MSG("invalid reply sample");
     return RMW_RET_ERROR;

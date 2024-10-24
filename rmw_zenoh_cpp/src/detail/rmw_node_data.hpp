@@ -83,7 +83,7 @@ public:
   // Create a new ServiceData for a given rmw_service_t.
   bool create_service_data(
     const rmw_service_t * const service,
-    z_session_t session,
+    const z_loaned_session_t * session,
     std::size_t id,
     const std::string & service_name,
     const rosidl_service_type_support_t * type_support,

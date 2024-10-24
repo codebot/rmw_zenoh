@@ -17,7 +17,6 @@
 
 #include <zenoh.h>
 
-#include <functional>
 #include <optional>
 
 #include "rmw/types.h"
@@ -29,6 +28,36 @@ void
 create_map_and_set_sequence_num(
   z_owned_bytes_t * out_bytes, int64_t sequence_number,
   uint8_t gid[RMW_GID_STORAGE_SIZE]);
+
+///=============================================================================
+// A class to store the replies to service requests.
+class ZenohReply final
+{
+public:
+  ZenohReply(z_owned_reply_t reply);
+
+  ~ZenohReply();
+
+  std::optional<const z_loaned_sample_t *> get_sample() const;
+
+private:
+  z_owned_reply_t reply_;
+};
+
+// A class to store the queries made by clients.
+///=============================================================================
+class ZenohQuery final
+{
+public:
+  ZenohQuery(z_owned_query_t query);
+
+  ~ZenohQuery();
+
+  const z_loaned_query_t * get_query() const;
+
+private:
+  z_owned_query_t query_;
+};
 }  // namespace rmw_zenoh_cpp
 
 #endif  // DETAIL__ZENOH_UTILS_HPP_
