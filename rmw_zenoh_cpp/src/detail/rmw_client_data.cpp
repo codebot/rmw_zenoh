@@ -145,7 +145,7 @@ void client_data_drop(void * data)
   }
 
   --num_in_flight_it->second;
-  if (num_in_flight_it->second == 0 && deleted_clients.count(client) > 0) {
+  if (num_in_flight_it->second == 0 && deleted_clients.count(client_data) > 0) {
     deleted_clients.erase(client_data);
   }
 }
@@ -178,8 +178,8 @@ std::shared_ptr<ClientData> ClientData::make(
     service_members->request_members_->data);
   auto response_members = static_cast<const message_type_support_callbacks_t *>(
     service_members->response_members_->data);
-  auto request_type_support = std::make_unique<RequestTypeSupport>(service_members);
-  auto response_type_support = std::make_unique<ResponseTypeSupport>(service_members);
+  auto request_type_support = std::make_shared<RequestTypeSupport>(service_members);
+  auto response_type_support = std::make_shared<ResponseTypeSupport>(service_members);
 
   // Note: Service request/response types will contain a suffix Request_ or Response_.
   // We remove the suffix when appending the type to the liveliness tokens for
@@ -290,14 +290,14 @@ ClientData::ClientData(
   std::shared_ptr<liveliness::Entity> entity,
   const void * request_type_support_impl,
   const void * response_type_support_impl,
-  std::unique_ptr<RequestTypeSupport> request_type_support,
-  std::unique_ptr<ResponseTypeSupport> response_type_support)
+  std::shared_ptr<RequestTypeSupport> request_type_support,
+  std::shared_ptr<ResponseTypeSupport> response_type_support)
 : rmw_node_(rmw_node),
   entity_(std::move(entity)),
   request_type_support_impl_(request_type_support_impl),
   response_type_support_impl_(response_type_support_impl),
-  request_type_support_(std::move(request_type_support)),
-  response_type_support_(std::move(response_type_support)),
+  request_type_support_(request_type_support),
+  response_type_support_(response_type_support),
   wait_set_data_(nullptr),
   sequence_number_(1),
   is_shutdown_(false)
