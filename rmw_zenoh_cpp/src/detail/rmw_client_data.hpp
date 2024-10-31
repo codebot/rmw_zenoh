@@ -113,8 +113,8 @@ private:
     std::shared_ptr<liveliness::Entity> entity,
     const void * request_type_support_impl,
     const void * response_type_support_impl,
-    std::unique_ptr<RequestTypeSupport> request_type_support,
-    std::unique_ptr<ResponseTypeSupport> response_type_support);
+    std::shared_ptr<RequestTypeSupport> request_type_support,
+    std::shared_ptr<ResponseTypeSupport> response_type_support);
 
   // Internal mutex.
   mutable std::mutex mutex_;
@@ -129,8 +129,8 @@ private:
   // Type support fields.
   const void * request_type_support_impl_;
   const void * response_type_support_impl_;
-  std::unique_ptr<RequestTypeSupport> request_type_support_;
-  std::unique_ptr<ResponseTypeSupport> response_type_support_;
+  std::shared_ptr<RequestTypeSupport> request_type_support_;
+  std::shared_ptr<ResponseTypeSupport> response_type_support_;
   // Deque to store the replies in the order they arrive.
   std::deque<std::unique_ptr<rmw_zenoh_cpp::ZenohReply>> reply_queue_;
   // Wait set data.
