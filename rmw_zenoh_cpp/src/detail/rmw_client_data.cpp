@@ -139,13 +139,13 @@ void client_data_drop(void * data)
     // This should never happen
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Unable to find object in num_in_flight_map."
+      "Unable to find object in num_in_flight_map. Report this bug."
     );
     return;
   }
 
   --num_in_flight_it->second;
-  if (num_in_flight_it->second == 0) {
+  if (num_in_flight_it->second == 0 && deleted_clients.count(client) > 0) {
     deleted_clients.erase(client_data);
   }
 }
@@ -240,11 +240,11 @@ std::shared_ptr<ClientData> ClientData::make(
     client_data = std::shared_ptr<ClientData>(
       new ClientData{
         node,
-        std::move(entity),
+        entity,
         request_members,
         response_members,
-        std::move(request_type_support),
-        std::move(response_type_support)
+        request_type_support,
+        response_type_support
       });
     duplicate_pointers.push_back(client_data);
   } while (deleted_clients.count(client_data.get()) > 0);
@@ -559,7 +559,7 @@ ClientData::~ClientData()
     // This should never happen
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Error finding client /%s in num_in_flight_map.",
+      "Error finding client /%s in num_in_flight_map. Report this bug.",
       entity_->topic_info().value().name_.c_str()
     );
   }
