@@ -88,7 +88,7 @@ void sub_data_handler(const z_sample_t * sample, void * data)
     // isn't fatal, it is unusual and so we should report it.
     source_timestamp = 0;
     RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp", "Unable to obtain sequence number from the attachment.");
+      "rmw_zenoh_cpp", "Unable to obtain source timestamp from the attachment.");
   }
 
   sub_data->add_new_message(

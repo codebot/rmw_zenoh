@@ -39,7 +39,7 @@
 extern "C"
 {
 //==============================================================================
-/// Initialize the middleware with the given options, and yielding an context.
+/// Initialize the middleware with the given options, and yield a context.
 rmw_ret_t
 rmw_init(const rmw_init_options_t * options, rmw_context_t * context)
 {
