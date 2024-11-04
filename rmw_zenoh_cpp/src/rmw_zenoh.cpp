@@ -1438,7 +1438,12 @@ rmw_create_client(
       allocator->deallocate(client_data, allocator->state);
     });
 
-  RMW_TRY_PLACEMENT_NEW(client_data, client_data, return nullptr, rmw_zenoh_cpp::rmw_client_data_t);
+  RMW_TRY_PLACEMENT_NEW(
+    client_data,
+    client_data,
+    return nullptr,
+    rmw_zenoh_cpp::rmw_client_data_t,
+  );
   auto destruct_client_data = rcpputils::make_scope_exit(
     [client_data]() {
       RMW_TRY_DESTRUCTOR_FROM_WITHIN_FAILURE(
