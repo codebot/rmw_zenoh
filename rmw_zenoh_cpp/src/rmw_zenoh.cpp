@@ -1896,9 +1896,7 @@ rmw_take_response(
     return RMW_RET_ERROR;
   }
 
-  auto now = std::chrono::system_clock::now().time_since_epoch();
-  auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);
-  request_header->received_timestamp = now_ns.count();
+  request_header->received_timestamp = latest_reply->get_received_timestamp();
 
   *taken = true;
 
