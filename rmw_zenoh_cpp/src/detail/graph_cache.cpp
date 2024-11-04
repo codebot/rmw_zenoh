@@ -1316,8 +1316,8 @@ void GraphCache::set_querying_subscriber_callback(
     std::unordered_map<std::size_t, QueryingSubscriberCallback>
   >::iterator cb_it = querying_subs_cbs_.find(sub_keyexpr);
   if (cb_it == querying_subs_cbs_.end()) {
-    querying_subs_cbs_[sub_keyexpr] = std::move(
-      std::unordered_map<std::size_t, QueryingSubscriberCallback>{});
+    querying_subs_cbs_[sub_keyexpr] =
+      std::unordered_map<std::size_t, QueryingSubscriberCallback>{};
     cb_it = querying_subs_cbs_.find(sub_keyexpr);
   }
   cb_it->second.insert(std::make_pair(sub_keyxpr_hash, std::move(cb)));
