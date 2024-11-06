@@ -37,6 +37,12 @@
 // TODO(clalancette): Make this configurable, or get it from the configuration
 #define SHM_BUFFER_SIZE_MB 10
 
+// This global mapping of raw Data pointers to Data shared pointers allows graph_sub_data_handler()
+// to lookup the pointer, and gain a reference to a shared_ptr if it exists.
+// This guarantees that the Data object will not be destroyed while we are using it.
+static std::mutex data_to_data_shared_ptr_map_mutex;
+static std::unordered_map<Data *, std::shared_ptr<Data>> data_to_data_shared_ptr_map;
+
 static void graph_sub_data_handler(const z_sample_t * sample, void * data);
 
 // Bundle all class members into a data struct which can be passed as a
@@ -67,16 +73,6 @@ struct Data final
 
     // Setup the liveliness subscriber to receives updates from the ROS graph
     // and update the graph cache.
-    // TODO(Yadunund): This closure is still not 100% thread safe as we are
-    // passing Data* as the type erased argument to z_closure. Thus during
-    // the execution of graph_sub_data_handler, the rawptr may be freed/reset
-    // by a different thread. When we switch to zenoh-cpp we can replace z_closure
-    // with a lambda that captures a weak_ptr<Data> by copy. The lambda and caputed
-    // weak_ptr<Data> will have the same lifetime as the subscriber. Then within
-    // graph_sub_data_handler, we would first lock to weak_ptr to check if the
-    // shared_ptr<Data> exits. If it does, then even if a different thread calls
-    // rmw_context_fini() to destroy rmw_context_impl_s, the locked
-    // shared_ptr<Data> would live on until the graph_sub_data_handler callback.
     auto sub_options = zc_liveliness_subscriber_options_null();
     z_owned_closure_sample_t callback = z_closure(
       graph_sub_data_handler, nullptr, this);
@@ -187,24 +183,35 @@ static void graph_sub_data_handler(const z_sample_t * sample, void * data)
     return;
   }
 
+  // Look up the data shared_ptr in the global map.  If it is in there, use it.
+  // If not, it is being shutdown so we can just ignore this update.
+  std::shared_ptr<Data> data_shared_ptr{nullptr};
+  {
+    std::lock_guard<std::mutex> lk(data_to_data_shared_ptr_map_mutex);
+    if (data_to_data_shared_ptr_map.count(data_ptr) == 0) {
+      return;
+    }
+    data_shared_ptr = data_to_data_shared_ptr_map[data_ptr];
+  }
+
   // Update the graph cache.
-  std::lock_guard<std::recursive_mutex> lock(data_ptr->mutex_);
-  if (data_ptr->is_shutdown_) {
+  std::lock_guard<std::recursive_mutex> lock(data_shared_ptr->mutex_);
+  if (data_shared_ptr->is_shutdown_) {
     return;
   }
   switch (sample->kind) {
     case z_sample_kind_t::Z_SAMPLE_KIND_PUT:
-      data_ptr->graph_cache_->parse_put(keystr._cstr);
+      data_shared_ptr->graph_cache_->parse_put(keystr._cstr);
       break;
     case z_sample_kind_t::Z_SAMPLE_KIND_DELETE:
-      data_ptr->graph_cache_->parse_del(keystr._cstr);
+      data_shared_ptr->graph_cache_->parse_del(keystr._cstr);
       break;
     default:
       return;
   }
 
   // Trigger the ROS graph guard condition.
-  rmw_ret_t rmw_ret = rmw_trigger_guard_condition(data_ptr->graph_guard_condition_.get());
+  rmw_ret_t rmw_ret = rmw_trigger_guard_condition(data_shared_ptr->graph_guard_condition_.get());
   if (RMW_RET_OK != rmw_ret) {
     RMW_ZENOH_LOG_WARN_NAMED(
       "rmw_zenoh_cpp",
@@ -357,6 +364,14 @@ rmw_context_impl_s::rmw_context_impl_s(
     std::move(shm_manager),
     std::move(liveliness_str),
     std::move(graph_cache));
+
+  std::lock_guard<std::mutex> lk(data_to_data_shared_ptr_map_mutex);
+  data_to_data_shared_ptr_map.emplace(data_.get(), data_);
+}
+
+rmw_context_impl_s::~rmw_context_impl_s()
+{
+  this->shutdown();
 }
 
 ///=============================================================================
@@ -397,6 +412,10 @@ std::size_t rmw_context_impl_s::get_next_entity_id()
 ///=============================================================================
 rmw_ret_t rmw_context_impl_s::shutdown()
 {
+  {
+    std::lock_guard<std::mutex> lk(data_to_data_shared_ptr_map_mutex);
+    data_to_data_shared_ptr_map.erase(data_.get());
+  }
   return data_->shutdown();
 }
 

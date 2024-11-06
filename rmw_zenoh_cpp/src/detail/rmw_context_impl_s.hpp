@@ -49,6 +49,8 @@ public:
     const std::size_t domain_id,
     const std::string & enclave);
 
+  ~rmw_context_impl_s();
+
   // Get a copy of the enclave.
   std::string enclave() const;
 
