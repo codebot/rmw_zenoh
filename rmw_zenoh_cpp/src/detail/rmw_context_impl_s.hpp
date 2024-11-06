@@ -32,6 +32,9 @@
 #include "rcutils/types.h"
 #include "rmw/rmw.h"
 
+// Forward declaration
+struct Data;
+
 ///=============================================================================
 class rmw_context_impl_s final
 {
@@ -94,66 +97,7 @@ public:
   void delete_node_data(const rmw_node_t * const node);
 
 private:
-  // Bundle all class members into a data struct which can be passed as a
-  // weak ptr to various threads for thread-safe access without capturing
-  // "this" ptr by reference.
-  struct Data : public std::enable_shared_from_this<Data>
-  {
-    // Constructor.
-    Data(
-      std::size_t domain_id,
-      const std::string & enclave,
-      z_owned_session_t session,
-      std::optional<zc_owned_shm_manager_t> shm_manager,
-      const std::string & liveliness_str,
-      std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache);
-
-    // Subscribe to the ROS graph.
-    rmw_ret_t subscribe_to_ros_graph();
-
-    // Shutdown the Zenoh session.
-    rmw_ret_t shutdown();
-
-    // Destructor.
-    ~Data();
-
-    // Mutex to lock when accessing members.
-    mutable std::recursive_mutex mutex_;
-    // RMW allocator.
-    const rcutils_allocator_t * allocator_;
-    // Enclave, name used to find security artifacts in a sros2 keystore.
-    std::string enclave_;
-    // The ROS domain id of this context.
-    std::size_t domain_id_;
-    // An owned session.
-    z_owned_session_t session_;
-    // An optional SHM manager that is initialized of SHM is enabled in the
-    // zenoh session config.
-    std::optional<zc_owned_shm_manager_t> shm_manager_;
-    // Liveliness keyexpr string to subscribe to for ROS graph changes.
-    std::string liveliness_str_;
-    // Graph cache.
-    std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache_;
-    // ROS graph liveliness subscriber.
-    z_owned_subscriber_t graph_subscriber_;
-    // Equivalent to rmw_dds_common::Context's guard condition.
-    // Guard condition that should be triggered when the graph changes.
-    std::unique_ptr<rmw_guard_condition_t> graph_guard_condition_;
-    // The GuardCondition data structure.
-    rmw_zenoh_cpp::GuardCondition guard_condition_data_;
-    // Shutdown flag.
-    bool is_shutdown_;
-    // A counter to assign a local id for every entity created in this session.
-    std::size_t next_entity_id_;
-    // True once graph subscriber is initialized.
-    bool is_initialized_;
-    // Nodes created from this context.
-    std::unordered_map<const rmw_node_t *, std::shared_ptr<rmw_zenoh_cpp::NodeData>> nodes_;
-  };
-
   std::shared_ptr<Data> data_{nullptr};
-
-  static void graph_sub_data_handler(const z_sample_t * sample, void * data);
 };
 
 

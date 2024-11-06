@@ -20,10 +20,12 @@
 #include <thread>
 #include <utility>
 
+#include "graph_cache.hpp"
 #include "guard_condition.hpp"
 #include "identifier.hpp"
 #include "liveliness_utils.hpp"
 #include "logging_macros.hpp"
+#include "rmw_node_data.hpp"
 #include "zenoh_config.hpp"
 #include "zenoh_router_check.hpp"
 
@@ -35,8 +37,158 @@
 // TODO(clalancette): Make this configurable, or get it from the configuration
 #define SHM_BUFFER_SIZE_MB 10
 
+static void graph_sub_data_handler(const z_sample_t * sample, void * data);
+
+// Bundle all class members into a data struct which can be passed as a
+// weak ptr to various threads for thread-safe access without capturing
+// "this" ptr by reference.
+struct Data : public std::enable_shared_from_this<Data>
+{
+  // Constructor.
+  Data(
+    std::size_t domain_id,
+    const std::string & enclave,
+    z_owned_session_t session,
+    std::optional<zc_owned_shm_manager_t> shm_manager,
+    const std::string & liveliness_str,
+    std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache)
+  : enclave_(std::move(enclave)),
+    domain_id_(std::move(domain_id)),
+    session_(std::move(session)),
+    shm_manager_(std::move(shm_manager)),
+    liveliness_str_(std::move(liveliness_str)),
+    graph_cache_(std::move(graph_cache)),
+    is_shutdown_(false),
+    next_entity_id_(0),
+    is_initialized_(false),
+    nodes_({})
+  {
+    graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
+    graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
+    graph_guard_condition_->data = &guard_condition_data_;
+  }
+
+  // Subscribe to the ROS graph.
+  rmw_ret_t subscribe_to_ros_graph()
+  {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    if (is_initialized_) {
+      return RMW_RET_OK;
+    }
+    // Setup the liveliness subscriber to receives updates from the ROS graph
+    // and update the graph cache.
+    // TODO(Yadunund): This closure is still not 100% thread safe as we are
+    // passing Data* as the type erased argument to z_closure. Thus during
+    // the execution of graph_sub_data_handler, the rawptr may be freed/reset
+    // by a different thread. When we switch to zenoh-cpp we can replace z_closure
+    // with a lambda that captures a weak_ptr<Data> by copy. The lambda and caputed
+    // weak_ptr<Data> will have the same lifetime as the subscriber. Then within
+    // graph_sub_data_handler, we would first lock to weak_ptr to check if the
+    // shared_ptr<Data> exits. If it does, then even if a different thread calls
+    // rmw_context_fini() to destroy rmw_context_impl_s, the locked
+    // shared_ptr<Data> would live on until the graph_sub_data_handler callback.
+    auto sub_options = zc_liveliness_subscriber_options_null();
+    z_owned_closure_sample_t callback = z_closure(
+      graph_sub_data_handler, nullptr, this);
+    graph_subscriber_ = zc_liveliness_declare_subscriber(
+      z_loan(session_),
+      z_keyexpr(liveliness_str_.c_str()),
+      z_move(callback),
+      &sub_options);
+    zc_liveliness_subscriber_options_drop(z_move(sub_options));
+    auto undeclare_z_sub = rcpputils::make_scope_exit(
+      [this]() {
+        z_undeclare_subscriber(z_move(this->graph_subscriber_));
+      });
+    if (!z_check(graph_subscriber_)) {
+      RMW_SET_ERROR_MSG("unable to create zenoh subscription");
+      return RMW_RET_ERROR;
+    }
+
+    undeclare_z_sub.cancel();
+    is_initialized_ = true;
+    return RMW_RET_OK;
+  }
+
+  // Shutdown the Zenoh session.
+  rmw_ret_t shutdown()
+  {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    rmw_ret_t ret = RMW_RET_OK;
+    if (is_shutdown_) {
+      return ret;
+    }
+
+    // Shutdown all the nodes in this context.
+    for (auto node_it = nodes_.begin(); node_it != nodes_.end(); ++node_it) {
+      ret = node_it->second->shutdown();
+      if (ret != RMW_RET_OK) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "Unable to shutdown node with id %zu. rmw_ret_t code: %zu.",
+          node_it->second->id(),
+          ret
+        );
+      }
+    }
+
+    z_undeclare_subscriber(z_move(graph_subscriber_));
+    if (shm_manager_.has_value()) {
+      z_drop(z_move(shm_manager_.value()));
+    }
+    // Close the zenoh session
+    if (z_close(z_move(session_)) < 0) {
+      RMW_SET_ERROR_MSG("Error while closing zenoh session");
+      return RMW_RET_ERROR;
+    }
+    is_shutdown_ = true;
+    return RMW_RET_OK;
+  }
+
+  // Destructor.
+  ~Data()
+  {
+    auto ret = this->shutdown();
+    nodes_.clear();
+    static_cast<void>(ret);
+  }
+
+  // Mutex to lock when accessing members.
+  mutable std::recursive_mutex mutex_;
+  // RMW allocator.
+  const rcutils_allocator_t * allocator_;
+  // Enclave, name used to find security artifacts in a sros2 keystore.
+  std::string enclave_;
+  // The ROS domain id of this context.
+  std::size_t domain_id_;
+  // An owned session.
+  z_owned_session_t session_;
+  // An optional SHM manager that is initialized of SHM is enabled in the
+  // zenoh session config.
+  std::optional<zc_owned_shm_manager_t> shm_manager_;
+  // Liveliness keyexpr string to subscribe to for ROS graph changes.
+  std::string liveliness_str_;
+  // Graph cache.
+  std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache_;
+  // ROS graph liveliness subscriber.
+  z_owned_subscriber_t graph_subscriber_;
+  // Equivalent to rmw_dds_common::Context's guard condition.
+  // Guard condition that should be triggered when the graph changes.
+  std::unique_ptr<rmw_guard_condition_t> graph_guard_condition_;
+  // The GuardCondition data structure.
+  rmw_zenoh_cpp::GuardCondition guard_condition_data_;
+  // Shutdown flag.
+  bool is_shutdown_;
+  // A counter to assign a local id for every entity created in this session.
+  std::size_t next_entity_id_;
+  // True once graph subscriber is initialized.
+  bool is_initialized_;
+  // Nodes created from this context.
+  std::unordered_map<const rmw_node_t *, std::shared_ptr<rmw_zenoh_cpp::NodeData>> nodes_;
+};
+
 ///=============================================================================
-void rmw_context_impl_s::graph_sub_data_handler(const z_sample_t * sample, void * data)
+static void graph_sub_data_handler(const z_sample_t * sample, void * data)
 {
   z_owned_str_t keystr = z_keyexpr_to_string(sample->keyexpr);
   auto free_keystr = rcpputils::make_scope_exit(
@@ -77,115 +229,6 @@ void rmw_context_impl_s::graph_sub_data_handler(const z_sample_t * sample, void 
       "[graph_sub_data_handler] Unable to trigger graph guard condition."
     );
   }
-}
-
-///=============================================================================
-rmw_context_impl_s::Data::Data(
-  std::size_t domain_id,
-  const std::string & enclave,
-  z_owned_session_t session,
-  std::optional<zc_owned_shm_manager_t> shm_manager,
-  const std::string & liveliness_str,
-  std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache)
-: enclave_(std::move(enclave)),
-  domain_id_(std::move(domain_id)),
-  session_(std::move(session)),
-  shm_manager_(std::move(shm_manager)),
-  liveliness_str_(std::move(liveliness_str)),
-  graph_cache_(std::move(graph_cache)),
-  is_shutdown_(false),
-  next_entity_id_(0),
-  is_initialized_(false),
-  nodes_({})
-{
-  graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
-  graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-  graph_guard_condition_->data = &guard_condition_data_;
-}
-
-///=============================================================================
-rmw_ret_t rmw_context_impl_s::Data::subscribe_to_ros_graph()
-{
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  if (is_initialized_) {
-    return RMW_RET_OK;
-  }
-  // Setup the liveliness subscriber to receives updates from the ROS graph
-  // and update the graph cache.
-  // TODO(Yadunund): This closure is still not 100% thread safe as we are
-  // passing Data* as the type erased argument to z_closure. Thus during
-  // the execution of graph_sub_data_handler, the rawptr may be freed/reset
-  // by a different thread. When we switch to zenoh-cpp we can replace z_closure
-  // with a lambda that captures a weak_ptr<Data> by copy. The lambda and caputed
-  // weak_ptr<Data> will have the same lifetime as the subscriber. Then within
-  // graph_sub_data_handler, we would first lock to weak_ptr to check if the
-  // shared_ptr<Data> exits. If it does, then even if a different thread calls
-  // rmw_context_fini() to destroy rmw_context_impl_s, the locked
-  // shared_ptr<Data> would live on until the graph_sub_data_handler callback.
-  auto sub_options = zc_liveliness_subscriber_options_null();
-  z_owned_closure_sample_t callback = z_closure(
-    rmw_context_impl_s::graph_sub_data_handler, nullptr, this);
-  graph_subscriber_ = zc_liveliness_declare_subscriber(
-    z_loan(session_),
-    z_keyexpr(liveliness_str_.c_str()),
-    z_move(callback),
-    &sub_options);
-  zc_liveliness_subscriber_options_drop(z_move(sub_options));
-  auto undeclare_z_sub = rcpputils::make_scope_exit(
-    [this]() {
-      z_undeclare_subscriber(z_move(this->graph_subscriber_));
-    });
-  if (!z_check(graph_subscriber_)) {
-    RMW_SET_ERROR_MSG("unable to create zenoh subscription");
-    return RMW_RET_ERROR;
-  }
-
-  undeclare_z_sub.cancel();
-  is_initialized_ = true;
-  return RMW_RET_OK;
-}
-
-///=============================================================================
-rmw_ret_t rmw_context_impl_s::Data::shutdown()
-{
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  rmw_ret_t ret = RMW_RET_OK;
-  if (is_shutdown_) {
-    return ret;
-  }
-
-  // Shutdown all the nodes in this context.
-  for (auto node_it = nodes_.begin(); node_it != nodes_.end(); ++node_it) {
-    ret = node_it->second->shutdown();
-    if (ret != RMW_RET_OK) {
-      RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to shutdown node with id %zu. rmw_ret_t code: %zu.",
-        node_it->second->id(),
-        ret
-      );
-    }
-  }
-
-  z_undeclare_subscriber(z_move(graph_subscriber_));
-  if (shm_manager_.has_value()) {
-    z_drop(z_move(shm_manager_.value()));
-  }
-  // Close the zenoh session
-  if (z_close(z_move(session_)) < 0) {
-    RMW_SET_ERROR_MSG("Error while closing zenoh session");
-    return RMW_RET_ERROR;
-  }
-  is_shutdown_ = true;
-  return RMW_RET_OK;
-}
-
-///=============================================================================
-rmw_context_impl_s::Data::~Data()
-{
-  auto ret = this->shutdown();
-  nodes_.clear();
-  static_cast<void>(ret);
 }
 
 ///=============================================================================
