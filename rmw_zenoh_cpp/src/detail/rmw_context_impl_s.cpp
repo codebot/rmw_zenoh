@@ -66,15 +66,7 @@ struct Data : public std::enable_shared_from_this<Data>
     graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
     graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
     graph_guard_condition_->data = &guard_condition_data_;
-  }
 
-  // Subscribe to the ROS graph.
-  rmw_ret_t subscribe_to_ros_graph()
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    if (is_initialized_) {
-      return RMW_RET_OK;
-    }
     // Setup the liveliness subscriber to receives updates from the ROS graph
     // and update the graph cache.
     // TODO(Yadunund): This closure is still not 100% thread safe as we are
@@ -102,12 +94,12 @@ struct Data : public std::enable_shared_from_this<Data>
       });
     if (!z_check(graph_subscriber_)) {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
-      return RMW_RET_ERROR;
+      throw std::runtime_error("Unable to subscribe to ROS graph updates.");
     }
 
     undeclare_z_sub.cancel();
+
     is_initialized_ = true;
-    return RMW_RET_OK;
   }
 
   // Shutdown the Zenoh session.
@@ -375,11 +367,6 @@ rmw_context_impl_s::rmw_context_impl_s(
     std::move(shm_manager),
     std::move(liveliness_str),
     std::move(graph_cache));
-
-  ret = data_->subscribe_to_ros_graph();
-  if (ret != RMW_RET_OK) {
-    throw std::runtime_error("Unable to subscribe to ROS Graph updates.");
-  }
 }
 
 ///=============================================================================
