@@ -19,6 +19,7 @@
 
 #include "logging_macros.hpp"
 #include "rmw_data_types.hpp"
+#include <zenoh_macros.h>
 
 #include "rmw/impl/cpp/macros.hpp"
 
@@ -165,7 +166,9 @@ void client_data_handler(z_loaned_reply_t * reply, void * data)
   if (z_reply_is_ok(reply)) {
     z_owned_reply_t owned_reply;
     z_reply_clone(&owned_reply, reply);
-    client_data->add_new_reply(std::make_unique<ZenohReply>(owned_reply));
+    std::chrono::nanoseconds::rep received_timestamp =
+      std::chrono::system_clock::now().time_since_epoch().count();
+    client_data->add_new_reply(std::make_unique<ZenohReply>(owned_reply, received_timestamp));
   } else {
     z_view_string_t keystr;
     z_keyexpr_as_view_string(z_loan(client_data->keyexpr), &keystr);
@@ -183,12 +186,6 @@ void client_data_handler(z_loaned_reply_t * reply, void * data)
     return;
   }
 
-  std::chrono::nanoseconds::rep received_timestamp =
-    std::chrono::system_clock::now().time_since_epoch().count();
-
-  client_data->add_new_reply(std::make_unique<ZenohReply>(reply, received_timestamp));
-  // Since we took ownership of the reply, null it out here
-  *reply = z_reply_null();
 }
 
 void client_data_drop(void * data)

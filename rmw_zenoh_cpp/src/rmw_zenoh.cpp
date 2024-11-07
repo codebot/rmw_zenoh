@@ -1874,14 +1874,6 @@ rmw_take_response(
     return RMW_RET_ERROR;
   }
 
-  if (!rmw_zenoh_cpp::get_gid_from_attachment(
-      &sample->attachment,
-      request_header->request_id.writer_guid))
-  {
-    RMW_SET_ERROR_MSG("Could not get client gid from attachment");
-    return RMW_RET_ERROR;
-  }
-
   request_header->received_timestamp = latest_reply->get_received_timestamp();
 
   z_drop(z_move(payload));

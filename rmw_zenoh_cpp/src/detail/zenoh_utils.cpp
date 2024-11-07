@@ -44,10 +44,10 @@ const z_loaned_query_t * ZenohQuery::get_query() const {return z_loan(query_);}
 
 ///=============================================================================
 ZenohReply::ZenohReply(
-  const z_owned_reply_t * reply,
+  z_owned_reply_t reply,
   std::chrono::nanoseconds::rep received_timestamp)
 {
-  reply_ = *reply;
+  reply_ = reply;
   received_timestamp_ = received_timestamp;
 }
 

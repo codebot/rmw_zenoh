@@ -18,7 +18,6 @@
 #include <zenoh.h>
 
 #include <chrono>
-#include <functional>
 #include <optional>
 
 #include "rmw/types.h"
@@ -36,7 +35,7 @@ create_map_and_set_sequence_num(
 class ZenohReply final
 {
 public:
-  ZenohReply(const z_owned_reply_t * reply, std::chrono::nanoseconds::rep received_timestamp);
+  ZenohReply(z_owned_reply_t reply, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohReply();
 
