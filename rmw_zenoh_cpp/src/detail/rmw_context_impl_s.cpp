@@ -144,8 +144,6 @@ struct Data : public std::enable_shared_from_this<Data>
 
   // Mutex to lock when accessing members.
   mutable std::recursive_mutex mutex_;
-  // RMW allocator.
-  const rcutils_allocator_t * allocator_;
   // Enclave, name used to find security artifacts in a sros2 keystore.
   std::string enclave_;
   // The ROS domain id of this context.
