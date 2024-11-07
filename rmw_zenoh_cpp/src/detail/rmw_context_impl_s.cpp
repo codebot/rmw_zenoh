@@ -60,7 +60,6 @@ struct Data : public std::enable_shared_from_this<Data>
     graph_cache_(std::move(graph_cache)),
     is_shutdown_(false),
     next_entity_id_(0),
-    is_initialized_(false),
     nodes_({})
   {
     graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
@@ -98,8 +97,6 @@ struct Data : public std::enable_shared_from_this<Data>
     }
 
     undeclare_z_sub.cancel();
-
-    is_initialized_ = true;
   }
 
   // Shutdown the Zenoh session.
@@ -173,8 +170,6 @@ struct Data : public std::enable_shared_from_this<Data>
   bool is_shutdown_;
   // A counter to assign a local id for every entity created in this session.
   std::size_t next_entity_id_;
-  // True once graph subscriber is initialized.
-  bool is_initialized_;
   // Nodes created from this context.
   std::unordered_map<const rmw_node_t *, std::shared_ptr<rmw_zenoh_cpp::NodeData>> nodes_;
 };
