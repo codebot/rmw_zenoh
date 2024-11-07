@@ -19,7 +19,6 @@
 
 #include "logging_macros.hpp"
 #include "rmw_data_types.hpp"
-#include <zenoh_macros.h>
 
 #include "rmw/impl/cpp/macros.hpp"
 
@@ -185,7 +184,6 @@ void client_data_handler(z_loaned_reply_t * reply, void * data)
     z_drop(z_move(err_str));
     return;
   }
-
 }
 
 void client_data_drop(void * data)
