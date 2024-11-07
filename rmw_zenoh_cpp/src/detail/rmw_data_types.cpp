@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <condition_variable>
-#include <cstring>
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <utility>
 
-#include "liveliness_utils.hpp"
 #include "logging_macros.hpp"
 #include "rmw_data_types.hpp"
 
@@ -184,6 +182,13 @@ void client_data_handler(z_loaned_reply_t * reply, void * data)
     z_drop(z_move(err_str));
     return;
   }
+
+  std::chrono::nanoseconds::rep received_timestamp =
+    std::chrono::system_clock::now().time_since_epoch().count();
+
+  client_data->add_new_reply(std::make_unique<ZenohReply>(reply, received_timestamp));
+  // Since we took ownership of the reply, null it out here
+  *reply = z_reply_null();
 }
 
 void client_data_drop(void * data)

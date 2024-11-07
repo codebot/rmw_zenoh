@@ -1419,7 +1419,12 @@ rmw_create_client(
       allocator->deallocate(client_data, allocator->state);
     });
 
-  RMW_TRY_PLACEMENT_NEW(client_data, client_data, return nullptr, rmw_zenoh_cpp::rmw_client_data_t);
+  RMW_TRY_PLACEMENT_NEW(
+    client_data,
+    client_data,
+    return nullptr,
+    rmw_zenoh_cpp::rmw_client_data_t,
+  );
   auto destruct_client_data = rcpputils::make_scope_exit(
     [client_data]() {
       RMW_TRY_DESTRUCTOR_FROM_WITHIN_FAILURE(
@@ -1869,9 +1874,15 @@ rmw_take_response(
     return RMW_RET_ERROR;
   }
 
-  auto now = std::chrono::system_clock::now().time_since_epoch();
-  auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);
-  request_header->received_timestamp = now_ns.count();
+  if (!rmw_zenoh_cpp::get_gid_from_attachment(
+      &sample->attachment,
+      request_header->request_id.writer_guid))
+  {
+    RMW_SET_ERROR_MSG("Could not get client gid from attachment");
+    return RMW_RET_ERROR;
+  }
+
+  request_header->received_timestamp = latest_reply->get_received_timestamp();
 
   z_drop(z_move(payload));
   *taken = true;
