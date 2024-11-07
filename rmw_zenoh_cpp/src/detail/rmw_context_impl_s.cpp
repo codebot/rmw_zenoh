@@ -42,7 +42,7 @@ static void graph_sub_data_handler(const z_sample_t * sample, void * data);
 // Bundle all class members into a data struct which can be passed as a
 // weak ptr to various threads for thread-safe access without capturing
 // "this" ptr by reference.
-struct Data : public std::enable_shared_from_this<Data>
+struct Data final
 {
   // Constructor.
   Data(
