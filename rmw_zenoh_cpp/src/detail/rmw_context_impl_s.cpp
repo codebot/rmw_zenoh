@@ -56,7 +56,6 @@ struct Data : public std::enable_shared_from_this<Data>
     domain_id_(std::move(domain_id)),
     session_(std::move(session)),
     shm_manager_(std::move(shm_manager)),
-    liveliness_str_(std::move(liveliness_str)),
     graph_cache_(std::move(graph_cache)),
     is_shutdown_(false),
     next_entity_id_(0),
@@ -83,7 +82,7 @@ struct Data : public std::enable_shared_from_this<Data>
       graph_sub_data_handler, nullptr, this);
     graph_subscriber_ = zc_liveliness_declare_subscriber(
       z_loan(session_),
-      z_keyexpr(liveliness_str_.c_str()),
+      z_keyexpr(liveliness_str.c_str()),
       z_move(callback),
       &sub_options);
     zc_liveliness_subscriber_options_drop(z_move(sub_options));
@@ -153,8 +152,6 @@ struct Data : public std::enable_shared_from_this<Data>
   // An optional SHM manager that is initialized of SHM is enabled in the
   // zenoh session config.
   std::optional<zc_owned_shm_manager_t> shm_manager_;
-  // Liveliness keyexpr string to subscribe to for ROS graph changes.
-  std::string liveliness_str_;
   // Graph cache.
   std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache_;
   // ROS graph liveliness subscriber.
