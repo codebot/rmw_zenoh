@@ -141,7 +141,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to generate keyexpr for liveliness token for the service %s.",
-      service_name);
+      service_name.c_str());
     return nullptr;
   }
 

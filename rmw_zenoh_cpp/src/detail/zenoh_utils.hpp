@@ -17,6 +17,7 @@
 
 #include <zenoh.h>
 
+#include <chrono>
 #include <functional>
 #include <optional>
 
@@ -37,14 +38,17 @@ create_map_and_set_sequence_num(int64_t sequence_number, GIDCopier gid_copier);
 class ZenohReply final
 {
 public:
-  ZenohReply(const z_owned_reply_t * reply);
+  ZenohReply(const z_owned_reply_t * reply, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohReply();
 
   std::optional<z_sample_t> get_sample() const;
 
+  std::chrono::nanoseconds::rep get_received_timestamp() const;
+
 private:
   z_owned_reply_t reply_;
+  std::chrono::nanoseconds::rep received_timestamp_;
 };
 
 // A class to store the queries made by clients.

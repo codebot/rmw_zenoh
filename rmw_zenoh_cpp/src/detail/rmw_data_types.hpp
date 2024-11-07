@@ -31,6 +31,7 @@
 #include "rosidl_runtime_c/type_hash.h"
 
 #include "event.hpp"
+#include "liveliness_utils.hpp"
 #include "message_type_support.hpp"
 #include "rmw_wait_set_data.hpp"
 #include "service_type_support.hpp"

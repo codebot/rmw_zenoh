@@ -98,7 +98,7 @@ rmw_init_options_copy(const rmw_init_options_t * src, rmw_init_options_t * dst)
     return ret;
   }
   auto free_discovery_options = rcpputils::make_scope_exit(
-    [&tmp, allocator]() {
+    [&tmp]() {
       rmw_ret_t tmp_ret = rmw_discovery_options_fini(&tmp.discovery_options);
       static_cast<void>(tmp_ret);
     });
