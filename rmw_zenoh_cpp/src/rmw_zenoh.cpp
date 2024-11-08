@@ -2451,7 +2451,7 @@ rmw_get_gid_for_publisher(const rmw_publisher_t * publisher, rmw_gid_t * gid)
   RMW_CHECK_ARGUMENT_FOR_NULL(pub_data, RMW_RET_INVALID_ARGUMENT);
 
   gid->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-  pub_data->copy_gid(gid);
+  pub_data->copy_gid(gid->data);
 
   return RMW_RET_OK;
 }
