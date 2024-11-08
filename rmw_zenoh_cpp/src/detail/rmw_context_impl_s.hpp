@@ -17,20 +17,16 @@
 
 #include <zenoh.h>
 
-# include <cstddef>
+#include <cstddef>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
-#include <unordered_map>
 
 #include "graph_cache.hpp"
-#include "guard_condition.hpp"
-#include "liveliness_utils.hpp"
 #include "rmw_node_data.hpp"
 
-#include "rcutils/types.h"
-#include "rmw/rmw.h"
+#include "rmw/ret_types.h"
+#include "rmw/types.h"
 
 // Forward declaration
 struct Data;
