@@ -42,7 +42,7 @@ namespace rmw_zenoh_cpp
 {
 
 ///=============================================================================
-class ClientData final
+class ClientData final : public std::enable_shared_from_this<ClientData>
 {
 public:
   // Make a shared_ptr of ClientData.
@@ -116,6 +116,9 @@ private:
     std::shared_ptr<RequestTypeSupport> request_type_support,
     std::shared_ptr<ResponseTypeSupport> response_type_support);
 
+  // Initialize the Zenoh objects for this entity.
+  bool init(z_session_t session);
+
   // Internal mutex.
   mutable std::mutex mutex_;
   // The parent node.
@@ -141,6 +144,8 @@ private:
   size_t sequence_number_;
   // Shutdown flag.
   bool is_shutdown_;
+  // Whether the object has ever successfully been initialized.
+  bool initialized_;
 };
 using ClientDataPtr = std::shared_ptr<ClientData>;
 using ClientDataConstPtr = std::shared_ptr<const ClientData>;

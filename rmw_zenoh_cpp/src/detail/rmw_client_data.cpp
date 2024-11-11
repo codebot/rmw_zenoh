@@ -254,35 +254,10 @@ std::shared_ptr<ClientData> ClientData::make(
     duplicate_pointers.push_back(client_data);
   } while (deleted_clients.count(client_data.get()) > 0);
 
-  client_data->keyexpr_ =
-    z_keyexpr_new(client_data->entity_->topic_info().value().topic_keyexpr_.c_str());
-  auto free_ros_keyexpr = rcpputils::make_scope_exit(
-    [client_data]() {
-      z_drop(z_move(client_data->keyexpr_));
-    });
-  if (!z_check(z_loan(client_data->keyexpr_))) {
-    RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
+  if (!client_data->init(session)) {
+    // init() already set the error.
     return nullptr;
   }
-
-  client_data->token_ = zc_liveliness_declare_token(
-    session,
-    z_keyexpr(client_data->entity_->liveliness_keyexpr().c_str()),
-    NULL
-  );
-  auto free_token = rcpputils::make_scope_exit(
-    [client_data]() {
-      z_drop(z_move(client_data->token_));
-    });
-  if (!z_check(client_data->token_)) {
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp",
-      "Unable to create liveliness token for the client.");
-    return nullptr;
-  }
-
-  free_ros_keyexpr.cancel();
-  free_token.cancel();
 
   num_in_flight_map[client_data.get()] = 0;
 
@@ -308,6 +283,42 @@ ClientData::ClientData(
   is_shutdown_(false)
 {
   // Do nothing.
+}
+
+///=============================================================================
+bool ClientData::init(z_session_t session)
+{
+  this->keyexpr_ =
+    z_keyexpr_new(this->entity_->topic_info().value().topic_keyexpr_.c_str());
+  auto free_ros_keyexpr = rcpputils::make_scope_exit(
+    [this]() {
+      z_drop(z_move(this->keyexpr_));
+    });
+  if (!z_check(z_loan(this->keyexpr_))) {
+    RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
+    return false;
+  }
+
+  this->token_ = zc_liveliness_declare_token(
+    session,
+    z_keyexpr(this->entity_->liveliness_keyexpr().c_str()),
+    NULL
+  );
+  auto free_token = rcpputils::make_scope_exit(
+    [this]() {
+      z_drop(z_move(this->token_));
+    });
+  if (!z_check(this->token_)) {
+    RMW_ZENOH_LOG_ERROR_NAMED(
+      "rmw_zenoh_cpp",
+      "Unable to create liveliness token for the client.");
+    return false;
+  }
+
+  free_ros_keyexpr.cancel();
+  free_token.cancel();
+
+  return true;
 }
 
 ///=============================================================================
@@ -605,7 +616,7 @@ rmw_ret_t ClientData::shutdown()
 {
   rmw_ret_t ret = RMW_RET_OK;
   std::lock_guard<std::mutex> lock(mutex_);
-  if (is_shutdown_) {
+  if (is_shutdown_ || !initialized_) {
     return ret;
   }
 
@@ -618,6 +629,7 @@ rmw_ret_t ClientData::shutdown()
   }
 
   is_shutdown_ = true;
+  initialized_ = false;
   return RMW_RET_OK;
 }
 
