@@ -45,14 +45,14 @@
 // to lookup the pointer, and gain a reference to a shared_ptr if it exists.
 // This guarantees that the Data object will not be destroyed while we are using it.
 static std::mutex data_to_data_shared_ptr_map_mutex;
-static std::unordered_map<Data *, std::shared_ptr<Data>> data_to_data_shared_ptr_map;
+static std::unordered_map<rmw_context_impl_s::Data *, std::shared_ptr<rmw_context_impl_s::Data>> data_to_data_shared_ptr_map;
 
 static void graph_sub_data_handler(const z_sample_t * sample, void * data);
 
 // Bundle all class members into a data struct which can be passed as a
 // weak ptr to various threads for thread-safe access without capturing
 // "this" ptr by reference.
-class Data final
+class rmw_context_impl_s::Data final
 {
 public:
   // Constructor.
@@ -440,7 +440,7 @@ static void graph_sub_data_handler(const z_sample_t * sample, void * data)
       z_drop(z_move(keystr));
     });
 
-  auto data_ptr = static_cast<Data *>(data);
+  auto data_ptr = static_cast<rmw_context_impl_s::Data *>(data);
   if (data_ptr == nullptr) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
@@ -451,7 +451,7 @@ static void graph_sub_data_handler(const z_sample_t * sample, void * data)
 
   // Look up the data shared_ptr in the global map.  If it is in there, use it.
   // If not, it is being shutdown so we can just ignore this update.
-  std::shared_ptr<Data> data_shared_ptr{nullptr};
+  std::shared_ptr<rmw_context_impl_s::Data> data_shared_ptr{nullptr};
   {
     std::lock_guard<std::mutex> lk(data_to_data_shared_ptr_map_mutex);
     if (data_to_data_shared_ptr_map.count(data_ptr) == 0) {
@@ -475,6 +475,7 @@ rmw_context_impl_s::rmw_context_impl_s(
   data_to_data_shared_ptr_map.emplace(data_.get(), data_);
 }
 
+///=============================================================================
 rmw_context_impl_s::~rmw_context_impl_s()
 {
   this->shutdown();

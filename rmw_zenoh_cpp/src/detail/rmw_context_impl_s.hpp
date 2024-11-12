@@ -28,9 +28,6 @@
 #include "rmw/ret_types.h"
 #include "rmw/types.h"
 
-// Forward declaration
-struct Data;
-
 ///=============================================================================
 class rmw_context_impl_s final
 {
@@ -93,6 +90,9 @@ public:
 
   /// Delete the NodeData for a given rmw_node_t if present.
   void delete_node_data(const rmw_node_t * const node);
+
+  // Forward declaration
+  class Data;
 
 private:
   std::shared_ptr<Data> data_{nullptr};
