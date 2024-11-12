@@ -263,7 +263,7 @@ rmw_ret_t PublisherData::publish(
     ]() {
       if (msg_bytes
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-          && !shmbuf.has_value()
+      && !shmbuf.has_value()
 #endif
       )
       {
@@ -293,10 +293,10 @@ rmw_ret_t PublisherData::publish(
     }
   } else {
 #endif
-    // Get memory from the allocator.
+  // Get memory from the allocator.
   msg_bytes = static_cast<char *>(allocator->allocate(max_data_length, allocator->state));
   RMW_CHECK_FOR_NULL_WITH_MSG(
-      msg_bytes, "bytes for message is null", return RMW_RET_BAD_ALLOC);
+    msg_bytes, "bytes for message is null", return RMW_RET_BAD_ALLOC);
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
 }
 #endif
