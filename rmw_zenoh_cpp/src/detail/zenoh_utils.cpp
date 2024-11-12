@@ -43,7 +43,13 @@ ZenohQuery::~ZenohQuery() {z_drop(z_move(query_));}
 const z_loaned_query_t * ZenohQuery::get_query() const {return z_loan(query_);}
 
 ///=============================================================================
-ZenohReply::ZenohReply(z_owned_reply_t reply) {reply_ = reply;}
+ZenohReply::ZenohReply(
+  z_owned_reply_t reply,
+  std::chrono::nanoseconds::rep received_timestamp)
+{
+  reply_ = reply;
+  received_timestamp_ = received_timestamp;
+}
 
 ///=============================================================================
 ZenohReply::~ZenohReply() {z_drop(z_move(reply_));}
@@ -56,5 +62,11 @@ std::optional<const z_loaned_sample_t *> ZenohReply::get_sample() const
   }
 
   return std::nullopt;
+}
+
+///=============================================================================
+std::chrono::nanoseconds::rep ZenohReply::get_received_timestamp() const
+{
+  return received_timestamp_;
 }
 }  // namespace rmw_zenoh_cpp

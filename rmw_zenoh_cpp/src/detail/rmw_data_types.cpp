@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <condition_variable>
-#include <cstring>
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <utility>
 
-#include "liveliness_utils.hpp"
 #include "logging_macros.hpp"
 #include "rmw_data_types.hpp"
 
@@ -167,7 +165,9 @@ void client_data_handler(z_loaned_reply_t * reply, void * data)
   if (z_reply_is_ok(reply)) {
     z_owned_reply_t owned_reply;
     z_reply_clone(&owned_reply, reply);
-    client_data->add_new_reply(std::make_unique<ZenohReply>(owned_reply));
+    std::chrono::nanoseconds::rep received_timestamp =
+      std::chrono::system_clock::now().time_since_epoch().count();
+    client_data->add_new_reply(std::make_unique<ZenohReply>(owned_reply, received_timestamp));
   } else {
     z_view_string_t keystr;
     z_keyexpr_as_view_string(z_loan(client_data->keyexpr), &keystr);

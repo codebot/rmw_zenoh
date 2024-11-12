@@ -17,6 +17,7 @@
 
 #include <zenoh.h>
 
+#include <chrono>
 #include <optional>
 
 #include "rmw/types.h"
@@ -34,14 +35,17 @@ create_map_and_set_sequence_num(
 class ZenohReply final
 {
 public:
-  ZenohReply(z_owned_reply_t reply);
+  ZenohReply(z_owned_reply_t reply, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohReply();
 
   std::optional<const z_loaned_sample_t *> get_sample() const;
 
+  std::chrono::nanoseconds::rep get_received_timestamp() const;
+
 private:
   z_owned_reply_t reply_;
+  std::chrono::nanoseconds::rep received_timestamp_;
 };
 
 // A class to store the queries made by clients.
