@@ -52,7 +52,7 @@ public:
   rmw_ret_t publish(
     const void * ros_message
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-  , std::optional<ShmContext> & shm
+    , std::optional<ShmContext> & shm
 #endif
   );
 
@@ -60,7 +60,7 @@ public:
   rmw_ret_t publish_serialized_message(
     const rmw_serialized_message_t * serialized_message
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-  , std::optional<ShmContext> & shm
+    , std::optional<ShmContext> & shm
 #endif
   );
 
