@@ -25,7 +25,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <vector>
 
 #include "attachment_helpers.hpp"
 #include "cdr.hpp"
@@ -41,38 +40,17 @@
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
 
-namespace rmw_zenoh_cpp
+namespace
 {
-// rmw_zenoh uses Zenoh queries to implement clients. It turns out that in Zenoh, there is no
-// way to cancel a query once it is in-flight via the z_get() zenoh-c API. Thus, if an
-// rmw_zenoh_cpp user does rmw_create_client(), rmw_send_request(), rmw_destroy_client(), but the
-// query comes in after the rmw_destroy_client(), rmw_zenoh_cpp could access already-freed memory.
-// The next 3 global variables are used to avoid that situation. Any time a query is initiated via
-// rmw_send_request(), num_in_flight_ is incremented.  When Zenoh calls the callback for the
-// query drop, num_in_flight_map->second is decremented.
-// When ClientData is destroyed, it checks to see if there are things in flight.  If there are,
-// it leaves this ClientData pointer both in the num_in_flight_map and the deleted_clients map.
-// When the client_data_handler() is called on these destroyed objects, it knows that it cannot
-// dereference the data anymore, and it gets out early.  When client_data_drop() is called, it
-// decrements num_in_flight_map->second, and if that drops to zero, drops the pointer address
-// completely from deleted_clients.
-//
-// There is one case which is not handled by this, which has to do with timeouts.  The query
-// timeout is currently set to essentially infinite.  Thus, if a query is in-flight but never
-// returns, the memory in this structure will never be freed.  There isn't much we can do about
-// that at this time, but we may want to consider changing the timeout so that the memory can
-// eventually be freed up.
-//
-// TODO(Yadunund): Remove these variables once we switch to zenoh-cpp and can capture
-// weak_ptr<ClientData> in zenoh callbacks.
-static std::mutex num_in_flight_mutex;
-static std::unordered_map<const ClientData *, std::size_t> num_in_flight_map = {};
-static std::unordered_set<const ClientData *> deleted_clients = {};
+
+std::mutex client_data_ptr_to_shared_ptr_map_mutex;
+std::unordered_map<const rmw_zenoh_cpp::ClientData *,
+  std::shared_ptr<rmw_zenoh_cpp::ClientData>> client_data_ptr_to_shared_ptr_map;
 
 ///=============================================================================
 void client_data_handler(z_owned_reply_t * reply, void * data)
 {
-  auto client_data = static_cast<ClientData *>(data);
+  auto client_data = static_cast<rmw_zenoh_cpp::ClientData *>(data);
   if (client_data == nullptr) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
@@ -81,18 +59,16 @@ void client_data_handler(z_owned_reply_t * reply, void * data)
     return;
   }
 
-  std::lock_guard<std::mutex> lock(num_in_flight_mutex);
-  if (deleted_clients.count(client_data) > 0) {
-    RMW_ZENOH_LOG_INFO_NAMED(
-      "rmw_zenoh_cpp",
-      "client_data_handler triggered for ClientData that has been deleted. Ignoring..."
-    );
-    return;
+  std::shared_ptr<rmw_zenoh_cpp::ClientData> client_data_shared_ptr{nullptr};
+  {
+    std::lock_guard<std::mutex> lk(client_data_ptr_to_shared_ptr_map_mutex);
+    if (client_data_ptr_to_shared_ptr_map.count(client_data) == 0) {
+      return;
+    }
+    client_data_shared_ptr = client_data_ptr_to_shared_ptr_map[client_data];
   }
 
-  // See the comment about the "num_in_flight" class variable in the ClientData class for
-  // why we need to do this.
-  if (client_data->is_shutdown()) {
+  if (client_data_shared_ptr->is_shutdown()) {
     return;
   }
 
@@ -118,43 +94,17 @@ void client_data_handler(z_owned_reply_t * reply, void * data)
   std::chrono::nanoseconds::rep received_timestamp =
     std::chrono::system_clock::now().time_since_epoch().count();
 
-  client_data->add_new_reply(std::make_unique<ZenohReply>(reply, received_timestamp));
+  client_data_shared_ptr->add_new_reply(
+    std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
 
   // Since we took ownership of the reply, null it out here
   *reply = z_reply_null();
 }
 
-///=============================================================================
-void client_data_drop(void * data)
+}  // namespace
+
+namespace rmw_zenoh_cpp
 {
-  auto client_data = static_cast<ClientData *>(data);
-  if (client_data == nullptr) {
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp",
-      "Unable to obtain client_data_t "
-    );
-    return;
-  }
-
-  // See the comment about the "num_in_flight" class variable in the ClientData class for
-  // why we need to do this.
-  std::lock_guard<std::mutex> lock(num_in_flight_mutex);
-  auto num_in_flight_it = num_in_flight_map.find(client_data);
-  if (num_in_flight_it == num_in_flight_map.end()) {
-    // This should never happen
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp",
-      "Unable to find object in num_in_flight_map. Report this bug."
-    );
-    return;
-  }
-
-  --num_in_flight_it->second;
-  if (num_in_flight_it->second == 0 && deleted_clients.count(client_data) > 0) {
-    deleted_clients.erase(client_data);
-  }
-}
-
 ///=============================================================================
 std::shared_ptr<ClientData> ClientData::make(
   z_session_t session,
@@ -238,28 +188,23 @@ std::shared_ptr<ClientData> ClientData::make(
     return nullptr;
   }
 
-  std::lock_guard<std::mutex> lock(num_in_flight_mutex);
-  std::vector<std::shared_ptr<ClientData>> duplicate_pointers;
-  std::shared_ptr<ClientData> client_data;
-  do {
-    client_data = std::shared_ptr<ClientData>(
-      new ClientData{
-        node,
-        entity,
-        request_members,
-        response_members,
-        request_type_support,
-        response_type_support
-      });
-    duplicate_pointers.push_back(client_data);
-  } while (deleted_clients.count(client_data.get()) > 0);
+  std::shared_ptr<ClientData> client_data = std::shared_ptr<ClientData>(
+    new ClientData{
+      node,
+      entity,
+      request_members,
+      response_members,
+      request_type_support,
+      response_type_support
+    });
 
   if (!client_data->init(session)) {
     // init() already set the error.
     return nullptr;
   }
 
-  num_in_flight_map[client_data.get()] = 0;
+  std::lock_guard<std::mutex> lk(client_data_ptr_to_shared_ptr_map_mutex);
+  client_data_ptr_to_shared_ptr_map.emplace(client_data.get(), client_data);
 
   return client_data;
 }
@@ -508,18 +453,6 @@ rmw_ret_t ClientData::send_request(
       z_bytes_map_drop(z_move(map));
     });
 
-  // See the comment about the "num_in_flight" class variable in the ClientData class for
-  // why we need to do this.
-  {
-    std::lock_guard<std::mutex> lock(num_in_flight_mutex);
-    auto num_in_flight_it = num_in_flight_map.find(this);
-    if (num_in_flight_it == num_in_flight_map.end()) {
-      // This should never happen
-      RMW_SET_ERROR_MSG("failed to find object in num_in_flight_map");
-      return RMW_RET_ERROR;
-    }
-    num_in_flight_it->second++;
-  }
   opts.attachment = z_bytes_map_as_attachment(&map);
   opts.target = Z_QUERY_TARGET_ALL_COMPLETE;
   // The default timeout for a z_get query is 10 seconds and if a response is not received within
@@ -535,7 +468,7 @@ rmw_ret_t ClientData::send_request(
   // TODO(Yadunund): Once we switch to zenoh-cpp with lambda closures,
   // capture shared_from_this() instead of this.
   z_owned_closure_reply_t zn_closure_reply =
-    z_closure(client_data_handler, client_data_drop, this);
+    z_closure(client_data_handler, nullptr, this);
   z_get(
     context_impl->session(),
     z_loan(keyexpr_), "",
@@ -548,33 +481,16 @@ rmw_ret_t ClientData::send_request(
 ///=============================================================================
 ClientData::~ClientData()
 {
+  {
+    std::lock_guard<std::mutex> lk(client_data_ptr_to_shared_ptr_map_mutex);
+    client_data_ptr_to_shared_ptr_map.erase(this);
+  }
+
   const rmw_ret_t ret = this->shutdown();
   if (ret != RMW_RET_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Error destructing client /%s.",
-      entity_->topic_info().value().name_.c_str()
-    );
-  }
-
-  std::lock_guard<std::mutex> lock(num_in_flight_mutex);
-  auto num_in_flight_it = num_in_flight_map.find(this);
-  if (num_in_flight_it != num_in_flight_map.end()) {
-    if (num_in_flight_it->second == 0) {
-      // If there is nothing in flight, we can remove this from the map
-      // with no further considerations.
-      num_in_flight_map.erase(this);
-    } else {
-      // Since there is still something in flight, we need to just add
-      // it to the deleted_clients; it will be deleted when the last
-      // outstanding query finishes.
-      deleted_clients.insert(this);
-    }
-  } else {
-    // This should never happen
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp",
-      "Error finding client /%s in num_in_flight_map. Report this bug.",
       entity_->topic_info().value().name_.c_str()
     );
   }
@@ -631,17 +547,6 @@ rmw_ret_t ClientData::shutdown()
   is_shutdown_ = true;
   initialized_ = false;
   return RMW_RET_OK;
-}
-
-///=============================================================================
-bool ClientData::query_in_flight() const
-{
-  std::lock_guard<std::mutex> lock(num_in_flight_mutex);
-  auto query_in_flight_it = num_in_flight_map.find(this);
-  if (query_in_flight_it != num_in_flight_map.end()) {
-    return query_in_flight_it->second > 0;
-  }
-  return false;
 }
 
 ///=============================================================================

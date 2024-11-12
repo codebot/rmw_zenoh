@@ -95,11 +95,6 @@ public:
   // Shutdown this ClientData.
   rmw_ret_t shutdown();
 
-  // TODO(Yadunund): Remove this API once we are able to capture weak_ptr<ClientData>
-  // in the client closures to avoid the issue with queries in flight as described
-  // below.
-  bool query_in_flight() const;
-
   // Check if this ClientData is shutdown.
   bool is_shutdown() const;
 

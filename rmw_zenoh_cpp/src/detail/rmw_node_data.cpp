@@ -387,13 +387,10 @@ void NodeData::delete_client_data(const rmw_client_t * const client)
   if (client_it == clients_.end()) {
     return;
   }
-  // We shutdown the client first and only if that is successful, we deallocate
-  // the ClientData. This is to keep the ClientData alive in cases where
-  // rmw_destroy_client is invoked while there are still queries in flight.
+  // Shutdown the client, then erase it.  The code in rmw_client_data.cpp is careful about keeping
+  // it alive as long as necessary.
   client_it->second->shutdown();
-  if (!client_it->second->query_in_flight()) {
-    clients_.erase(client);
-  }
+  clients_.erase(client);
 }
 
 ///=============================================================================
