@@ -203,7 +203,7 @@ size_t zenoh_shm_message_size_threshold()
         RMW_ZENOH_LOG_ERROR_NAMED(
           "rmw_zenoh_cpp", "Envar %s: value is too large!",
           zenoh_shm_message_size_threshold_envar);
-      } else if ((read_value & (read_value - 1)) != 0) { // power of 2 check
+      } else if ((read_value & (read_value - 1)) != 0) {  // power of 2 check
         RMW_ZENOH_LOG_ERROR_NAMED(
           "rmw_zenoh_cpp", "Envar %s: value must be power of 2!",
           zenoh_shm_message_size_threshold_envar);

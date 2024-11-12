@@ -291,14 +291,15 @@ rmw_ret_t PublisherData::publish(
       RMW_SET_ERROR_MSG("Failed to allocate a SHM buffer, even after GCing.");
       return RMW_RET_ERROR;
     }
-  } else
+  } else {
 #endif
-  {
     // Get memory from the allocator.
-    msg_bytes = static_cast<char *>(allocator->allocate(max_data_length, allocator->state));
-    RMW_CHECK_FOR_NULL_WITH_MSG(
+  msg_bytes = static_cast<char *>(allocator->allocate(max_data_length, allocator->state));
+  RMW_CHECK_FOR_NULL_WITH_MSG(
       msg_bytes, "bytes for message is null", return RMW_RET_BAD_ALLOC);
-  }
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+}
+#endif
 
   // Object that manages the raw buffer
   eprosima::fastcdr::FastBuffer fastbuffer(msg_bytes, max_data_length);
@@ -331,11 +332,12 @@ rmw_ret_t PublisherData::publish(
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   if (shmbuf.has_value()) {
     z_bytes_from_shm_mut(&payload, z_move(shmbuf.value()));
-  } else
+  } else {
 #endif
-  {
-    z_bytes_copy_from_buf(&payload, reinterpret_cast<const uint8_t *>(msg_bytes), data_length);
-  }
+  z_bytes_copy_from_buf(&payload, reinterpret_cast<const uint8_t *>(msg_bytes), data_length);
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+}
+#endif
 
   z_result_t res = z_publisher_put(z_loan(pub_), z_move(payload), &options);
   if (res != Z_OK) {
