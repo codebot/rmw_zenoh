@@ -45,7 +45,8 @@
 // to lookup the pointer, and gain a reference to a shared_ptr if it exists.
 // This guarantees that the Data object will not be destroyed while we are using it.
 static std::mutex data_to_data_shared_ptr_map_mutex;
-static std::unordered_map<rmw_context_impl_s::Data *, std::shared_ptr<rmw_context_impl_s::Data>> data_to_data_shared_ptr_map;
+static std::unordered_map<rmw_context_impl_s::Data *,
+  std::shared_ptr<rmw_context_impl_s::Data>> data_to_data_shared_ptr_map;
 
 static void graph_sub_data_handler(const z_sample_t * sample, void * data);
 
