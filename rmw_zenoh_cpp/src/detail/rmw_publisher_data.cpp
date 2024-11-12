@@ -227,7 +227,7 @@ rmw_ret_t PublisherData::publish(
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   , std::optional<ShmContext> & shm
 #endif
-  )
+)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   if (is_shutdown_) {
@@ -258,14 +258,15 @@ rmw_ret_t PublisherData::publish(
   auto always_free_msg_bytes = rcpputils::make_scope_exit(
     [&msg_bytes, allocator
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-     , &shmbuf
+    , &shmbuf
 #endif
     ]() {
-      if (msg_bytes 
+      if (msg_bytes
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
           && !shmbuf.has_value()
 #endif
-      ) {
+      )
+      {
         allocator->deallocate(msg_bytes, allocator->state);
       }
     });
@@ -275,7 +276,7 @@ rmw_ret_t PublisherData::publish(
   if (shm.has_value() && max_data_length >= shm.value().msgsize_threshold) {
     RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled.");
 
-    auto& provider = shm.value().shm_provider;
+    auto & provider = shm.value().shm_provider;
 
     // TODO(yellowhatter): SHM, use alignment based on msgsize_threshold
     z_alloc_alignment_t alignment = {0};
@@ -357,7 +358,7 @@ rmw_ret_t PublisherData::publish_serialized_message(
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   , std::optional<ShmContext> & /*shm_provider*/
 #endif
-  )
+)
 {
   eprosima::fastcdr::FastBuffer buffer(
     reinterpret_cast<char *>(serialized_message->buffer), serialized_message->buffer_length);

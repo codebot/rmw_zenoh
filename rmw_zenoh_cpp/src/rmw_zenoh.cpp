@@ -602,7 +602,7 @@ rmw_publish(
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
     , context_impl->shm()
 #endif
-    );
+  );
 }
 
 //==============================================================================
@@ -712,7 +712,7 @@ rmw_publish_serialized_message(
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
     , context_impl->shm()
 #endif
-    );
+  );
 }
 
 //==============================================================================

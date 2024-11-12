@@ -20,13 +20,13 @@ namespace rmw_zenoh_cpp
 {
 ///=============================================================================
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-    struct ShmContext
-    {
-      z_owned_shm_provider_t shm_provider;
-      size_t msgsize_threshold;
+struct ShmContext
+{
+  z_owned_shm_provider_t shm_provider;
+  size_t msgsize_threshold;
 
-      ~ShmContext();
-    };
+  ~ShmContext();
+};
 #endif
 }  // namespace rmw_zenoh_cpp
 

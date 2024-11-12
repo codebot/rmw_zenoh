@@ -95,7 +95,7 @@ rmw_context_impl_s::Data::Data(
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   , std::optional<rmw_zenoh_cpp::ShmContext> shm
 #endif
-  )
+)
 : enclave_(std::move(enclave)),
   domain_id_(std::move(domain_id)),
   session_(std::move(session)),
@@ -183,7 +183,7 @@ rmw_ret_t rmw_context_impl_s::Data::shutdown()
   }
 
   z_undeclare_subscriber(z_move(graph_subscriber_));
-  
+
   // Don't touch Zenoh Session if the ROS process is exiting,
   // it will cause panic.
   if (!is_exiting) {
@@ -320,7 +320,7 @@ rmw_context_impl_s::rmw_context_impl_s(
 
     // Read msg size treshold from config
     shm_context.msgsize_threshold = rmw_zenoh_cpp::zenoh_shm_message_size_threshold();
-    
+
     // Create Layout for provider's memory
     // Provider's alignment will be 1 byte as we are going to make only 1-byte aligned allocations
     // TODO(yellowhatter): use zenoh_shm_message_size_threshold as base for alignment
@@ -354,7 +354,7 @@ rmw_context_impl_s::rmw_context_impl_s(
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
     , std::move(shm)
 #endif
-    );
+  );
 
   ret = data_->subscribe_to_ros_graph();
   if (ret != RMW_RET_OK) {
@@ -389,7 +389,7 @@ const z_loaned_session_t * rmw_context_impl_s::session() const
 
 ///=============================================================================
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-std::optional<rmw_zenoh_cpp::ShmContext>& rmw_context_impl_s::shm()
+std::optional<rmw_zenoh_cpp::ShmContext> & rmw_context_impl_s::shm()
 {
   std::lock_guard<std::recursive_mutex> lock(data_->mutex_);
   return data_->shm_;

@@ -55,7 +55,7 @@ public:
   // Note: This is not thread-safe.
   // TODO(Yadunund): Remove this API and instead include a publish() API
   // that handles the shm_provider once the context manages publishers.
-  std::optional<rmw_zenoh_cpp::ShmContext>& shm();
+  std::optional<rmw_zenoh_cpp::ShmContext> & shm();
 #endif
 
   // Get the graph guard condition.
