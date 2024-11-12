@@ -90,19 +90,24 @@ rmw_context_impl_s::Data::Data(
   std::size_t domain_id,
   const std::string & enclave,
   z_owned_session_t session,
-  std::optional<z_owned_shm_provider_t> shm_provider,
   const std::string & liveliness_str,
-  std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache)
+  std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+  , std::optional<rmw_zenoh_cpp::ShmContext> shm
+#endif
+  )
 : enclave_(std::move(enclave)),
   domain_id_(std::move(domain_id)),
   session_(std::move(session)),
-  shm_provider_(std::move(shm_provider)),
   liveliness_str_(std::move(liveliness_str)),
   graph_cache_(std::move(graph_cache)),
   is_shutdown_(false),
   next_entity_id_(0),
   is_initialized_(false),
   nodes_({})
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+  , shm_(shm)
+#endif
 {
   graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
   graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
@@ -178,14 +183,18 @@ rmw_ret_t rmw_context_impl_s::Data::shutdown()
   }
 
   z_undeclare_subscriber(z_move(graph_subscriber_));
-  if (shm_provider_.has_value()) {
-    z_drop(z_move(shm_provider_.value()));
-  }
+  
   // Don't touch Zenoh Session if the ROS process is exiting,
   // it will cause panic.
   if (!is_exiting) {
     z_close(z_loan_mut(session_), NULL);
   }
+
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+  // drop SHM subsystem if used
+  shm_ = std::nullopt;
+#endif
+
   is_shutdown_ = true;
   return RMW_RET_OK;
 }
@@ -213,14 +222,6 @@ rmw_context_impl_s::rmw_context_impl_s(
   {
     throw std::runtime_error("Error configuring Zenoh session.");
   }
-
-  // Check if shm is enabled.
-  z_owned_string_t shm_enabled;
-  zc_config_get_from_str(z_loan(config), Z_CONFIG_SHARED_MEMORY_KEY, &shm_enabled);
-  auto always_free_shm_enabled = rcpputils::make_scope_exit(
-    [&shm_enabled]() {
-      z_drop(z_move(shm_enabled));
-    });
 
   // Initialize the zenoh session.
   z_owned_session_t session;
@@ -309,40 +310,51 @@ rmw_context_impl_s::rmw_context_impl_s(
   }
   z_drop(z_move(handler));
 
-  // Initialize the shm manager if shared_memory is enabled in the config.
-  std::optional<z_owned_shm_provider_t> shm_provider = std::nullopt;
-  if (strncmp(z_string_data(z_loan(shm_enabled)), "true", z_string_len(z_loan(shm_enabled))) == 0) {
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+  // Initialize the shm subsystem if shared_memory is enabled in the config
+  std::optional<rmw_zenoh_cpp::ShmContext> shm;
+  if (rmw_zenoh_cpp::zenoh_shm_enabled()) {
     RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled");
 
-    // TODO(yuyuan): determine the default alignment of SHM
-    z_alloc_alignment_t alignment = {5};
-    z_owned_memory_layout_t layout;
-    z_memory_layout_new(&layout, SHM_BUFFER_SIZE_MB * 1024 * 1024, alignment);
+    rmw_zenoh_cpp::ShmContext shm_context;
 
-    z_owned_shm_provider_t provider;
-    if (z_posix_shm_provider_new(&provider, z_loan(layout)) != Z_OK) {
-      RMW_ZENOH_LOG_ERROR_NAMED("rmw_zenoh_cpp", "Unable to create a SHM provider.");
-      throw std::runtime_error("Unable to create shm manager.");
+    // Read msg size treshold from config
+    shm_context.msgsize_threshold = rmw_zenoh_cpp::zenoh_shm_message_size_threshold();
+    
+    // Create Layout for provider's memory
+    // Provider's alignment will be 1 byte as we are going to make only 1-byte aligned allocations
+    // TODO(yellowhatter): use zenoh_shm_message_size_threshold as base for alignment
+    z_alloc_alignment_t alignment = {0};
+    z_owned_memory_layout_t layout;
+    if (z_memory_layout_new(&layout, rmw_zenoh_cpp::zenoh_shm_alloc_size(), alignment) != Z_OK) {
+      throw std::runtime_error("Unable to create a Layout for SHM provider.");
     }
-    shm_provider = provider;
+    // Create SHM provider
+    const auto provider_creation_result =
+      z_posix_shm_provider_new(&shm_context.shm_provider, z_loan(layout));
+    z_drop(z_move(layout));
+    if (provider_creation_result != Z_OK) {
+      throw std::runtime_error("Unable to create an SHM provider.");
+    }
+    // Upon successful provider creation, store it in the context
+    shm = std::make_optional(std::move(shm_context));
+  } else {
+    RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is disabled");
   }
-  auto free_shm_provider = rcpputils::make_scope_exit(
-    [&shm_provider]() {
-      if (shm_provider.has_value()) {
-        z_drop(z_move(shm_provider.value()));
-      }
-    });
+#endif
 
   close_session.cancel();
-  free_shm_provider.cancel();
 
   data_ = std::make_shared<Data>(
     domain_id,
     std::move(enclave),
     std::move(session),
-    std::move(shm_provider),
     std::move(liveliness_str),
-    std::move(graph_cache));
+    std::move(graph_cache)
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+    , std::move(shm)
+#endif
+    );
 
   ret = data_->subscribe_to_ros_graph();
   if (ret != RMW_RET_OK) {
@@ -376,11 +388,13 @@ const z_loaned_session_t * rmw_context_impl_s::session() const
 }
 
 ///=============================================================================
-std::optional<z_owned_shm_provider_t> & rmw_context_impl_s::shm_provider()
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+std::optional<rmw_zenoh_cpp::ShmContext>& rmw_context_impl_s::shm()
 {
   std::lock_guard<std::recursive_mutex> lock(data_->mutex_);
-  return data_->shm_provider_;
+  return data_->shm_;
 }
+#endif
 
 ///=============================================================================
 rmw_guard_condition_t * rmw_context_impl_s::graph_guard_condition()
