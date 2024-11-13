@@ -95,7 +95,7 @@ void client_data_drop(void * data)
   if (client_data == nullptr) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Unable to obtain client_data_t "
+      "Unable to obtain client_data_t from data in client_data_drop."
     );
     return;
   }
@@ -568,7 +568,13 @@ void ClientData::decrement_in_flight_and_conditionally_remove()
 
   if (is_shutdown_ && num_in_flight_ == 0) {
     rmw_context_impl_s * context_impl = static_cast<rmw_context_impl_s *>(rmw_node_->data);
+    if (context_impl == nullptr) {
+      return;
+    }
     std::shared_ptr<rmw_zenoh_cpp::NodeData> node_data = context_impl->get_node_data(rmw_node_);
+    if (node_data == nullptr) {
+      return;
+    }
     node_data->delete_client_data(rmw_client_);
   }
 }
