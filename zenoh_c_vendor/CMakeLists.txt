@@ -17,7 +17,7 @@ find_package(ament_cmake_vendor_package REQUIRED)
 # when expanded.
 set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=zenoh/transport_compression zenoh/transport_tcp zenoh/transport_tls")
 
-set(RMW_ZENOH_BUILD_WITH_SHARED_MEMORY OFF CACHE BOOL "Compile Zenoh RMW with Shared Memory support")
+set(RMW_ZENOH_BUILD_WITH_SHARED_MEMORY ON CACHE BOOL "Compile Zenoh RMW with Shared Memory support")
 
 # Set VCS_VERSION to include latest changes from zenoh-c to benefit from :
 # - https://github.com/eclipse-zenoh/zenoh-c/pull/340 (fix build issue)
