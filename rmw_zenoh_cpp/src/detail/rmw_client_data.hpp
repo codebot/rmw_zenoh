@@ -49,6 +49,7 @@ public:
   static std::shared_ptr<ClientData> make(
     z_session_t session,
     const rmw_node_t * const node,
+    const rmw_client_t * client,
     liveliness::NodeInfo node_info,
     std::size_t node_id,
     std::size_t service_id,
@@ -79,21 +80,26 @@ public:
     const void * ros_request,
     int64_t * sequence_id);
 
+  // Set a callback to be called when events happen.
   void set_on_new_response_callback(
     rmw_event_callback_t callback,
     const void * user_data);
 
-  // rmw_wait helpers.
+  // Check if there is data in the queue, and if not attach the wait set condition variable.
   bool queue_has_data_and_attach_condition_if_not(
     rmw_wait_set_data_t * wait_set_data);
 
+  // Detach any attached wait set condition variable, and return whether there is data in the queue.
   bool detach_condition_and_queue_is_empty();
-
-  // See the comment for "num_in_flight" below on the use of this method.
-  void decrement_queries_in_flight();
 
   // Shutdown this ClientData.
   rmw_ret_t shutdown();
+
+  // Shutdown this ClientData, and return whether there are any requests currently in flight.
+  bool shutdown_and_query_in_flight();
+
+  // Decrement the in flight requests, and if that drops to 0 remove the client from the node.
+  void decrement_in_flight_and_conditionally_remove();
 
   // Check if this ClientData is shutdown.
   bool is_shutdown() const;
@@ -105,6 +111,7 @@ private:
   // Constructor.
   ClientData(
     const rmw_node_t * rmw_node,
+    const rmw_client_t * client,
     std::shared_ptr<liveliness::Entity> entity,
     const void * request_type_support_impl,
     const void * response_type_support_impl,
@@ -114,10 +121,14 @@ private:
   // Initialize the Zenoh objects for this entity.
   bool init(z_session_t session);
 
+  // Shutdown this client (the mutex is expected to be held by the caller).
+  void _shutdown();
+
   // Internal mutex.
-  mutable std::mutex mutex_;
+  mutable std::recursive_mutex mutex_;
   // The parent node.
   const rmw_node_t * rmw_node_;
+  const rmw_client_t * rmw_client_;
   // The Entity generated for the service.
   std::shared_ptr<liveliness::Entity> entity_;
   // An owned keyexpression.
@@ -139,6 +150,7 @@ private:
   size_t sequence_number_;
   // Shutdown flag.
   bool is_shutdown_;
+  size_t num_in_flight_;
 };
 using ClientDataPtr = std::shared_ptr<ClientData>;
 using ClientDataConstPtr = std::shared_ptr<const ClientData>;

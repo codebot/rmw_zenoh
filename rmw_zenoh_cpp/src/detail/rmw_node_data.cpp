@@ -347,6 +347,7 @@ bool NodeData::create_client_data(
   auto client_data = ClientData::make(
     std::move(session),
     node_,
+    client,
     entity_->node_info(),
     id_,
     std::move(id),
@@ -387,10 +388,9 @@ void NodeData::delete_client_data(const rmw_client_t * const client)
   if (client_it == clients_.end()) {
     return;
   }
-  // Shutdown the client, then erase it.  The code in rmw_client_data.cpp is careful about keeping
-  // it alive as long as necessary.
-  client_it->second->shutdown();
-  clients_.erase(client);
+  if (!client_it->second->shutdown_and_query_in_flight()) {
+    clients_.erase(client);
+  }
 }
 
 ///=============================================================================
