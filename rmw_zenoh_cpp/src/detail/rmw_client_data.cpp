@@ -532,7 +532,7 @@ rmw_ret_t ClientData::shutdown()
 {
   rmw_ret_t ret = RMW_RET_OK;
   std::lock_guard<std::mutex> lock(mutex_);
-  if (is_shutdown_ || !initialized_) {
+  if (is_shutdown_) {
     return ret;
   }
 
@@ -545,7 +545,6 @@ rmw_ret_t ClientData::shutdown()
   }
 
   is_shutdown_ = true;
-  initialized_ = false;
   return RMW_RET_OK;
 }
 
