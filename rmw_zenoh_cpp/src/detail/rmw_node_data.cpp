@@ -402,56 +402,6 @@ rmw_ret_t NodeData::shutdown()
     return ret;
   }
 
-  // Shutdown all the entities within this node.
-  for (auto pub_it = pubs_.begin(); pub_it != pubs_.end(); ++pub_it) {
-    ret = pub_it->second->shutdown();
-    if (ret != RMW_RET_OK) {
-      RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to shutdown publisher %s within id %zu. rmw_ret_t code: %zu.",
-        pub_it->second->topic_info().name_.c_str(),
-        id_,
-        ret
-      );
-    }
-  }
-  for (auto sub_it = subs_.begin(); sub_it != subs_.end(); ++sub_it) {
-    ret = sub_it->second->shutdown();
-    if (ret != RMW_RET_OK) {
-      RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to shutdown subscription %s within id %zu. rmw_ret_t code: %zu.",
-        sub_it->second->topic_info().name_.c_str(),
-        id_,
-        ret
-      );
-    }
-  }
-  for (auto srv_it = services_.begin(); srv_it != services_.end(); ++srv_it) {
-    ret = srv_it->second->shutdown();
-    if (ret != RMW_RET_OK) {
-      RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to shutdown service %s within id %zu. rmw_ret_t code: %zu.",
-        srv_it->second->topic_info().name_.c_str(),
-        id_,
-        ret
-      );
-    }
-  }
-  for (auto cli_it = clients_.begin(); cli_it != clients_.end(); ++cli_it) {
-    ret = cli_it->second->shutdown();
-    if (ret != RMW_RET_OK) {
-      RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to shutdown client %s within id %zu. rmw_ret_t code: %zu.",
-        cli_it->second->topic_info().name_.c_str(),
-        id_,
-        ret
-      );
-    }
-  }
-
   // Unregister this node from the ROS graph.
   zc_liveliness_undeclare_token(z_move(token_));
 
