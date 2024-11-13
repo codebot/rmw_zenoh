@@ -223,8 +223,11 @@ PublisherData::PublisherData(
 
 ///=============================================================================
 rmw_ret_t PublisherData::publish(
-  const void * ros_message,
-  std::optional<z_owned_shm_provider_t> & shm_provider)
+  const void * ros_message
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+  , std::optional<ShmContext> & shm
+#endif
+)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   if (is_shutdown_) {
@@ -233,12 +236,14 @@ rmw_ret_t PublisherData::publish(
   }
 
   // Serialize data.
-  size_t max_data_length = type_support_->get_estimated_serialized_size(
+  const size_t max_data_length = type_support_->get_estimated_serialized_size(
     ros_message,
     type_support_impl_);
 
   // To store serialized message byte array.
   char * msg_bytes = nullptr;
+
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   std::optional<z_owned_shm_mut_t> shmbuf = std::nullopt;
   auto always_free_shmbuf = rcpputils::make_scope_exit(
     [&shmbuf]() {
@@ -246,24 +251,36 @@ rmw_ret_t PublisherData::publish(
         z_drop(z_move(shmbuf.value()));
       }
     });
+#endif
 
   rcutils_allocator_t * allocator = &rmw_node_->context->options.allocator;
 
   auto always_free_msg_bytes = rcpputils::make_scope_exit(
-    [&msg_bytes, allocator, &shmbuf]() {
-      if (msg_bytes && !shmbuf.has_value()) {
+    [&msg_bytes, allocator
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+    , &shmbuf
+#endif
+    ]() {
+      if (msg_bytes
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+      && !shmbuf.has_value()
+#endif
+      )
+      {
         allocator->deallocate(msg_bytes, allocator->state);
       }
     });
 
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   // Get memory from SHM buffer if available.
-  if (shm_provider.has_value()) {
+  if (shm.has_value() && max_data_length >= shm.value().msgsize_threshold) {
     RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled.");
 
-    auto provider = shm_provider.value();
+    auto & provider = shm.value().shm_provider;
+
+    // TODO(yellowhatter): SHM, use alignment based on msgsize_threshold
+    z_alloc_alignment_t alignment = {0};
     z_buf_layout_alloc_result_t alloc;
-    // TODO(yuyuan): SHM, configure this
-    z_alloc_alignment_t alignment = {5};
     z_shm_provider_alloc_gc_defrag_blocking(&alloc, z_loan(provider), SHM_BUF_OK_SIZE, alignment);
 
     if (alloc.status == ZC_BUF_LAYOUT_ALLOC_STATUS_OK) {
@@ -275,11 +292,14 @@ rmw_ret_t PublisherData::publish(
       return RMW_RET_ERROR;
     }
   } else {
-    // Get memory from the allocator.
-    msg_bytes = static_cast<char *>(allocator->allocate(max_data_length, allocator->state));
-    RMW_CHECK_FOR_NULL_WITH_MSG(
-      msg_bytes, "bytes for message is null", return RMW_RET_BAD_ALLOC);
-  }
+#endif
+  // Get memory from the allocator.
+  msg_bytes = static_cast<char *>(allocator->allocate(max_data_length, allocator->state));
+  RMW_CHECK_FOR_NULL_WITH_MSG(
+    msg_bytes, "bytes for message is null", return RMW_RET_BAD_ALLOC);
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+}
+#endif
 
   // Object that manages the raw buffer
   eprosima::fastcdr::FastBuffer fastbuffer(msg_bytes, max_data_length);
@@ -309,11 +329,15 @@ rmw_ret_t PublisherData::publish(
   options.attachment = z_move(attachment);
 
   z_owned_bytes_t payload;
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   if (shmbuf.has_value()) {
     z_bytes_from_shm_mut(&payload, z_move(shmbuf.value()));
   } else {
-    z_bytes_copy_from_buf(&payload, reinterpret_cast<const uint8_t *>(msg_bytes), data_length);
-  }
+#endif
+  z_bytes_copy_from_buf(&payload, reinterpret_cast<const uint8_t *>(msg_bytes), data_length);
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+}
+#endif
 
   z_result_t res = z_publisher_put(z_loan(pub_), z_move(payload), &options);
   if (res != Z_OK) {
@@ -332,8 +356,11 @@ rmw_ret_t PublisherData::publish(
 
 ///=============================================================================
 rmw_ret_t PublisherData::publish_serialized_message(
-  const rmw_serialized_message_t * serialized_message,
-  std::optional<z_owned_shm_provider_t> & /*shm_provider*/)
+  const rmw_serialized_message_t * serialized_message
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+  , std::optional<ShmContext> & /*shm_provider*/
+#endif
+)
 {
   eprosima::fastcdr::FastBuffer buffer(
     reinterpret_cast<char *>(serialized_message->buffer), serialized_message->buffer_length);
