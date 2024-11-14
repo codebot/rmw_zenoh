@@ -145,11 +145,15 @@ bool zenoh_shm_enabled()
     return zenoh_shm_enabled_default;
   }
 
-  if (strlen(envar_value) == strlen("true") && strncmp(envar_value, "true", strlen(envar_value)) == 0) {
+  if (strlen(envar_value) == strlen("true") &&
+    strncmp(envar_value, "true", strlen(envar_value)) == 0)
+  {
     return true;
   }
 
-  if (strlen(envar_value) == strlen("false") && strncmp(envar_value, "false", strlen(envar_value)) == 0) {
+  if (strlen(envar_value) == strlen("false") &&
+    strncmp(envar_value, "false", strlen(envar_value)) == 0)
+  {
     return false;
   }
 

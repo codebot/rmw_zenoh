@@ -18,6 +18,24 @@ namespace rmw_zenoh_cpp
 {
 ///=============================================================================
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+ShmContext::ShmContext(ShmContext && other)
+: shm_provider(other.shm_provider),
+  msgsize_threshold(other.msgsize_threshold)
+{
+  ::z_internal_null(&other.shm_provider);
+}
+
+ShmContext & ShmContext::operator=(ShmContext && other)
+{
+  if (this != &other) {
+    ::z_drop(::z_move(shm_provider));
+    shm_provider = other.shm_provider;
+    ::z_internal_null(&other.shm_provider);
+    msgsize_threshold = other.msgsize_threshold;
+  }
+  return *this;
+}
+
 ShmContext::~ShmContext()
 {
   z_drop(z_move(shm_provider));

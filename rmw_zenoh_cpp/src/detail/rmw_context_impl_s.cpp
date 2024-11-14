@@ -106,7 +106,7 @@ rmw_context_impl_s::Data::Data(
   is_initialized_(false),
   nodes_({})
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-  , shm_(shm)
+  , shm_(std::move(shm))
 #endif
 {
   graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
