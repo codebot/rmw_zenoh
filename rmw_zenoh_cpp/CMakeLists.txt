@@ -49,6 +49,7 @@ add_library(rmw_zenoh_cpp SHARED
   src/detail/type_support.cpp
   src/detail/type_support_common.cpp
   src/detail/zenoh_config.cpp
+  src/detail/zenoh_router_check.cpp
   src/detail/zenoh_utils.cpp
   src/rmw_event.cpp
   src/rmw_get_network_flow_endpoints.cpp

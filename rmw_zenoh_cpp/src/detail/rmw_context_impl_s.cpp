@@ -32,6 +32,7 @@
 #include "logging_macros.hpp"
 #include "rmw_node_data.hpp"
 #include "zenoh_config.hpp"
+#include "zenoh_router_check.hpp"
 
 #include "rcpputils/scope_exit.hpp"
 #include "rmw/error_handling.h"
@@ -93,29 +94,26 @@ public:
         z_close(z_move(session_));
       });
 
+    // TODO(Yadunund) Move this check into a separate thread.
     // Verify if the zenoh router is running if configured.
-    int context = 0;
-    auto router_callback = [](const struct z_id_t * id, void * ctx) {
-        const std::string id_str = rmw_zenoh_cpp::liveliness::zid_to_str(*id);
-        RMW_ZENOH_LOG_INFO_NAMED(
-          "rmw_zenoh_cpp",
-          "Successfully connected to a Zenoh router with id %s.", id_str.c_str());
-        // Note: Callback is guaranteed to never be called
-        // concurrently according to z_info_routers_zid docstring
-        (*(static_cast<int *>(ctx)))++;
-      };
-
-    z_owned_closure_zid_t router_closure = z_closure(router_callback, nullptr /* drop */, &context);
-    if (z_info_routers_zid(z_loan(session_), z_move(router_closure))) {
-      throw std::runtime_error("Failed to evaluate if Zenoh routers are connected to the session.");
-    }
-
-    if (context == 0) {
-      // There were no routers. This isn't fatal, as they can be started later, but warn the user.
-      RMW_ZENOH_LOG_WARN_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to connect to a Zenoh router. "
-        "Have you started a router with `ros2 run rmw_zenoh_cpp rmw_zenohd`?");
+    const std::optional<uint64_t> configured_connection_attempts =
+      rmw_zenoh_cpp::zenoh_router_check_attempts();
+    if (configured_connection_attempts.has_value()) {
+      ret = RMW_RET_ERROR;
+      uint64_t connection_attempts = 0;
+      // Retry until the connection is successful.
+      while (ret != RMW_RET_OK && connection_attempts < configured_connection_attempts.value()) {
+        if ((ret = rmw_zenoh_cpp::zenoh_router_check(z_loan(session_))) != RMW_RET_OK) {
+          ++connection_attempts;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+      if (ret != RMW_RET_OK) {
+        throw std::runtime_error(
+                "Unable to connect to a Zenoh router after " +
+                std::to_string(configured_connection_attempts.value()) +
+                " retries.");
+      }
     }
 
     // Initialize the graph cache.
