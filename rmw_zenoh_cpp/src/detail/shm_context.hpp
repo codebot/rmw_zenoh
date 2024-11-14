@@ -15,6 +15,7 @@
 #ifndef DETAIL__SHM_CONTEXT_HPP_
 #define DETAIL__SHM_CONTEXT_HPP_
 
+#include <zenoh.h>
 
 namespace rmw_zenoh_cpp
 {

@@ -145,14 +145,17 @@ bool zenoh_shm_enabled()
     return zenoh_shm_enabled_default;
   }
 
-  if (strncmp(envar_value, "false", strlen(envar_value)) == 0) {
-    return false;
-  }
-
-  if (strncmp(envar_value, "true", strlen(envar_value)) == 0) {
+  if (strlen(envar_value) == strlen("true") && strncmp(envar_value, "true", strlen(envar_value)) == 0) {
     return true;
   }
 
+  if (strlen(envar_value) == strlen("false") && strncmp(envar_value, "false", strlen(envar_value)) == 0) {
+    return false;
+  }
+
+  RMW_ZENOH_LOG_ERROR_NAMED(
+    "rmw_zenoh_cpp", "Envar %s is invalid. Use the default value and report this bug.",
+    zenoh_shm_enabled_envar);
   return zenoh_shm_enabled_default;
 }
 ///=============================================================================
