@@ -50,13 +50,11 @@ public:
   // create other Zenoh objects.
   const z_loaned_session_t * session() const;
 
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-  // Get a reference to the shm subsystem.
+  // Get a reference to the shm_provider.
   // Note: This is not thread-safe.
   // TODO(Yadunund): Remove this API and instead include a publish() API
   // that handles the shm_provider once the context manages publishers.
-  std::optional<rmw_zenoh_cpp::ShmContext> & shm();
-#endif
+  std::optional<z_owned_shm_provider_t> & shm_provider();
 
   // Get the graph guard condition.
   rmw_guard_condition_t * graph_guard_condition();
@@ -105,12 +103,9 @@ private:
       std::size_t domain_id,
       const std::string & enclave,
       z_owned_session_t session,
+      std::optional<z_owned_shm_provider_t> shm_provider,
       const std::string & liveliness_str,
-      std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-      , std::optional<rmw_zenoh_cpp::ShmContext> shm
-#endif
-    );
+      std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache);
 
     // Subscribe to the ROS graph.
     rmw_ret_t subscribe_to_ros_graph();
@@ -131,6 +126,9 @@ private:
     std::size_t domain_id_;
     // An owned session.
     z_owned_session_t session_;
+    // An optional SHM manager that is initialized of SHM is enabled in the
+    // zenoh session config.
+    std::optional<z_owned_shm_provider_t> shm_provider_;
     // Liveliness keyexpr string to subscribe to for ROS graph changes.
     std::string liveliness_str_;
     // Graph cache.
@@ -150,11 +148,6 @@ private:
     bool is_initialized_;
     // Nodes created from this context.
     std::unordered_map<const rmw_node_t *, std::shared_ptr<rmw_zenoh_cpp::NodeData>> nodes_;
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-    // An optional SHM context that is initialized if SHM is enabled in the
-    // zenoh session config.
-    std::optional<rmw_zenoh_cpp::ShmContext> shm_;
-#endif
   };
 
   std::shared_ptr<Data> data_{nullptr};

@@ -34,7 +34,6 @@
 #include "message_type_support.hpp"
 #include "attachment_helpers.hpp"
 #include "type_support_common.hpp"
-#include "shm_context.hpp"
 
 #include "rcutils/allocator.h"
 
@@ -75,11 +74,8 @@ public:
 
   // Publish a ROS message.
   rmw_ret_t publish(
-    const void * ros_message
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-    , std::optional<ShmContext> & shm
-#endif
-  );
+    const void * ros_message,
+    std::optional<z_owned_shm_provider_t> & shm_provider);
 
   // Get a copy of the keyexpr_hash of this SubscriptionData's liveliness::Entity.
   std::size_t keyexpr_hash() const;
