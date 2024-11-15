@@ -281,7 +281,7 @@ rmw_ret_t PublisherData::publish(
     // TODO(yellowhatter): SHM, use alignment based on msgsize_threshold
     z_alloc_alignment_t alignment = {0};
     z_buf_layout_alloc_result_t alloc;
-    z_shm_provider_alloc_gc_defrag_blocking(&alloc, z_loan(provider), SHM_BUF_OK_SIZE, alignment);
+    z_shm_provider_alloc_gc_defrag_blocking(&alloc, z_loan(provider), max_data_length, alignment);
 
     if (alloc.status == ZC_BUF_LAYOUT_ALLOC_STATUS_OK) {
       shmbuf = std::make_optional(alloc.buf);

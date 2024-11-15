@@ -11,7 +11,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-set(RMW_ZENOH_BUILD_WITH_SHARED_MEMORY ON CACHE BOOL "Compile Zenoh RMW with Shared Memory support")
+set(RMW_ZENOH_BUILD_WITH_SHARED_MEMORY TRUE CACHE BOOL "Compile Zenoh RMW with Shared Memory support")
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
@@ -85,7 +85,7 @@ target_compile_definitions(rmw_zenoh_cpp
 
 if(${RMW_ZENOH_BUILD_WITH_SHARED_MEMORY})
   target_compile_definitions(rmw_zenoh_cpp
-    PRIVATE
+    PUBLIC
       RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   )
 endif()

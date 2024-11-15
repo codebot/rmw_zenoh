@@ -26,7 +26,7 @@ struct ShmContext
   z_owned_shm_provider_t shm_provider;
   size_t msgsize_threshold;
 
-  ShmContext();
+  ShmContext(size_t alloc_size, size_t msgsize_threshold);
   ShmContext(ShmContext && other);
 
   ShmContext & operator=(ShmContext && other);

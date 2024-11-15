@@ -157,9 +157,6 @@ bool zenoh_shm_enabled()
     return false;
   }
 
-  RMW_ZENOH_LOG_ERROR_NAMED(
-    "rmw_zenoh_cpp", "Envar %s is invalid. Use the default value and report this bug.",
-    zenoh_shm_enabled_envar);
   return zenoh_shm_enabled_default;
 }
 ///=============================================================================

@@ -316,28 +316,10 @@ rmw_context_impl_s::rmw_context_impl_s(
   if (rmw_zenoh_cpp::zenoh_shm_enabled()) {
     RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled");
 
-    rmw_zenoh_cpp::ShmContext shm_context;
-
-    // Read msg size treshold from config
-    shm_context.msgsize_threshold = rmw_zenoh_cpp::zenoh_shm_message_size_threshold();
-
-    // Create Layout for provider's memory
-    // Provider's alignment will be 1 byte as we are going to make only 1-byte aligned allocations
-    // TODO(yellowhatter): use zenoh_shm_message_size_threshold as base for alignment
-    z_alloc_alignment_t alignment = {0};
-    z_owned_memory_layout_t layout;
-    if (z_memory_layout_new(&layout, rmw_zenoh_cpp::zenoh_shm_alloc_size(), alignment) != Z_OK) {
-      throw std::runtime_error("Unable to create a Layout for SHM provider.");
-    }
-    // Create SHM provider
-    const auto provider_creation_result =
-      z_posix_shm_provider_new(&shm_context.shm_provider, z_loan(layout));
-    z_drop(z_move(layout));
-    if (provider_creation_result != Z_OK) {
-      throw std::runtime_error("Unable to create an SHM provider.");
-    }
-    // Upon successful provider creation, store it in the context
-    shm = std::make_optional(std::move(shm_context));
+    shm = std::make_optional(rmw_zenoh_cpp::ShmContext(
+      rmw_zenoh_cpp::zenoh_shm_alloc_size(),
+      rmw_zenoh_cpp::zenoh_shm_message_size_threshold()
+    ));
   } else {
     RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is disabled");
   }
