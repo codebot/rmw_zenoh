@@ -64,7 +64,7 @@ public:
   liveliness::TopicInfo topic_info() const;
 
   // Copy the GID of this PublisherData into an rmw_gid_t.
-  void copy_gid(rmw_gid_t * gid) const;
+  void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
 
   // Get the events manager of this PublisherData.
   std::shared_ptr<EventsManager> events_mgr() const;
