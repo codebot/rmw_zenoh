@@ -330,6 +330,7 @@ rmw_ret_t PublisherData::publish(
 
   z_owned_bytes_t payload;
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+  always_free_shmbuf.cancel();
   if (shmbuf.has_value()) {
     z_bytes_from_shm_mut(&payload, z_move(shmbuf.value()));
   } else {
@@ -358,7 +359,7 @@ rmw_ret_t PublisherData::publish(
 rmw_ret_t PublisherData::publish_serialized_message(
   const rmw_serialized_message_t * serialized_message
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-  , std::optional<ShmContext> & /*shm_provider*/
+  , std::optional<ShmContext> & shm
 #endif
 )
 {
@@ -387,8 +388,35 @@ rmw_ret_t PublisherData::publish_serialized_message(
 
   options.attachment = z_move(attachment);
 
+
   z_owned_bytes_t payload;
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+  // Get memory from SHM buffer if available.
+  if (shm.has_value() && data_length >= shm.value().msgsize_threshold) {
+    RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled.");
+
+    auto & provider = shm.value().shm_provider;
+
+    // TODO(yellowhatter): SHM, use alignment based on msgsize_threshold
+    z_alloc_alignment_t alignment = {0};
+    z_buf_layout_alloc_result_t alloc;
+    z_shm_provider_alloc_gc_defrag_blocking(&alloc, z_loan(provider), data_length, alignment);
+
+    if (alloc.status == ZC_BUF_LAYOUT_ALLOC_STATUS_OK) {
+      auto msg_bytes = reinterpret_cast<char *>(z_shm_mut_data_mut(z_loan_mut(alloc.buf)));
+      std::memcpy(msg_bytes, serialized_message->buffer, data_length);
+      z_bytes_from_shm_mut(&payload, z_move(alloc.buf));
+    } else {
+      // TODO(Yadunund): Should we revert to regular allocation and not return an error?
+      RMW_SET_ERROR_MSG("Failed to allocate a SHM buffer, even after GCing.");
+      return RMW_RET_ERROR;
+    }
+  } else {
+#endif
   z_bytes_copy_from_buf(&payload, serialized_message->buffer, data_length);
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+}
+#endif
 
   z_result_t res = z_publisher_put(z_loan(pub_), z_move(payload), &options);
   if (res != Z_OK) {
