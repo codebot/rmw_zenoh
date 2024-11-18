@@ -322,7 +322,7 @@ void NodeData::delete_service_data(const rmw_service_t * const service)
 ///=============================================================================
 bool NodeData::create_client_data(
   const rmw_client_t * const client,
-  z_session_t session,
+  const z_loaned_session_t * session,
   std::size_t id,
   const std::string & service_name,
   const rosidl_service_type_support_t * type_supports,

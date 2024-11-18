@@ -99,7 +99,7 @@ public:
   // Create a new ClientData for a given rmw_client_t.
   bool create_client_data(
     const rmw_client_t * const client,
-    z_session_t session,
+    const z_loaned_session_t * session,
     std::size_t id,
     const std::string & service_name,
     const rosidl_service_type_support_t * type_support,

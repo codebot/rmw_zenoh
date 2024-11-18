@@ -19,24 +19,19 @@
 #include <chrono>
 #include <cinttypes>
 #include <cstring>
-#include <memory>
 #include <mutex>
-#include <optional>
 #include <string>
 #include <utility>
 
-#include "detail/attachment_helpers.hpp"
 #include "detail/cdr.hpp"
 #include "detail/guard_condition.hpp"
 #include "detail/identifier.hpp"
+#include "detail/logging.hpp"
 #include "detail/liveliness_utils.hpp"
-#include "detail/logging_macros.hpp"
 #include "detail/message_type_support.hpp"
-#include "detail/qos.hpp"
 #include "detail/rmw_context_impl_s.hpp"
 #include "detail/serialization_format.hpp"
 #include "detail/type_support_common.hpp"
-#include "detail/zenoh_utils.hpp"
 
 #include "rcpputils/scope_exit.hpp"
 #include "rcutils/strdup.h"
@@ -46,6 +41,7 @@
 #include "rmw/impl/cpp/macros.hpp"
 #include "rmw/ret_types.h"
 #include "rmw/rmw.h"
+#include "rmw/types.h"
 #include "rmw/validate_namespace.h"
 #include "rmw/validate_node_name.h"
 

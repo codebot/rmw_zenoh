@@ -22,21 +22,14 @@
 #include <deque>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <string>
 #include <unordered_map>
 
 #include "event.hpp"
 #include "liveliness_utils.hpp"
-#include "message_type_support.hpp"
 #include "service_type_support.hpp"
-#include "type_support_common.hpp"
 #include "zenoh_utils.hpp"
-#include "rmw_data_types.hpp"
 
-#include "rcutils/allocator.h"
-
-#include "rmw/rmw.h"
 #include "rmw/ret_types.h"
 
 namespace rmw_zenoh_cpp

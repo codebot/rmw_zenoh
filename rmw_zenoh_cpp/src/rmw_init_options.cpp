@@ -16,13 +16,11 @@
 #include <string.h>
 
 #include "detail/identifier.hpp"
-#include "detail/rmw_init_options_impl.hpp"
 
 #include "rcpputils/scope_exit.hpp"
 
 #include "rcutils/allocator.h"
 #include "rcutils/strdup.h"
-#include "rcutils/types.h"
 
 #include "rmw/impl/cpp/macros.hpp"
 #include "rmw/init_options.h"

@@ -22,20 +22,13 @@
 #include <deque>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <string>
-#include <unordered_map>
 
 #include "event.hpp"
 #include "liveliness_utils.hpp"
-#include "message_type_support.hpp"
 #include "service_type_support.hpp"
-#include "type_support_common.hpp"
 #include "zenoh_utils.hpp"
 
-#include "rcutils/allocator.h"
-
-#include "rmw/rmw.h"
 #include "rmw/ret_types.h"
 
 namespace rmw_zenoh_cpp
@@ -47,7 +40,7 @@ class ClientData final : public std::enable_shared_from_this<ClientData>
 public:
   // Make a shared_ptr of ClientData.
   static std::shared_ptr<ClientData> make(
-    z_session_t session,
+    const z_loaned_session_t * session,
     const rmw_node_t * const node,
     const rmw_client_t * client,
     liveliness::NodeInfo node_info,
@@ -59,9 +52,6 @@ public:
 
   // Get a copy of the TopicInfo of this ClientData.
   liveliness::TopicInfo topic_info() const;
-
-  // Returns true if liveliness token is still valid.
-  bool liveliness_is_valid() const;
 
   // Copy the GID of this ClientData into an rmw_gid_t.
   void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
@@ -119,7 +109,7 @@ private:
     std::shared_ptr<ResponseTypeSupport> response_type_support);
 
   // Initialize the Zenoh objects for this entity.
-  bool init(z_session_t session);
+  bool init(const z_loaned_session_t * session);
 
   // Shutdown this client (the mutex is expected to be held by the caller).
   void _shutdown();
