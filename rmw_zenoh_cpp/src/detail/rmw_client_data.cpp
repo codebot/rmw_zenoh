@@ -100,7 +100,7 @@ namespace rmw_zenoh_cpp
 {
 ///=============================================================================
 std::shared_ptr<ClientData> ClientData::make(
-  const z_loaned_session_t * session,
+  const std::shared_ptr<zenoh::Session> & session,
   const rmw_node_t * const node,
   const rmw_client_t * client,
   liveliness::NodeInfo node_info,
@@ -162,7 +162,7 @@ std::shared_ptr<ClientData> ClientData::make(
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
-    z_info_zid(session),
+    session->get_zid(),
     std::to_string(node_id),
     std::to_string(service_id),
     liveliness::EntityType::Client,
@@ -193,7 +193,7 @@ std::shared_ptr<ClientData> ClientData::make(
       response_type_support
     });
 
-  if (!client_data->init(session)) {
+  if (!client_data->init(z_loan(session->_0))) {
     // init() already set the error.
     return nullptr;
   }

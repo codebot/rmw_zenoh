@@ -59,7 +59,7 @@ void service_data_handler(z_loaned_query_t * query, void * data)
 
 ///=============================================================================
 std::shared_ptr<ServiceData> ServiceData::make(
-  const z_loaned_session_t * session,
+  const std::shared_ptr<zenoh::Session> & session,
   const rmw_node_t * const node,
   liveliness::NodeInfo node_info,
   std::size_t node_id,
@@ -120,7 +120,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
-    z_info_zid(session),
+    session->get_zid(),
     std::to_string(node_id),
     std::to_string(service_id),
     liveliness::EntityType::Service,
@@ -170,7 +170,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
       z_undeclare_queryable(z_move(service_data->qable_));
     });
   if (z_declare_queryable(
-      session, &service_data->qable_, z_loan(service_ke),
+      z_loan(session->_0), &service_data->qable_, z_loan(service_ke),
       z_move(callback), &qable_options) != Z_OK)
   {
     RMW_SET_ERROR_MSG("unable to create zenoh queryable");
@@ -190,7 +190,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
       }
     });
   if (zc_liveliness_declare_token(
-      session, &service_data->token_, z_loan(liveliness_ke),
+      z_loan(session->_0), &service_data->token_, z_loan(liveliness_ke),
       NULL) != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(

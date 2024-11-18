@@ -91,7 +91,7 @@ SubscriptionData::Message::~Message()
 
 ///=============================================================================
 std::shared_ptr<SubscriptionData> SubscriptionData::make(
-  const z_loaned_session_t * session,
+  const std::shared_ptr<zenoh::Session> & session,
   std::shared_ptr<GraphCache> graph_cache,
   const rmw_node_t * const node,
   liveliness::NodeInfo node_info,
@@ -133,7 +133,7 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
   // with Zenoh; after this, callbacks may come in at any time.
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
-    z_info_zid(session),
+    session->get_zid(),
     std::to_string(node_id),
     std::to_string(subscription_id),
     liveliness::EntityType::Subscription,

@@ -15,7 +15,7 @@
 #ifndef DETAIL__LIVELINESS_UTILS_HPP_
 #define DETAIL__LIVELINESS_UTILS_HPP_
 
-#include <zenoh.h>
+#include <zenoh.hxx>
 
 #include <cstddef>
 #include <cstdint>
@@ -125,6 +125,14 @@ public:
   /// @param node_info The node information that is required for all entities.
   /// @param topic_info An optional topic information for relevant entities.
   /// @return An entity if all inputs are valid. This way no invalid entities can be created.
+  static EntityPtr make(
+    zenoh::Id zid,
+    const std::string & nid,
+    const std::string & id,
+    EntityType type,
+    NodeInfo node_info,
+    std::optional<TopicInfo> topic_info = std::nullopt);
+
   static EntityPtr make(
     z_id_t zid,
     const std::string & nid,

@@ -30,7 +30,7 @@ namespace rmw_zenoh_cpp
 std::shared_ptr<NodeData> NodeData::make(
   const rmw_node_t * const node,
   std::size_t id,
-  const z_loaned_session_t * session,
+  const std::shared_ptr<zenoh::Session> & session,
   std::size_t domain_id,
   const std::string & namespace_,
   const std::string & node_name,
@@ -38,7 +38,7 @@ std::shared_ptr<NodeData> NodeData::make(
 {
   // Create the entity.
   auto entity = rmw_zenoh_cpp::liveliness::Entity::make(
-    z_info_zid(session),
+    session->get_zid(),
     std::to_string(id),
     std::to_string(id),
     rmw_zenoh_cpp::liveliness::EntityType::Node,
@@ -65,7 +65,7 @@ std::shared_ptr<NodeData> NodeData::make(
     [&token]() {
       z_drop(z_move(token));
     });
-  if (zc_liveliness_declare_token(session, &token, z_loan(liveliness_ke), NULL) != Z_OK) {
+  if (zc_liveliness_declare_token(z_loan(session->_0), &token, z_loan(liveliness_ke), NULL) != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the node.");
@@ -121,7 +121,7 @@ std::size_t NodeData::id() const
 ///=============================================================================
 bool NodeData::create_pub_data(
   const rmw_publisher_t * const publisher,
-  const z_loaned_session_t * session,
+  const std::shared_ptr<zenoh::Session> & session,
   std::size_t id,
   const std::string & topic_name,
   const rosidl_message_type_support_t * type_support,
@@ -143,7 +143,7 @@ bool NodeData::create_pub_data(
   }
 
   auto pub_data = PublisherData::make(
-    std::move(session),
+    session,
     node_,
     entity_->node_info(),
     id_,
@@ -187,7 +187,7 @@ void NodeData::delete_pub_data(const rmw_publisher_t * const publisher)
 ///=============================================================================
 bool NodeData::create_sub_data(
   const rmw_subscription_t * const subscription,
-  const z_loaned_session_t * session,
+  const std::shared_ptr<zenoh::Session> & session,
   std::shared_ptr<GraphCache> graph_cache,
   std::size_t id,
   const std::string & topic_name,
@@ -210,7 +210,7 @@ bool NodeData::create_sub_data(
   }
 
   auto sub_data = SubscriptionData::make(
-    std::move(session),
+    session,
     std::move(graph_cache),
     node_,
     entity_->node_info(),
@@ -255,7 +255,7 @@ void NodeData::delete_sub_data(const rmw_subscription_t * const subscription)
 ///=============================================================================
 bool NodeData::create_service_data(
   const rmw_service_t * const service,
-  const z_loaned_session_t * session,
+  const std::shared_ptr<zenoh::Session> & session,
   std::size_t id,
   const std::string & service_name,
   const rosidl_service_type_support_t * type_supports,
@@ -277,7 +277,7 @@ bool NodeData::create_service_data(
   }
 
   auto service_data = ServiceData::make(
-    std::move(session),
+    session,
     node_,
     entity_->node_info(),
     id_,
@@ -322,7 +322,7 @@ void NodeData::delete_service_data(const rmw_service_t * const service)
 ///=============================================================================
 bool NodeData::create_client_data(
   const rmw_client_t * const client,
-  const z_loaned_session_t * session,
+  const std::shared_ptr<zenoh::Session> & session,
   std::size_t id,
   const std::string & service_name,
   const rosidl_service_type_support_t * type_supports,
@@ -344,7 +344,7 @@ bool NodeData::create_client_data(
   }
 
   auto client_data = ClientData::make(
-    std::move(session),
+    session,
     node_,
     client,
     entity_->node_info(),

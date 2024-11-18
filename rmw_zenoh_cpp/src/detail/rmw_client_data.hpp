@@ -40,7 +40,7 @@ class ClientData final : public std::enable_shared_from_this<ClientData>
 public:
   // Make a shared_ptr of ClientData.
   static std::shared_ptr<ClientData> make(
-    const z_loaned_session_t * session,
+    const std::shared_ptr<zenoh::Session> & session,
     const rmw_node_t * const node,
     const rmw_client_t * client,
     liveliness::NodeInfo node_info,

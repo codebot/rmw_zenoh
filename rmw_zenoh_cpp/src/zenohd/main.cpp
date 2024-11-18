@@ -23,16 +23,14 @@
 #include <signal.h>
 #endif
 
-#include <zenoh.h>
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <zenoh.hxx>
+#include <zenoh/api/session.hxx>
 
 #include "../detail/zenoh_config.hpp"
-#include "../detail/liveliness_utils.hpp"
 
 #include "rmw/error_handling.h"
-
-#include "rcpputils/scope_exit.hpp"
+#include "rcutils/env.h"
 
 static bool running = true;
 static std::mutex run_mutex;
@@ -60,40 +58,36 @@ int main(int argc, char ** argv)
   (void)argc;
   (void)argv;
 
-  // If not already defined, set the logging environment variable for Zenoh router
-  // to info level by default.
-  // TODO(Yadunund): Switch to rcutils_get_env once it supports not overwriting values.
-  if (setenv(ZENOH_LOG_ENV_VAR_STR, ZENOH_LOG_INFO_LEVEL_STR, 0) != 0) {
+  if (!rcutils_set_env_overwrite(ZENOH_LOG_ENV_VAR_STR, ZENOH_LOG_INFO_LEVEL_STR, 0)) {
     RMW_SET_ERROR_MSG("Error configuring Zenoh logging.");
     return 1;
   }
 
   // Enable the zenoh built-in logger
-  zc_try_init_log_from_env();
+  zenoh::try_init_log_from_env();
 
-  // Initialize the zenoh configuration for the router.
-  z_owned_config_t config;
-  if ((rmw_zenoh_cpp::get_z_config(
-      rmw_zenoh_cpp::ConfigurableEntity::Router,
-      &config)) != RMW_RET_OK)
-  {
+  std::optional<zenoh::Config> config = rmw_zenoh_cpp::get_z_config(
+      rmw_zenoh_cpp::ConfigurableEntity::Router);
+
+  if (!config.has_value()) {
     RMW_SET_ERROR_MSG("Error configuring Zenoh router.");
     return 1;
   }
 
-  z_owned_session_t session;
-  if (z_open(&session, z_move(config), NULL) != Z_OK) {
-    printf("Unable to open router session!\n");
-    return 1;
+  zenoh::ZResult result;
+  auto session = zenoh::Session::open(
+      std::move(config.value()),
+      zenoh::Session::SessionOptions::create_default(),
+      &result);
+  if(result != Z_OK) {
+      std::cout << "Error opening Session!" << "\\n";
+      return 1;
   }
-  auto always_close_session = rcpputils::make_scope_exit(
-    [&session]() {
-      z_close(z_loan_mut(session), NULL);
-    });
 
-  printf(
-    "Started Zenoh router with id %s.\n",
-    rmw_zenoh_cpp::liveliness::zid_to_str(z_info_zid(z_session_loan(&session))).c_str());
+  std::cout << "Started Zenoh router with id"
+            << session.get_zid().to_string()
+            << std::endl;
+
 #ifdef _WIN32
   SetConsoleCtrlHandler(quit, TRUE);
 #else

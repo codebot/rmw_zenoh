@@ -41,7 +41,7 @@ class ServiceData final
 public:
   // Make a shared_ptr of ServiceData.
   static std::shared_ptr<ServiceData> make(
-    const z_loaned_session_t * session,
+    const std::shared_ptr<zenoh::Session> & session,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,
     std::size_t node_id,

@@ -77,33 +77,32 @@ public:
     nodes_({})
   {
     // Initialize the zenoh configuration.
-    z_owned_config_t config;
-    rmw_ret_t ret;
-    if ((ret =
-      rmw_zenoh_cpp::get_z_config(
-        rmw_zenoh_cpp::ConfigurableEntity::Session,
-        &config)) != RMW_RET_OK)
-    {
+    std::optional<zenoh::Config> config = rmw_zenoh_cpp::get_z_config(
+        rmw_zenoh_cpp::ConfigurableEntity::Session);
+
+    if (!config.has_value()) {
       throw std::runtime_error("Error configuring Zenoh session.");
     }
 
-    // Check if shm is enabled.
-    z_owned_string_t shm_enabled;
-    zc_config_get_from_str(z_loan(config), Z_CONFIG_SHARED_MEMORY_KEY, &shm_enabled);
-    auto always_free_shm_enabled = rcpputils::make_scope_exit(
-      [&shm_enabled]() {
-        z_drop(z_move(shm_enabled));
-      });
+    // // Check if shm is enabled.
+    // z_owned_string_t shm_enabled;
+    // zc_config_get_from_str(z_loan(config), Z_CONFIG_SHARED_MEMORY_KEY, &shm_enabled);
+    // auto always_free_shm_enabled = rcpputils::make_scope_exit(
+    //   [&shm_enabled]() {
+    //     z_drop(z_move(shm_enabled));
+    //   });
 
     // Initialize the zenoh session.
-    if (z_open(&session_, z_move(config), NULL) != Z_OK) {
-      RMW_SET_ERROR_MSG("Error setting up zenoh session");
-      throw std::runtime_error("Error setting up zenoh session.");
+    zenoh::ZResult result;
+    session_ = std::make_shared<zenoh::Session>(
+        std::move(config.value()),
+        zenoh::Session::SessionOptions::create_default(),
+        &result);
+    if(result != Z_OK) {
+      throw std::runtime_error("Error setting up zenoh session. ");
     }
-    auto close_session = rcpputils::make_scope_exit(
-      [this]() {
-        z_close(z_loan_mut(session_), NULL);
-      });
+
+    rmw_ret_t ret;
 
     // TODO(Yadunund) Move this check into a separate thread.
     // Verify if the zenoh router is running if configured.
@@ -114,8 +113,12 @@ public:
       uint64_t connection_attempts = 0;
       // Retry until the connection is successful.
       while (ret != RMW_RET_OK && connection_attempts < configured_connection_attempts.value()) {
-        if ((ret = rmw_zenoh_cpp::zenoh_router_check(z_loan(session_))) != RMW_RET_OK) {
+        zenoh::ZResult err;
+        this->session_->get_routers_z_id(&err);
+        if (err != Z_OK) {
           ++connection_attempts;
+        } else {
+          ret = RMW_RET_OK;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
@@ -128,8 +131,7 @@ public:
     }
 
     // Initialize the graph cache.
-    const z_id_t zid = z_info_zid(z_loan(session_));
-    graph_cache_ = std::make_shared<rmw_zenoh_cpp::GraphCache>(zid);
+    graph_cache_ = std::make_shared<rmw_zenoh_cpp::GraphCache>(this->session_->get_zid().to_string());
     // Setup liveliness subscriptions for discovery.
     std::string liveliness_str = rmw_zenoh_cpp::liveliness::subscription_token(domain_id);
 
@@ -148,60 +150,62 @@ public:
     // the code will be simpler, and if we're just going to spin over the non-blocking
     // reads until we obtain responses, we'll just be hogging CPU time by convincing
     // the OS that we're doing actual work when it could instead park the thread.
-    z_owned_fifo_handler_reply_t handler;
-    z_owned_closure_reply_t closure;
-    z_fifo_channel_reply_new(&closure, &handler, SIZE_MAX - 1);
+    // z_owned_fifo_handler_reply_t handler;
+    // z_owned_closure_reply_t closure;
+    // z_fifo_channel_reply_new(&closure, &handler, SIZE_MAX - 1);
+    // Intuitively use a FIFO channel rather than building it up with a closure and a handler to FIFO channel
+    zenoh::KeyExpr keyexpr(liveliness_str);
 
+    zenoh::Session::GetOptions options = zenoh::Session::GetOptions::create_default();
+    options.target = zenoh::QueryTarget::Z_QUERY_TARGET_ALL;
+    options.payload = "";
 
-    z_view_keyexpr_t keyexpr;
-    z_view_keyexpr_from_str(&keyexpr, liveliness_str.c_str());
-    zc_liveliness_get(
-      z_loan(session_), z_loan(keyexpr),
-      z_move(closure), NULL);
+    zenoh::ZResult err;
+    auto replies = session_->liveliness_get(
+      keyexpr,
+      zenoh::channels::FifoChannel(SIZE_MAX - 1),
+      zenoh::Session::LivelinessGetOptions::create_default(),
+      &err);
 
-    z_owned_reply_t reply;
-    while (z_recv(z_loan(handler), &reply) == Z_OK) {
-      if (z_reply_is_ok(z_loan(reply))) {
-        const z_loaned_sample_t * sample = z_reply_ok(z_loan(reply));
-        z_view_string_t keystr;
-        z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
-        std::string str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
-        // Ignore tokens from the same session to avoid race conditions from this
-        // query and the liveliness subscription.
-        graph_cache_->parse_put(str, true);
-      } else {
-        RMW_ZENOH_LOG_DEBUG_NAMED(
-          "rmw_zenoh_cpp", "[rmw_context_impl_s] z_call received an invalid reply.\n");
-      }
-      z_drop(z_move(reply));
+    if (err != Z_OK)
+    {
+      throw std::runtime_error("Error getting liveliness. ");
     }
-    z_drop(z_move(handler));
+
+    for (auto res = replies.recv(); std::holds_alternative<zenoh::Reply>(res); res = replies.recv()) {
+
+        const zenoh::Reply &reply = std::get<zenoh::Reply>(res);
+        if (reply.is_ok()) {
+            const auto &sample = reply.get_ok();
+            graph_cache_->parse_put(std::string(sample.get_keyexpr().as_string_view()), true);
+        }
+    }
 
     // Initialize the shm manager if shared_memory is enabled in the config.
     shm_provider_ = std::nullopt;
-    if (strncmp(
-      z_string_data(z_loan(shm_enabled)),
-      "true",
-      z_string_len(z_loan(shm_enabled))) == 0)
-    {
-      // TODO(yuyuan): determine the default alignment of SHM
-      z_alloc_alignment_t alignment = {5};
-      z_owned_memory_layout_t layout;
-      z_memory_layout_new(&layout, SHM_BUFFER_SIZE_MB * 1024 * 1024, alignment);
+    // if (strncmp(
+    //   z_string_data(z_loan(shm_enabled)),
+    //   "true",
+    //   z_string_len(z_loan(shm_enabled))) == 0)
+    // {
+    //   // TODO(yuyuan): determine the default alignment of SHM
+    //   z_alloc_alignment_t alignment = {5};
+    //   z_owned_memory_layout_t layout;
+    //   z_memory_layout_new(&layout, SHM_BUFFER_SIZE_MB * 1024 * 1024, alignment);
 
-      z_owned_shm_provider_t provider;
-      if (z_posix_shm_provider_new(&provider, z_loan(layout)) != Z_OK) {
-        RMW_ZENOH_LOG_ERROR_NAMED("rmw_zenoh_cpp", "Unable to create a SHM provider.");
-        throw std::runtime_error("Unable to create shm provider.");
-      }
-      shm_provider_ = provider;
-    }
-    auto free_shm_provider = rcpputils::make_scope_exit(
-      [this]() {
-        if (shm_provider_.has_value()) {
-          z_drop(z_move(shm_provider_.value()));
-        }
-      });
+    //   z_owned_shm_provider_t provider;
+    //   if (z_posix_shm_provider_new(&provider, z_loan(layout)) != Z_OK) {
+    //     RMW_ZENOH_LOG_ERROR_NAMED("rmw_zenoh_cpp", "Unable to create a SHM provider.");
+    //     throw std::runtime_error("Unable to create shm provider.");
+    //   }
+    //   shm_provider_ = provider;
+    // }
+    // auto free_shm_provider = rcpputils::make_scope_exit(
+    //   [this]() {
+    //     if (shm_provider_.has_value()) {
+    //       z_drop(z_move(shm_provider_.value()));
+    //     }
+    //   });
 
     graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
     graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
@@ -220,7 +224,7 @@ public:
         z_undeclare_subscriber(z_move(this->graph_subscriber_));
       });
     if (zc_liveliness_declare_subscriber(
-        z_loan(session_),
+        z_loan(session_->_0),
         &graph_subscriber_, z_loan(liveliness_ke),
         z_move(callback), &sub_options) != Z_OK)
     {
@@ -228,8 +232,6 @@ public:
       throw std::runtime_error("Unable to subscribe to ROS graph updates.");
     }
 
-    close_session.cancel();
-    free_shm_provider.cancel();
     undeclare_z_sub.cancel();
   }
 
@@ -266,11 +268,12 @@ public:
       // to avoid an AB/BA deadlock if shutdown is racing with graph_sub_data_handler().
     }
 
-    // Close the zenoh session
-    if (z_close(z_loan_mut(session_), NULL) != Z_OK) {
-      RMW_SET_ERROR_MSG("Error while closing zenoh session");
-      return RMW_RET_ERROR;
-    }
+    // // Close the zenoh session
+    // if (z_close(z_loan_mut(session_), NULL) != Z_OK) {
+    //   RMW_SET_ERROR_MSG("Error while closing zenoh session");
+    //   return RMW_RET_ERROR;
+    // }
+    session_.reset();
     return RMW_RET_OK;
   }
 
@@ -283,7 +286,13 @@ public:
   const z_loaned_session_t * session() const
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return z_loan(session_);
+    return z_loan(session_->_0);
+  }
+
+  const std::shared_ptr<zenoh::Session> session_cpp() const
+  {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    return session_;
   }
 
   std::optional<z_owned_shm_provider_t> & shm_provider()
@@ -313,7 +322,7 @@ public:
   bool session_is_valid() const
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return !z_session_is_closed(z_loan(session_));
+    return !z_session_is_closed(z_loan(session_->_0));
   }
 
   std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache()
@@ -344,7 +353,7 @@ public:
     auto node_data = rmw_zenoh_cpp::NodeData::make(
       node,
       this->get_next_entity_id(),
-      z_loan(session_),
+      session_cpp(),
       domain_id_,
       ns,
       node_name,
@@ -421,7 +430,7 @@ private:
   // Enclave, name used to find security artifacts in a sros2 keystore.
   std::string enclave_;
   // An owned session.
-  z_owned_session_t session_;
+  std::shared_ptr<zenoh::Session> session_;
   // An optional SHM manager that is initialized of SHM is enabled in the
   // zenoh session config.
   std::optional<z_owned_shm_provider_t> shm_provider_;
@@ -500,6 +509,12 @@ std::string rmw_context_impl_s::enclave() const
 const z_loaned_session_t * rmw_context_impl_s::session() const
 {
   return data_->session();
+}
+
+///=============================================================================
+const std::shared_ptr<zenoh::Session> rmw_context_impl_s::session_cpp() const
+{
+return data_->session_cpp();
 }
 
 ///=============================================================================

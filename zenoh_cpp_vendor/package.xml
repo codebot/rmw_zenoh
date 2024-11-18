@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>zenoh_c_vendor</name>
+  <name>zenoh_cpp_vendor</name>
   <version>0.0.1</version>
   <description>Vendor pkg to install zenoh-c</description>
   <maintainer email="yadunund@openrobotics.org">Yadunund</maintainer>

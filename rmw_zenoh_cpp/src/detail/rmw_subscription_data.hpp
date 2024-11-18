@@ -62,7 +62,7 @@ public:
 
   // Make a shared_ptr of SubscriptionData.
   static std::shared_ptr<SubscriptionData> make(
-    const z_loaned_session_t * session,
+    const std::shared_ptr<zenoh::Session> & session,
     std::shared_ptr<GraphCache> graph_cache,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,

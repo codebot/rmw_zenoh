@@ -39,7 +39,7 @@ namespace rmw_zenoh_cpp
 
 ///=============================================================================
 std::shared_ptr<PublisherData> PublisherData::make(
-  const z_loaned_session_t * session,
+  const std::shared_ptr<zenoh::Session> & session,
   const rmw_node_t * const node,
   liveliness::NodeInfo node_info,
   std::size_t node_id,
@@ -79,7 +79,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
-    z_info_zid(session),
+    session->get_zid(),
     std::to_string(node_id),
     std::to_string(publisher_id),
     liveliness::EntityType::Publisher,
@@ -132,7 +132,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
 
     ze_owned_publication_cache_t pub_cache_;
     if (ze_declare_publication_cache(
-        session, &pub_cache_, z_loan(pub_ke), &pub_cache_opts))
+        z_loan(session->_0), &pub_cache_, z_loan(pub_ke), &pub_cache_opts))
     {
       RMW_SET_ERROR_MSG("unable to create zenoh publisher cache");
       return nullptr;
@@ -159,7 +159,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
       z_undeclare_publisher(z_move(pub));
     });
   if (z_declare_publisher(
-      session, &pub, z_loan(pub_ke), &opts) != Z_OK)
+      z_loan(session->_0), &pub, z_loan(pub_ke), &opts) != Z_OK)
   {
     RMW_SET_ERROR_MSG("Unable to create Zenoh publisher.");
     return nullptr;
@@ -174,7 +174,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
       z_drop(z_move(token));
     });
   if (zc_liveliness_declare_token(
-      session, &token, z_loan(liveliness_ke),
+      z_loan(session->_0), &token, z_loan(liveliness_ke),
       NULL) != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(

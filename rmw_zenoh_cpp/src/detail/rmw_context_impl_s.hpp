@@ -50,6 +50,7 @@ public:
   // Loan the Zenoh session.
   const z_loaned_session_t * session() const;
 
+  const std::shared_ptr<zenoh::Session> session_cpp() const;
   // Get a reference to the shm_provider.
   // Note: This is not thread-safe.
   // TODO(Yadunund): Remove this API and instead include a publish() API

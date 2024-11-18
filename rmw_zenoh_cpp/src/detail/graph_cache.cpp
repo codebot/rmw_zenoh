@@ -68,8 +68,8 @@ TopicData::TopicData(ConstEntityPtr entity)
 }
 
 ///=============================================================================
-GraphCache::GraphCache(const z_id_t & zid)
-: zid_str_(liveliness::zid_to_str(zid))
+GraphCache::GraphCache(const std::string & zid)
+: zid_str_(zid)
 {
   // Do nothing.
 }
@@ -364,6 +364,7 @@ void GraphCache::parse_put(
       {entity->node_name(), node}};
     graph_.emplace(std::make_pair(entity->node_namespace(), std::move(node_map)));
     update_topic_maps_for_put(node, entity);
+
     total_nodes_in_graph_ += 1;
     return;
   }
