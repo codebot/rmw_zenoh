@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <zenoh.h>
-#include <string.h>
+#include <zenoh.hxx>
 
 #include "detail/identifier.hpp"
-#include "detail/rmw_init_options_impl.hpp"
 
 #include "rcpputils/scope_exit.hpp"
 

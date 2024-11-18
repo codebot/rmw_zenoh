@@ -15,37 +15,36 @@
 #ifndef DETAIL__ZENOH_UTILS_HPP_
 #define DETAIL__ZENOH_UTILS_HPP_
 
-#include <zenoh.h>
+#include <zenoh.hxx>
 
 #include <chrono>
 #include <functional>
 #include <optional>
+#include <vector>
 
 #include "rmw/types.h"
 
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-void
-create_map_and_set_sequence_num(
-  z_owned_bytes_t * out_bytes, int64_t sequence_number,
-  uint8_t gid[RMW_GID_STORAGE_SIZE]);
+zenoh::Bytes create_map_and_set_sequence_num(
+  int64_t sequence_number, std::vector<uint8_t> gid);
 
 ///=============================================================================
 // A class to store the replies to service requests.
 class ZenohReply final
 {
 public:
-  ZenohReply(const z_loaned_reply_t * reply, std::chrono::nanoseconds::rep received_timestamp);
+  ZenohReply(const zenoh::Reply & reply, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohReply();
 
-  std::optional<const z_loaned_sample_t *> get_sample() const;
+  const zenoh::Reply & get_sample() const;
 
   std::chrono::nanoseconds::rep get_received_timestamp() const;
 
 private:
-  z_owned_reply_t reply_;
+  std::optional<zenoh::Reply> reply_;
   std::chrono::nanoseconds::rep received_timestamp_;
 };
 
@@ -54,16 +53,16 @@ private:
 class ZenohQuery final
 {
 public:
-  ZenohQuery(const z_loaned_query_t * query, std::chrono::nanoseconds::rep received_timestamp);
+  ZenohQuery(const zenoh::Query & query, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohQuery();
 
-  const z_loaned_query_t * get_query() const;
+  const zenoh::Query & get_query() const;
 
   std::chrono::nanoseconds::rep get_received_timestamp() const;
 
 private:
-  z_owned_query_t query_;
+  std::optional<zenoh::Query> query_;
   std::chrono::nanoseconds::rep received_timestamp_;
 };
 }  // namespace rmw_zenoh_cpp

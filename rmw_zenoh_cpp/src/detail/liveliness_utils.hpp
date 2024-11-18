@@ -15,8 +15,6 @@
 #ifndef DETAIL__LIVELINESS_UTILS_HPP_
 #define DETAIL__LIVELINESS_UTILS_HPP_
 
-#include <zenoh.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -24,6 +22,8 @@
 #include <optional>
 #include <string>
 #include <vector>
+
+#include <zenoh.hxx>
 
 #include "rmw/types.h"
 
@@ -127,7 +127,7 @@ public:
   /// @param topic_info An optional topic information for relevant entities.
   /// @return An entity if all inputs are valid. This way no invalid entities can be created.
   static EntityPtr make(
-    z_id_t zid,
+    zenoh::Id zid,
     const std::string & nid,
     const std::string & id,
     EntityType type,
@@ -174,6 +174,8 @@ public:
 
   void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
 
+  std::vector<uint8_t> copy_gid() const;
+
 private:
   Entity(
     std::string zid,
@@ -191,7 +193,7 @@ private:
   NodeInfo node_info_;
   std::optional<TopicInfo> topic_info_;
   std::string liveliness_keyexpr_;
-  uint8_t gid_[RMW_GID_STORAGE_SIZE];
+  std::vector<uint8_t> gid_;
 };
 
 ///=============================================================================
@@ -231,15 +233,13 @@ std::string qos_to_keyexpr(const rmw_qos_profile_t & qos);
 ///=============================================================================
 /// Convert a rmw_qos_profile_t from a keyexpr. Return std::nullopt if invalid.
 std::optional<rmw_qos_profile_t> keyexpr_to_qos(const std::string & keyexpr);
-
-///=============================================================================
-/// Convert a Zenoh id to a string.
-std::string zid_to_str(const z_id_t & id);
 }  // namespace liveliness
 
 ///=============================================================================
 /// Generate a hash for a given GID.
-size_t hash_gid(const uint8_t gid[RMW_GID_STORAGE_SIZE]);
+size_t hash_gid_p(const uint8_t gid[RMW_GID_STORAGE_SIZE]);
+
+size_t hash_gid(const std::vector<uint8_t> gid);
 }  // namespace rmw_zenoh_cpp
 
 ///=============================================================================

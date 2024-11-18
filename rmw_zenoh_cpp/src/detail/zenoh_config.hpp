@@ -15,11 +15,12 @@
 #ifndef DETAIL__ZENOH_CONFIG_HPP_
 #define DETAIL__ZENOH_CONFIG_HPP_
 
-#include <zenoh.h>
-
 #include <optional>
 #include <unordered_map>
 #include <utility>
+
+#include <zenoh.hxx>
+#include <zenoh/api/config.hxx>
 
 #include "rmw/ret_types.h"
 
@@ -46,9 +47,9 @@ enum class ConfigurableEntity : uint8_t
 ///     is configured using the rmw_zenoh default configuration file.
 /// @param entity The zenoh entity to be configured.
 /// @param config The zenoh configuration to be filled.
-/// @returns `RMW_RET_OK` if the configuration was successfully loaded.
+/// @returns The zenoh configuration to be filled.
 [[nodiscard]]
-rmw_ret_t get_z_config(const ConfigurableEntity & entity, z_owned_config_t * config);
+std::optional<zenoh::Config> get_z_config(const ConfigurableEntity & entity);
 
 ///=============================================================================
 /// Get the number of times rmw_init should try to connect to a zenoh router

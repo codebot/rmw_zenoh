@@ -25,6 +25,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
+
+#include <zenoh.hxx>
 
 #include "attachment_helpers.hpp"
 #include "cdr.hpp"
@@ -40,72 +43,11 @@
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
 
-namespace
-{
-
-///=============================================================================
-void client_data_handler(z_loaned_reply_t * reply, void * data)
-{
-  auto client_data = static_cast<rmw_zenoh_cpp::ClientData *>(data);
-  if (client_data == nullptr) {
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp",
-      "Unable to obtain client_data_t from data in client_data_handler."
-    );
-    return;
-  }
-
-  if (client_data->is_shutdown()) {
-    return;
-  }
-
-  if (!z_reply_is_ok(reply)) {
-    const z_loaned_reply_err_t * err = z_reply_err(reply);
-    const z_loaned_bytes_t * err_payload = z_reply_err_payload(err);
-
-    z_owned_string_t err_str;
-    z_bytes_to_string(err_payload, &err_str);
-
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp",
-      "z_reply_is_ok returned False for keyexpr %s. Reason: %.*s",
-      client_data->topic_info().topic_keyexpr_.c_str(),
-      static_cast<int>(z_string_len(z_loan(err_str))),
-      z_string_data(z_loan(err_str)));
-    z_drop(z_move(err_str));
-
-    return;
-  }
-
-  std::chrono::nanoseconds::rep received_timestamp =
-    std::chrono::system_clock::now().time_since_epoch().count();
-
-  client_data->add_new_reply(
-    std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
-}
-
-///=============================================================================
-void client_data_drop(void * data)
-{
-  auto client_data = static_cast<rmw_zenoh_cpp::ClientData *>(data);
-  if (client_data == nullptr) {
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp",
-      "Unable to obtain client_data_t from data in client_data_drop."
-    );
-    return;
-  }
-
-  client_data->decrement_in_flight_and_conditionally_remove();
-}
-
-}  // namespace
-
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
 std::shared_ptr<ClientData> ClientData::make(
-  const z_loaned_session_t * session,
+  std::shared_ptr<zenoh::Session> session,
   const rmw_node_t * const node,
   const rmw_client_t * client,
   liveliness::NodeInfo node_info,
@@ -167,7 +109,7 @@ std::shared_ptr<ClientData> ClientData::make(
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
-    z_info_zid(session),
+    session->get_zid(),
     std::to_string(node_id),
     std::to_string(service_id),
     liveliness::EntityType::Client,
@@ -232,44 +174,26 @@ ClientData::ClientData(
 }
 
 ///=============================================================================
-bool ClientData::init(const z_loaned_session_t * session)
+bool ClientData::init(const std::shared_ptr<zenoh::Session> session)
 {
-  if (z_keyexpr_from_str(
-    &this->keyexpr_,
-    this->entity_->topic_info().value().topic_keyexpr_.c_str()) != Z_OK)
-  {
-    RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
-    return false;
-  }
-  auto free_ros_keyexpr = rcpputils::make_scope_exit(
-    [this]() {
-      z_drop(z_move(this->keyexpr_));
-    });
-
+  std::string topic_keyexpr = this->entity_->topic_info().value().topic_keyexpr_;
+  keyexpr_ = zenoh::KeyExpr(topic_keyexpr);
+  // TODO(ahcorde) check KeyExpr
   std::string liveliness_keyexpr = this->entity_->liveliness_keyexpr();
-  z_view_keyexpr_t liveliness_ke;
-  z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
-  if (z_liveliness_declare_token(
-      session,
-      &this->token_,
-      z_loan(liveliness_ke),
-      NULL
-    ) != Z_OK)
-  {
+  zenoh::ZResult err;
+  this->token_ = session->liveliness_declare_token(
+    zenoh::KeyExpr(liveliness_keyexpr),
+    zenoh::Session::LivelinessDeclarationOptions::create_default(),
+    &err);
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the client.");
     return false;
   }
-  auto free_token = rcpputils::make_scope_exit(
-    [this]() {
-      z_drop(z_move(this->token_));
-    });
 
+  sess_ = session;
   initialized_ = true;
-
-  free_ros_keyexpr.cancel();
-  free_token.cancel();
 
   return true;
 }
@@ -292,10 +216,9 @@ bool ClientData::liveliness_is_valid() const
 }
 
 ///=============================================================================
-void ClientData::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
+std::vector<uint8_t> ClientData::copy_gid() const
 {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  entity_->copy_gid(out_gid);
+  return entity_->copy_gid();
 }
 
 ///=============================================================================
@@ -308,15 +231,14 @@ void ClientData::add_new_reply(std::unique_ptr<ZenohReply> reply)
     reply_queue_.size() >= adapted_qos_profile.depth)
   {
     // Log warning if message is discarded due to hitting the queue depth
-    z_view_string_t keystr;
-    z_keyexpr_as_view_string(z_loan(keyexpr_), &keystr);
+    std::string keystr = std::string(keyexpr_.value().as_string_view());
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Query queue depth of %ld reached, discarding oldest Query "
       "for client for %.*s",
       adapted_qos_profile.depth,
-      static_cast<int>(z_string_len(z_loan(keystr))),
-      z_string_data(z_loan(keystr)));
+      keystr.size(),
+      keystr.c_str());
     reply_queue_.pop_front();
   }
   reply_queue_.emplace_back(std::move(reply));
@@ -346,47 +268,67 @@ rmw_ret_t ClientData::take_response(
   std::unique_ptr<ZenohReply> latest_reply = std::move(reply_queue_.front());
   reply_queue_.pop_front();
 
-  if (!latest_reply->get_sample().has_value()) {
+  auto & reply = latest_reply->get_sample();
+
+  if (!reply.is_ok()) {
     RMW_SET_ERROR_MSG("invalid reply sample");
     return RMW_RET_ERROR;
   }
-  const z_loaned_sample_t * sample = latest_reply->get_sample().value();
+
+  const zenoh::Sample & sample = reply.get_ok();
 
   // Object that manages the raw buffer
-  z_owned_slice_t payload;
-  z_bytes_to_slice(z_sample_payload(sample), &payload);
-  eprosima::fastcdr::FastBuffer fastbuffer(
-    reinterpret_cast<char *>(const_cast<uint8_t *>(z_slice_data(z_loan(payload)))),
-    z_slice_len(z_loan(payload)));
+  auto & payload = sample.get_payload();
+  auto slice = payload.slice_iter().next();
+  if (slice.has_value()) {
+    const uint8_t * payload = slice.value().data;
+    const size_t payload_len = slice.value().len;
 
-  // Object that serializes the data
-  rmw_zenoh_cpp::Cdr deser(fastbuffer);
-  if (!response_type_support_->deserialize_ros_message(
-      deser.get_cdr(),
-      ros_response,
-      response_type_support_impl_))
-  {
-    RMW_SET_ERROR_MSG("could not deserialize ROS response");
+    eprosima::fastcdr::FastBuffer fastbuffer(
+      reinterpret_cast<char *>(const_cast<uint8_t *>(payload)), payload_len);
+
+    // Object that serializes the data
+    rmw_zenoh_cpp::Cdr deser(fastbuffer);
+    if (!response_type_support_->deserialize_ros_message(
+        deser.get_cdr(),
+        ros_response,
+        response_type_support_impl_))
+    {
+      RMW_SET_ERROR_MSG("could not deserialize ROS response");
+      return RMW_RET_ERROR;
+    }
+
+    // Fill in the request_header
+    if (!sample.get_attachment().has_value()) {
+      RMW_ZENOH_LOG_DEBUG_NAMED(
+        "rmw_zenoh_cpp",
+        "ClientData take_request attachment is empty");
+      return RMW_RET_ERROR;
+    }
+    rmw_zenoh_cpp::AttachmentData attachment(std::move(sample.get_attachment().value().get()));
+    request_header->request_id.sequence_number = attachment.sequence_number();
+    if (request_header->request_id.sequence_number < 0) {
+      RMW_SET_ERROR_MSG("Failed to get sequence_number from client call attachment");
+      return RMW_RET_ERROR;
+    }
+    request_header->source_timestamp = attachment.source_timestamp();
+    if (request_header->source_timestamp < 0) {
+      RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
+      return RMW_RET_ERROR;
+    }
+    memcpy(
+      request_header->request_id.writer_guid,
+      attachment.copy_gid().data(),
+      RMW_GID_STORAGE_SIZE);
+    request_header->received_timestamp = latest_reply->get_received_timestamp();
+
+    *taken = true;
+  } else {
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp",
+      "ClientData not able to get slice data");
     return RMW_RET_ERROR;
   }
-
-  // Fill in the request_header
-  AttachmentData attachment(z_sample_attachment(sample));
-  request_header->request_id.sequence_number = attachment.sequence_number();
-  if (request_header->request_id.sequence_number < 0) {
-    RMW_SET_ERROR_MSG("Failed to get sequence_number from client call attachment");
-    return RMW_RET_ERROR;
-  }
-  request_header->source_timestamp = attachment.source_timestamp();
-  if (request_header->source_timestamp < 0) {
-    RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
-    return RMW_RET_ERROR;
-  }
-  attachment.copy_gid(request_header->request_id.writer_guid);
-  request_header->received_timestamp = latest_reply->get_received_timestamp();
-
-  z_drop(z_move(payload));
-  *taken = true;
 
   return RMW_RET_OK;
 }
@@ -439,16 +381,10 @@ rmw_ret_t ClientData::send_request(
   *sequence_id = sequence_number_++;
 
   // Send request
-  z_get_options_t opts;
-  z_get_options_default(&opts);
-  z_owned_bytes_t attachment;
-  uint8_t local_gid[RMW_GID_STORAGE_SIZE];
-  entity_->copy_gid(local_gid);
-  create_map_and_set_sequence_num(
-    &attachment, *sequence_id,
-    local_gid);
-  opts.attachment = z_move(attachment);
-
+  zenoh::Session::GetOptions opts = zenoh::Session::GetOptions::create_default();
+  std::vector<uint8_t> local_gid;
+  local_gid = entity_->copy_gid();
+  opts.attachment = rmw_zenoh_cpp::create_map_and_set_sequence_num(*sequence_id, local_gid);
   opts.target = Z_QUERY_TARGET_ALL_COMPLETE;
   // The default timeout for a z_get query is 10 seconds and if a response is not received within
   // this window, the queryable will return an invalid reply. However, it is common for actions,
@@ -458,23 +394,64 @@ rmw_ret_t ClientData::send_request(
   // Latest consolidation guarantees unicity of replies for the same key expression,
   // which optimizes bandwidth. The default is "None", which imples replies may come in any order
   // and any number.
-  opts.consolidation = z_query_consolidation_latest();
-  z_owned_bytes_t payload;
-  z_bytes_copy_from_buf(
-    &payload, reinterpret_cast<const uint8_t *>(request_bytes), data_length);
-  opts.payload = z_move(payload);
+  opts.consolidation = zenoh::ConsolidationMode::Z_CONSOLIDATION_MODE_NONE;
+
+  std::vector<uint8_t> raw_bytes(
+    reinterpret_cast<const uint8_t *>(request_bytes),
+    reinterpret_cast<const uint8_t *>(request_bytes) + data_length);
+  opts.payload = zenoh::Bytes(raw_bytes);
 
   // TODO(Yadunund): Once we switch to zenoh-cpp with lambda closures,
   // capture shared_from_this() instead of this.
   num_in_flight_++;
-  z_owned_closure_reply_t zn_closure_reply;
-  z_closure(&zn_closure_reply, client_data_handler, client_data_drop, this);
-  z_get(
-    context_impl->session(),
-    z_loan(keyexpr_), "",
-    z_move(zn_closure_reply),
-    &opts);
 
+  std::weak_ptr<rmw_zenoh_cpp::ClientData> client_data = shared_from_this();
+  zenoh::ZResult err;
+  std::string parameters;
+  context_impl->session()->get(
+    keyexpr_.value(),
+    parameters,
+    [client_data](const zenoh::Reply & reply) {
+      if (!reply.is_ok()) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "z_reply_is_ok returned False Reason: %s",
+          reply.get_err().get_payload().as_string())
+        return;
+      }
+      const zenoh::Sample & sample = reply.get_ok();
+
+      auto sub_data = client_data.lock();
+      if (sub_data == nullptr) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "Unable to obtain ClientData from data for %s.",
+          std::string(sample.get_keyexpr().as_string_view()));
+        return;
+      }
+
+      if (sub_data->is_shutdown()) {
+        return;
+      }
+
+      std::chrono::nanoseconds::rep received_timestamp =
+      std::chrono::system_clock::now().time_since_epoch().count();
+
+      sub_data->add_new_reply(
+        std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
+    },
+    [client_data]() {
+      auto sub_data = client_data.lock();
+      if (sub_data == nullptr) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "Unable to obtain ClientData");
+        return;
+      }
+      sub_data->decrement_in_flight_and_conditionally_remove();
+    },
+    std::move(opts),
+    &err);
   return RMW_RET_OK;
 }
 
@@ -530,11 +507,16 @@ void ClientData::_shutdown()
   }
 
   // Unregister this node from the ROS graph.
-  if (initialized_) {
-    z_liveliness_undeclare_token(z_move(token_));
-    z_drop(z_move(keyexpr_));
+  zenoh::ZResult err;
+  std::move(token_).value().undeclare(&err);
+  if (err != Z_OK) {
+    RMW_ZENOH_LOG_ERROR_NAMED(
+      "rmw_zenoh_cpp",
+      "Unable to undeclare liveliness token");
+    return;
   }
 
+  sess_.reset();
   is_shutdown_ = true;
 }
 

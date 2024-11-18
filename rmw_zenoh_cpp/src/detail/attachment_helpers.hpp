@@ -15,34 +15,37 @@
 #ifndef DETAIL__ATTACHMENT_HELPERS_HPP_
 #define DETAIL__ATTACHMENT_HELPERS_HPP_
 
-#include <zenoh.h>
+#include <cstdint>
+#include <vector>
+
+#include <zenoh.hxx>
 
 #include "rmw/types.h"
 
 namespace rmw_zenoh_cpp
 {
-///=============================================================================
 class AttachmentData final
 {
 public:
-  AttachmentData(
-    const int64_t sequence_number,
-    const int64_t source_timestamp,
-    const uint8_t source_gid[RMW_GID_STORAGE_SIZE]);
-  explicit AttachmentData(const z_loaned_bytes_t *);
+  explicit AttachmentData(
+    const int64_t _sequence_number,
+    const int64_t _source_timestamp,
+    const std::vector<uint8_t> _source_gid);
+
+  explicit AttachmentData(const zenoh::Bytes & bytes);
   explicit AttachmentData(AttachmentData && data);
 
   int64_t sequence_number() const;
   int64_t source_timestamp() const;
-  void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
+  std::vector<uint8_t> copy_gid() const;
   size_t gid_hash() const;
 
-  void serialize_to_zbytes(z_owned_bytes_t *);
+  zenoh::Bytes serialize_to_zbytes();
 
 private:
   int64_t sequence_number_;
   int64_t source_timestamp_;
-  uint8_t source_gid_[RMW_GID_STORAGE_SIZE];
+  std::vector<uint8_t> source_gid_;
   size_t gid_hash_;
 };
 }  // namespace rmw_zenoh_cpp

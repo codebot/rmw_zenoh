@@ -15,8 +15,6 @@
 #ifndef DETAIL__RMW_CLIENT_DATA_HPP_
 #define DETAIL__RMW_CLIENT_DATA_HPP_
 
-#include <zenoh.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -25,6 +23,9 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
+
+#include <zenoh.hxx>
 
 #include "event.hpp"
 #include "liveliness_utils.hpp"
@@ -47,7 +48,7 @@ class ClientData final : public std::enable_shared_from_this<ClientData>
 public:
   // Make a shared_ptr of ClientData.
   static std::shared_ptr<ClientData> make(
-    const z_loaned_session_t * session,
+    std::shared_ptr<zenoh::Session> session,
     const rmw_node_t * const node,
     const rmw_client_t * client,
     liveliness::NodeInfo node_info,
@@ -64,7 +65,7 @@ public:
   bool liveliness_is_valid() const;
 
   // Copy the GID of this ClientData into an rmw_gid_t.
-  void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
+  std::vector<uint8_t> copy_gid() const;
 
   // Add a new ZenohReply to the queue.
   void add_new_reply(std::unique_ptr<rmw_zenoh_cpp::ZenohReply> reply);
@@ -119,7 +120,7 @@ private:
     std::shared_ptr<ResponseTypeSupport> response_type_support);
 
   // Initialize the Zenoh objects for this entity.
-  bool init(const z_loaned_session_t * session);
+  bool init(const std::shared_ptr<zenoh::Session> session);
 
   // Shutdown this client (the mutex is expected to be held by the caller).
   void _shutdown();
@@ -131,10 +132,12 @@ private:
   const rmw_client_t * rmw_client_;
   // The Entity generated for the service.
   std::shared_ptr<liveliness::Entity> entity_;
+  // A shared session.
+  std::shared_ptr<zenoh::Session> sess_;
   // An owned keyexpression.
-  z_owned_keyexpr_t keyexpr_;
+  std::optional<zenoh::KeyExpr> keyexpr_;
   // Liveliness token for the service.
-  z_owned_liveliness_token_t token_;
+  std::optional<zenoh::LivelinessToken> token_;
   // Type support fields.
   const void * request_type_support_impl_;
   const void * response_type_support_impl_;

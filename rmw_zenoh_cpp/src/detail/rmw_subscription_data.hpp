@@ -15,8 +15,6 @@
 #ifndef DETAIL__RMW_SUBSCRIPTION_DATA_HPP_
 #define DETAIL__RMW_SUBSCRIPTION_DATA_HPP_
 
-#include <zenoh.h>
-
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -27,6 +25,8 @@
 #include <string>
 #include <unordered_map>
 #include <variant>
+
+#include <zenoh.hxx>
 
 #include "event.hpp"
 #include "graph_cache.hpp"
@@ -49,20 +49,20 @@ public:
   struct Message
   {
     explicit Message(
-      z_owned_slice_t p,
+      zenoh::Bytes p,
       uint64_t recv_ts,
       AttachmentData && attachment);
 
     ~Message();
 
-    z_owned_slice_t payload;
+    zenoh::Bytes payload;
     uint64_t recv_timestamp;
     AttachmentData attachment;
   };
 
   // Make a shared_ptr of SubscriptionData.
   static std::shared_ptr<SubscriptionData> make(
-    const z_loaned_session_t * session,
+    std::shared_ptr<zenoh::Session> session,
     std::shared_ptr<GraphCache> graph_cache,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,
@@ -126,6 +126,7 @@ private:
     const rmw_node_t * rmw_node,
     std::shared_ptr<GraphCache> graph_cache,
     std::shared_ptr<liveliness::Entity> entity,
+    std::shared_ptr<zenoh::Session> session,
     const void * type_support_impl,
     std::unique_ptr<MessageTypeSupport> type_support);
 
@@ -139,10 +140,12 @@ private:
   std::shared_ptr<GraphCache> graph_cache_;
   // The Entity generated for the subscription.
   std::shared_ptr<liveliness::Entity> entity_;
+  // A shared session
+  std::shared_ptr<zenoh::Session> sess_;
   // An owned subscriber or querying_subscriber depending on the QoS settings.
-  std::variant<z_owned_subscriber_t, ze_owned_querying_subscriber_t> sub_;
+  std::optional<std::variant<zenoh::Subscriber<void>, zenoh::ext::QueryingSubscriber<void>>> sub_;
   // Liveliness token for the subscription.
-  z_owned_liveliness_token_t token_;
+  std::optional<zenoh::LivelinessToken> token_;
   // Type support fields
   const void * type_support_impl_;
   std::unique_ptr<MessageTypeSupport> type_support_;

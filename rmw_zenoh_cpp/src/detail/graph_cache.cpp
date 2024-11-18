@@ -69,8 +69,8 @@ TopicData::TopicData(ConstEntityPtr entity)
 }
 
 ///=============================================================================
-GraphCache::GraphCache(const z_id_t & zid)
-: zid_str_(liveliness::zid_to_str(zid))
+GraphCache::GraphCache(const std::string & zid)
+: zid_str_(zid)
 {
   // Do nothing.
 }
@@ -1160,7 +1160,7 @@ rmw_ret_t GraphCache::get_entities_info_by_topic(
         }
 
         memset(ep.endpoint_gid, 0, RMW_GID_STORAGE_SIZE);
-        entity->copy_gid(ep.endpoint_gid);
+        memcpy(ep.endpoint_gid, entity->copy_gid().data(), RMW_GID_STORAGE_SIZE);
 
         endpoints.push_back(ep);
       }

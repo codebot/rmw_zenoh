@@ -15,8 +15,6 @@
 #ifndef DETAIL__RMW_SERVICE_DATA_HPP_
 #define DETAIL__RMW_SERVICE_DATA_HPP_
 
-#include <zenoh.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -25,6 +23,8 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+
+#include <zenoh.hxx>
 
 #include "event.hpp"
 #include "liveliness_utils.hpp"
@@ -42,12 +42,12 @@ namespace rmw_zenoh_cpp
 {
 
 ///=============================================================================
-class ServiceData final
+class ServiceData final : public std::enable_shared_from_this<ServiceData>
 {
 public:
   // Make a shared_ptr of ServiceData.
   static std::shared_ptr<ServiceData> make(
-    const z_loaned_session_t * session,
+    std::shared_ptr<zenoh::Session> session,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,
     std::size_t node_id,
@@ -99,6 +99,7 @@ private:
   ServiceData(
     const rmw_node_t * rmw_node,
     std::shared_ptr<liveliness::Entity> entity,
+    std::shared_ptr<zenoh::Session> session,
     const void * request_type_support_impl,
     const void * response_type_support_impl,
     std::unique_ptr<RequestTypeSupport> request_type_support,
@@ -110,12 +111,15 @@ private:
   const rmw_node_t * rmw_node_;
   // The Entity generated for the service.
   std::shared_ptr<liveliness::Entity> entity_;
-  // An owned keyexpression.
-  z_owned_keyexpr_t keyexpr_;
+
+  // A shared session
+  std::shared_ptr<zenoh::Session> sess_;
+  // The keyexpr string.
+  std::string keyexpr_;
   // An owned queryable.
-  z_owned_queryable_t qable_;
+  std::optional<zenoh::Queryable<void>> qable_;
   // Liveliness token for the service.
-  z_owned_liveliness_token_t token_;
+  std::optional<zenoh::LivelinessToken> token_;
   // Type support fields.
   const void * request_type_support_impl_;
   const void * response_type_support_impl_;

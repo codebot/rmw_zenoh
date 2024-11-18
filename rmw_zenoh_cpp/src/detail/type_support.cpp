@@ -131,10 +131,10 @@ bool TypeSupport::deserialize_ros_message(
     uint8_t dump = 0;
     deser >> dump;
     (void)dump;
-  } catch (const eprosima::fastcdr::exception::Exception &) {
+  } catch (const eprosima::fastcdr::exception::Exception & e) {
     RMW_SET_ERROR_MSG_WITH_FORMAT_STRING(
-      "Fast CDR exception deserializing message of type %s.",
-      get_name());
+      "Fast CDR exception deserializing message of type %s. %s",
+      get_name(), e.what());
     return false;
   }
 

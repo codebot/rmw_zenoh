@@ -40,6 +40,6 @@ jobs:
       with:
         package-name: |
           rmw_zenoh_cpp
-          zenoh_c_vendor
+          zenoh_cpp_vendor
         target-ros2-distro: ${{ matrix.ROS_DISTRO }}
         vcs-repo-file-url: ${{ matrix.BUILD_TYPE == 'source' && env.ROS2_REPOS_FILE_URL || '' }}

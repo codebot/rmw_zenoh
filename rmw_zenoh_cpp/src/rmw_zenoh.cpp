@@ -13,8 +13,7 @@
 // limitations under the License.
 
 #include <fastcdr/FastBuffer.h>
-
-#include <zenoh.h>
+#include <rmw/get_topic_endpoint_info.h>
 
 #include <chrono>
 #include <cinttypes>
@@ -26,7 +25,8 @@
 #include <string>
 #include <utility>
 
-#include "detail/attachment_helpers.hpp"
+#include <zenoh.hxx>
+
 #include "detail/cdr.hpp"
 #include "detail/guard_condition.hpp"
 #include "detail/graph_cache.hpp"
@@ -751,7 +751,7 @@ rmw_publisher_assert_liveliness(const rmw_publisher_t * publisher)
   auto pub_data = node_data->get_pub_data(publisher);
   RMW_CHECK_ARGUMENT_FOR_NULL(pub_data, RMW_RET_INVALID_ARGUMENT);
 
-  if (!pub_data->liveliness_is_valid()) {
+  if (pub_data->is_shutdown()) {
     return RMW_RET_ERROR;
   }
 
@@ -2451,7 +2451,7 @@ rmw_get_gid_for_publisher(const rmw_publisher_t * publisher, rmw_gid_t * gid)
   RMW_CHECK_ARGUMENT_FOR_NULL(pub_data, RMW_RET_INVALID_ARGUMENT);
 
   gid->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-  pub_data->copy_gid(gid->data);
+  memcpy(gid->data, pub_data->copy_gid().data(), RMW_GID_STORAGE_SIZE);
 
   return RMW_RET_OK;
 }
@@ -2468,7 +2468,7 @@ rmw_get_gid_for_client(const rmw_client_t * client, rmw_gid_t * gid)
   RMW_CHECK_ARGUMENT_FOR_NULL(client_data, RMW_RET_INVALID_ARGUMENT);
 
   gid->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-  client_data->copy_gid(gid->data);
+  memcpy(gid->data, client_data->copy_gid().data(), RMW_GID_STORAGE_SIZE);
 
   return RMW_RET_OK;
 }
