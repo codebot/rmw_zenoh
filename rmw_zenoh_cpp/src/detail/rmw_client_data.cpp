@@ -245,11 +245,11 @@ bool ClientData::init(const z_loaned_session_t * session)
     [this]() {
       z_drop(z_move(this->token_));
     });
-  if(zc_liveliness_declare_token(
-    session,
-    &this->token_,
-    z_loan(liveliness_ke),
-    NULL
+  if (zc_liveliness_declare_token(
+      session,
+      &this->token_,
+      z_loan(liveliness_ke),
+      NULL
     ) != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(

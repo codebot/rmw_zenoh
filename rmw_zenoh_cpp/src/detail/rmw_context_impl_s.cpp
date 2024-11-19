@@ -179,9 +179,9 @@ public:
     // Initialize the shm manager if shared_memory is enabled in the config.
     shm_provider_ = std::nullopt;
     if (strncmp(
-      z_string_data(z_loan(shm_enabled)),
-      "true",
-      z_string_len(z_loan(shm_enabled))) == 0)
+        z_string_data(z_loan(shm_enabled)),
+        "true",
+        z_string_len(z_loan(shm_enabled))) == 0)
     {
       // TODO(yuyuan): determine the default alignment of SHM
       z_alloc_alignment_t alignment = {5};
