@@ -109,7 +109,7 @@ private:
     std::shared_ptr<ResponseTypeSupport> response_type_support);
 
   // Initialize the Zenoh objects for this entity.
-  bool init(const z_loaned_session_t * session);
+  bool init(const std::shared_ptr<zenoh::Session> & session);
 
   // Shutdown this client (the mutex is expected to be held by the caller).
   void _shutdown();
@@ -122,9 +122,9 @@ private:
   // The Entity generated for the service.
   std::shared_ptr<liveliness::Entity> entity_;
   // An owned keyexpression.
-  z_owned_keyexpr_t keyexpr_;
+  std::optional<zenoh::KeyExpr> keyexpr_;
   // Liveliness token for the service.
-  zc_owned_liveliness_token_t token_;
+  std::optional<zenoh::LivelinessToken> token_;
   // Type support fields.
   const void * request_type_support_impl_;
   const void * response_type_support_impl_;

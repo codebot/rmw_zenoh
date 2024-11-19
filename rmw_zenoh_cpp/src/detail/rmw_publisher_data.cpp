@@ -166,16 +166,12 @@ std::shared_ptr<PublisherData> PublisherData::make(
   }
 
   std::string liveliness_keyexpr = entity->liveliness_keyexpr();
-  z_view_keyexpr_t liveliness_ke;
-  z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
-  zc_owned_liveliness_token_t token;
-  auto free_token = rcpputils::make_scope_exit(
-    [&token]() {
-      z_drop(z_move(token));
-    });
-  if (zc_liveliness_declare_token(
-      z_loan(session->_0), &token, z_loan(liveliness_ke),
-      NULL) != Z_OK)
+  zenoh::ZResult err;
+  auto token = session->liveliness_declare_token(
+    zenoh::KeyExpr(liveliness_keyexpr),
+    zenoh::Session::LivelinessDeclarationOptions::create_default(),
+    &err);
+  if (err != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
@@ -183,7 +179,6 @@ std::shared_ptr<PublisherData> PublisherData::make(
     return nullptr;
   }
 
-  free_token.cancel();
   undeclare_z_publisher_cache.cancel();
   undeclare_z_publisher.cancel();
 
@@ -205,7 +200,7 @@ PublisherData::PublisherData(
   std::shared_ptr<liveliness::Entity> entity,
   z_owned_publisher_t pub,
   std::optional<ze_owned_publication_cache_t> pub_cache,
-  zc_owned_liveliness_token_t token,
+  zenoh::LivelinessToken token,
   const void * type_support_impl,
   std::unique_ptr<MessageTypeSupport> type_support)
 : rmw_node_(rmw_node),
@@ -428,7 +423,15 @@ rmw_ret_t PublisherData::shutdown()
   }
 
   // Unregister this publisher from the ROS graph.
-  zc_liveliness_undeclare_token(z_move(token_));
+  zenoh::ZResult err;
+  std::move(token_).value().undeclare(&err);
+  if (err != Z_OK)
+  {
+    RMW_ZENOH_LOG_ERROR_NAMED(
+        "rmw_zenoh_cpp",
+        "Unable to undeclare liveliness token");
+    return RMW_RET_ERROR;
+  }
   if (pub_cache_.has_value()) {
     z_drop(z_move(pub_cache_.value()));
   }

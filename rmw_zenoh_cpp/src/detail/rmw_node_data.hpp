@@ -126,7 +126,7 @@ private:
     const rmw_node_t * const node,
     std::size_t id,
     std::shared_ptr<liveliness::Entity> entity,
-    zc_owned_liveliness_token_t token);
+    zenoh::LivelinessToken token);
   // Internal mutex.
   mutable std::mutex mutex_;
   // The rmw_node_t associated with this NodeData.
@@ -137,7 +137,7 @@ private:
   // The Entity generated for the node.
   std::shared_ptr<liveliness::Entity> entity_;
   // Liveliness token for the node.
-  zc_owned_liveliness_token_t token_;
+  std::optional<zenoh::LivelinessToken> token_;
   // Shutdown flag.
   bool is_shutdown_;
   // Map of publishers.

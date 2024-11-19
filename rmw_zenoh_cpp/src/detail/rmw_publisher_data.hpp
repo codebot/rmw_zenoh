@@ -85,7 +85,7 @@ private:
     std::shared_ptr<liveliness::Entity> entity,
     z_owned_publisher_t pub,
     std::optional<ze_owned_publication_cache_t> pub_cache,
-    zc_owned_liveliness_token_t token,
+    zenoh::LivelinessToken token,
     const void * type_support_impl,
     std::unique_ptr<MessageTypeSupport> type_support);
 
@@ -100,7 +100,7 @@ private:
   // Optional publication cache when durability is transient_local.
   std::optional<ze_owned_publication_cache_t> pub_cache_;
   // Liveliness token for the publisher.
-  zc_owned_liveliness_token_t token_;
+  std::optional<zenoh::LivelinessToken> token_;
   // Type support fields
   const void * type_support_impl_;
   std::unique_ptr<MessageTypeSupport> type_support_;

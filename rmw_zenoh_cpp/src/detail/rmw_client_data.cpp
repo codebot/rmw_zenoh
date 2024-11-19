@@ -193,7 +193,7 @@ std::shared_ptr<ClientData> ClientData::make(
       response_type_support
     });
 
-  if (!client_data->init(z_loan(session->_0))) {
+  if (!client_data->init(session)) {
     // init() already set the error.
     return nullptr;
   }
@@ -226,40 +226,24 @@ ClientData::ClientData(
 }
 
 ///=============================================================================
-bool ClientData::init(const z_loaned_session_t * session)
+bool ClientData::init(const std::shared_ptr<zenoh::Session> & session)
 {
   std::string topic_keyexpr = this->entity_->topic_info().value().topic_keyexpr_;
-  auto free_ros_keyexpr = rcpputils::make_scope_exit(
-    [this]() {
-      z_drop(z_move(this->keyexpr_));
-    });
-  if (z_keyexpr_from_str(&this->keyexpr_, topic_keyexpr.c_str()) != Z_OK) {
-    RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
-    return false;
-  }
+  keyexpr_ = zenoh::KeyExpr(topic_keyexpr);
 
   std::string liveliness_keyexpr = this->entity_->liveliness_keyexpr();
-  z_view_keyexpr_t liveliness_ke;
-  z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
-  auto free_token = rcpputils::make_scope_exit(
-    [this]() {
-      z_drop(z_move(this->token_));
-    });
-  if(zc_liveliness_declare_token(
-    session,
-    &this->token_,
-    z_loan(liveliness_ke),
-    NULL
-    ) != Z_OK)
+  zenoh::ZResult err;
+  this->token_ = session->liveliness_declare_token(
+    zenoh::KeyExpr(liveliness_keyexpr),
+    zenoh::Session::LivelinessDeclarationOptions::create_default(),
+    &err);
+  if (err != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the client.");
     return false;
   }
-
-  free_ros_keyexpr.cancel();
-  free_token.cancel();
 
   return true;
 }
@@ -289,7 +273,7 @@ void ClientData::add_new_reply(std::unique_ptr<ZenohReply> reply)
   {
     // Log warning if message is discarded due to hitting the queue depth
     z_view_string_t keystr;
-    z_keyexpr_as_view_string(z_loan(keyexpr_), &keystr);
+    z_keyexpr_as_view_string(z_loan(keyexpr_.value()._0), &keystr);
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Query queue depth of %ld reached, discarding oldest Query "
@@ -451,7 +435,7 @@ rmw_ret_t ClientData::send_request(
   z_closure(&callback, client_data_handler, client_data_drop, this);
   z_get(
     context_impl->session(),
-    z_loan(keyexpr_), "",
+    z_loan(keyexpr_.value()._0), "",
     z_move(callback),
     &opts);
 
@@ -510,9 +494,15 @@ void ClientData::_shutdown()
   }
 
   // Unregister this node from the ROS graph.
-  zc_liveliness_undeclare_token(z_move(token_));
-
-  z_drop(z_move(keyexpr_));
+  zenoh::ZResult err;
+  std::move(token_).value().undeclare(&err);
+  if (err != Z_OK)
+  {
+    RMW_ZENOH_LOG_ERROR_NAMED(
+        "rmw_zenoh_cpp",
+        "Unable to undeclare liveliness token");
+    return;
+  }
 
   is_shutdown_ = true;
 }

@@ -58,20 +58,18 @@ std::shared_ptr<NodeData> NodeData::make(
 
   // Create the liveliness token.
   std::string liveliness_keyexpr = entity->liveliness_keyexpr();
-  z_view_keyexpr_t liveliness_ke;
-  z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
-  zc_owned_liveliness_token_t token;
-  auto free_token = rcpputils::make_scope_exit(
-    [&token]() {
-      z_drop(z_move(token));
-    });
-  if (zc_liveliness_declare_token(z_loan(session->_0), &token, z_loan(liveliness_ke), NULL) != Z_OK) {
+  zenoh::ZResult err;
+  auto token = session->liveliness_declare_token(
+    zenoh::KeyExpr(liveliness_keyexpr),
+    zenoh::Session::LivelinessDeclarationOptions::create_default(),
+    &err);
+  if (err != Z_OK)
+  {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the node.");
     return nullptr;
   }
-  free_token.cancel();
 
   return std::shared_ptr<NodeData>(
     new NodeData{
@@ -87,7 +85,7 @@ NodeData::NodeData(
   const rmw_node_t * const node,
   std::size_t id,
   std::shared_ptr<liveliness::Entity> entity,
-  zc_owned_liveliness_token_t token)
+  zenoh::LivelinessToken token)
 : node_(node),
   id_(std::move(id)),
   entity_(std::move(entity)),
@@ -452,7 +450,15 @@ rmw_ret_t NodeData::shutdown()
   }
 
   // Unregister this node from the ROS graph.
-  zc_liveliness_undeclare_token(z_move(token_));
+  zenoh::ZResult err;
+  std::move(token_).value().undeclare(&err);
+  if (err != Z_OK)
+  {
+    RMW_ZENOH_LOG_ERROR_NAMED(
+        "rmw_zenoh_cpp",
+        "Unable to undeclare liveliness token");
+    return RMW_RET_ERROR;
+  }
 
   is_shutdown_ = true;
   return ret;

@@ -320,15 +320,12 @@ bool SubscriptionData::init()
 
   // Publish to the graph that a new subscription is in town.
   std::string liveliness_keyexpr = entity_->liveliness_keyexpr();
-  z_view_keyexpr_t liveliness_ke;
-  z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
-
-  auto free_token = rcpputils::make_scope_exit(
-    [this]() {
-      z_drop(z_move(token_));
-    });
-  if (zc_liveliness_declare_token(
-      context_impl->session(), &token_, z_loan(liveliness_ke), NULL) != Z_OK)
+  zenoh::ZResult err;
+  token_ = context_impl->session_cpp()->liveliness_declare_token(
+    zenoh::KeyExpr(liveliness_keyexpr),
+    zenoh::Session::LivelinessDeclarationOptions::create_default(),
+    &err);
+  if (err != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
@@ -337,7 +334,6 @@ bool SubscriptionData::init()
   }
 
   undeclare_z_sub.cancel();
-  free_token.cancel();
 
   initialized_ = true;
 
@@ -396,7 +392,15 @@ rmw_ret_t SubscriptionData::shutdown()
   graph_cache_->remove_qos_event_callbacks(entity_->keyexpr_hash());
 
   // Unregister this subscription from the ROS graph.
-  zc_liveliness_undeclare_token(z_move(token_));
+  zenoh::ZResult err;
+  std::move(token_).value().undeclare(&err);
+  if (err != Z_OK)
+  {
+    RMW_ZENOH_LOG_ERROR_NAMED(
+        "rmw_zenoh_cpp",
+        "Unable to undeclare liveliness token");
+    return RMW_RET_ERROR;
+  }
 
   z_owned_subscriber_t * sub = std::get_if<z_owned_subscriber_t>(&sub_);
   if (sub != nullptr) {
