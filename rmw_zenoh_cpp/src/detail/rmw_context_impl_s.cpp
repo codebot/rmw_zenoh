@@ -32,7 +32,6 @@
 #include "logging_macros.hpp"
 #include "rmw_node_data.hpp"
 #include "zenoh_config.hpp"
-#include "zenoh_router_check.hpp"
 
 #include "rcpputils/scope_exit.hpp"
 #include "rmw/error_handling.h"
