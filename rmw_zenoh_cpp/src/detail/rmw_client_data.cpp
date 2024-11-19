@@ -351,7 +351,7 @@ rmw_ret_t ClientData::take_response(
   }
 
   // Fill in the request_header
-  rmw_zenoh_cpp::attachement_data_t attachment(z_sample_attachment(sample));
+  rmw_zenoh_cpp::attachment_data_t attachment(z_sample_attachment(sample));
   request_header->request_id.sequence_number = attachment.sequence_number;
   if (request_header->request_id.sequence_number < 0) {
     RMW_SET_ERROR_MSG("Failed to get sequence_number from client call attachment");

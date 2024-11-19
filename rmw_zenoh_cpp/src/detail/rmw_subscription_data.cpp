@@ -59,7 +59,7 @@ void sub_data_handler(z_loaned_sample_t * sample, void * data)
     return;
   }
 
-  attachement_data_t attachment(z_sample_attachment(sample));
+  attachment_data_t attachment(z_sample_attachment(sample));
   const z_loaned_bytes_t * payload = z_sample_payload(sample);
 
   z_owned_slice_t slice;
@@ -78,7 +78,7 @@ void sub_data_handler(z_loaned_sample_t * sample, void * data)
 SubscriptionData::Message::Message(
   z_owned_slice_t p,
   uint64_t recv_ts,
-  attachement_data_t && attachment_)
+  attachment_data_t && attachment_)
 : payload(p), recv_timestamp(recv_ts), attachment(std::move(attachment_))
 {
 }

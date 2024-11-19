@@ -29,7 +29,7 @@ void create_map_and_set_sequence_num(
   auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);
   int64_t source_timestamp = now_ns.count();
 
-  rmw_zenoh_cpp::attachement_data_t data(sequence_number, source_timestamp, gid);
+  rmw_zenoh_cpp::attachment_data_t data(sequence_number, source_timestamp, gid);
   data.serialize_to_zbytes(out_bytes);
 }
 

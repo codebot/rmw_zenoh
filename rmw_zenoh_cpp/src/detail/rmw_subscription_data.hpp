@@ -51,13 +51,13 @@ public:
     explicit Message(
       z_owned_slice_t p,
       uint64_t recv_ts,
-      attachement_data_t && attachment);
+      attachment_data_t && attachment);
 
     ~Message();
 
     z_owned_slice_t payload;
     uint64_t recv_timestamp;
-    attachement_data_t attachment;
+    attachment_data_t attachment;
   };
 
   // Make a shared_ptr of SubscriptionData.
