@@ -22,15 +22,15 @@
 namespace rmw_zenoh_cpp
 {
 
-class attachement_data_t final
+class attachment_data_t final
 {
 public:
-  explicit attachement_data_t(
+  explicit attachment_data_t(
     const int64_t _sequence_number,
     const int64_t _source_timestamp,
     const uint8_t _source_gid[RMW_GID_STORAGE_SIZE]);
-  explicit attachement_data_t(const z_loaned_bytes_t *);
-  explicit attachement_data_t(attachement_data_t && data);
+  explicit attachment_data_t(const z_loaned_bytes_t *);
+  explicit attachment_data_t(attachment_data_t && data);
 
   int64_t sequence_number;
   int64_t source_timestamp;

@@ -59,7 +59,7 @@ void sub_data_handler(z_loaned_sample_t * sample, void * data)
     return;
   }
 
-  attachement_data_t attachment(z_sample_attachment(sample));
+  attachment_data_t attachment(z_sample_attachment(sample));
   const z_loaned_bytes_t * payload = z_sample_payload(sample);
 
   z_owned_slice_t slice;
@@ -78,7 +78,7 @@ void sub_data_handler(z_loaned_sample_t * sample, void * data)
 SubscriptionData::Message::Message(
   z_owned_slice_t p,
   uint64_t recv_ts,
-  attachement_data_t && attachment_)
+  attachment_data_t && attachment_)
 : payload(p), recv_timestamp(recv_ts), attachment(std::move(attachment_))
 {
 }
@@ -195,12 +195,6 @@ SubscriptionData::SubscriptionData(
 // enable_shared_from_this, which is not available in constructors.
 bool SubscriptionData::init()
 {
-  if (entity_->topic_info()->qos_.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
-    RMW_ZENOH_LOG_WARN_NAMED(
-      "rmw_zenoh_cpp",
-      "`reliability` no longer supported on subscriber. Ignoring...");
-  }
-
   // TODO(Yadunund): Instead of passing a rawptr, rely on capturing weak_ptr<SubscriptionData>
   // in the closure callback once we switch to zenoh-cpp.
   z_owned_closure_sample_t callback;

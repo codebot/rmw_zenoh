@@ -307,7 +307,7 @@ rmw_ret_t ServiceData::take_request(
 
   // Fill in the request header.
   // Get the sequence_number out of the attachment
-  rmw_zenoh_cpp::attachement_data_t attachment(z_query_attachment(loaned_query));
+  rmw_zenoh_cpp::attachment_data_t attachment(z_query_attachment(loaned_query));
 
   request_header->request_id.sequence_number = attachment.sequence_number;
   if (request_header->request_id.sequence_number < 0) {

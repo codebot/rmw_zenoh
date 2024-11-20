@@ -28,7 +28,7 @@ set(RMW_ZENOH_BUILD_WITH_SHARED_MEMORY TRUE CACHE BOOL "Compile Zenoh RMW with S
 # - https://github.com/eclipse-zenoh/zenoh-c/pull/620 (fix ze_querying_subscriber_get API to query newly discovered publishers)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION a57fda736d2f8866c06509f34b5bc73e372c6aaf
+  VCS_VERSION 4b759d4e4d35a97d7b20b5c4003b8b764a10f679
   CMAKE_ARGS
     -DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}
     -DZENOHC_BUILD_WITH_SHARED_MEMORY:BOOL=${RMW_ZENOH_BUILD_WITH_SHARED_MEMORY}
