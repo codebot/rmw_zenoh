@@ -83,8 +83,8 @@ private:
   PublisherData(
     const rmw_node_t * rmw_node,
     std::shared_ptr<liveliness::Entity> entity,
-    z_owned_publisher_t pub,
-    std::optional<ze_owned_publication_cache_t> pub_cache,
+    zenoh::Publisher pub,
+    std::optional<zenoh::ext::PublicationCache> pub_cache,
     zenoh::LivelinessToken token,
     const void * type_support_impl,
     std::unique_ptr<MessageTypeSupport> type_support);
@@ -96,9 +96,9 @@ private:
   // The Entity generated for the publisher.
   std::shared_ptr<liveliness::Entity> entity_;
   // An owned publisher.
-  z_owned_publisher_t pub_;
+  zenoh::Publisher pub_;
   // Optional publication cache when durability is transient_local.
-  std::optional<ze_owned_publication_cache_t> pub_cache_;
+  std::optional<zenoh::ext::PublicationCache> pub_cache_;
   // Liveliness token for the publisher.
   std::optional<zenoh::LivelinessToken> token_;
   // Type support fields

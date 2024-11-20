@@ -99,52 +99,34 @@ std::shared_ptr<PublisherData> PublisherData::make(
     return nullptr;
   }
 
-  std::string topic_keyexpr = entity->topic_info()->topic_keyexpr_;
-  z_view_keyexpr_t pub_ke;
-  if (z_view_keyexpr_from_str(&pub_ke, topic_keyexpr.c_str()) != Z_OK) {
-    RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
-    return nullptr;
-  }
-
+  zenoh::ZResult err;
+  std::optional<zenoh::ext::PublicationCache> pub_cache;
+  zenoh::KeyExpr pub_ke(entity->topic_info()->topic_keyexpr_);
   // Create a Publication Cache if durability is transient_local.
-  std::optional<ze_owned_publication_cache_t> pub_cache = std::nullopt;
-  auto undeclare_z_publisher_cache = rcpputils::make_scope_exit(
-    [&pub_cache]() {
-      if (pub_cache.has_value()) {
-        z_drop(z_move(pub_cache.value()));
-      }
-    });
   if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
-    ze_publication_cache_options_t pub_cache_opts;
-    ze_publication_cache_options_default(&pub_cache_opts);
+
+    zenoh::Session::PublicationCacheOptions pub_cache_opts =
+      zenoh::Session::PublicationCacheOptions::create_default();
+
     pub_cache_opts.history = adapted_qos_profile.depth;
     pub_cache_opts.queryable_complete = true;
-    // Set the queryable_prefix to the session id so that querying subscribers can specify this
-    // session id to obtain latest data from this specific publication caches when querying over
-    // the same keyexpression.
-    // When such a prefix is added to the PublicationCache, it listens to queries with this extra
-    // prefix (allowing to be queried in a unique way), but still replies with the original
-    // publications' key expressions.
-    std::string queryable_prefix = entity->zid();
-    z_view_keyexpr_t prefix_ke;
-    z_view_keyexpr_from_str(&prefix_ke, queryable_prefix.c_str());
-    pub_cache_opts.queryable_prefix = z_loan(prefix_ke);
 
-    ze_owned_publication_cache_t pub_cache_;
-    if (ze_declare_publication_cache(
-        z_loan(session->_0), &pub_cache_, z_loan(pub_ke), &pub_cache_opts))
+    std::string queryable_prefix = entity->zid();
+    pub_cache_opts.queryable_prefix = zenoh::KeyExpr(queryable_prefix);
+
+    pub_cache = session->declare_publication_cache(pub_ke, std::move(pub_cache_opts), &err);
+
+    if (err != Z_OK)
     {
       RMW_SET_ERROR_MSG("unable to create zenoh publisher cache");
       return nullptr;
     }
-    pub_cache = pub_cache_;
   }
 
   // Set congestion_control to BLOCK if appropriate.
-  z_publisher_options_t opts;
-  z_publisher_options_default(&opts);
-  opts.congestion_control = Z_CONGESTION_CONTROL_DROP;
 
+  zenoh::Session::PublisherOptions opts = zenoh::Session::PublisherOptions::create_default();
+  opts.congestion_control = Z_CONGESTION_CONTROL_DROP;
   if (adapted_qos_profile.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
     opts.reliability = Z_RELIABILITY_RELIABLE;
 
@@ -152,21 +134,15 @@ std::shared_ptr<PublisherData> PublisherData::make(
       opts.congestion_control = Z_CONGESTION_CONTROL_BLOCK;
     }
   }
-  z_owned_publisher_t pub;
-  // TODO(clalancette): What happens if the key name is a valid but empty string?
-  auto undeclare_z_publisher = rcpputils::make_scope_exit(
-    [&pub]() {
-      z_undeclare_publisher(z_move(pub));
-    });
-  if (z_declare_publisher(
-      z_loan(session->_0), &pub, z_loan(pub_ke), &opts) != Z_OK)
+  auto pub = session->declare_publisher(pub_ke, std::move(opts), &err);
+
+  if (err != Z_OK)
   {
     RMW_SET_ERROR_MSG("Unable to create Zenoh publisher.");
     return nullptr;
   }
 
   std::string liveliness_keyexpr = entity->liveliness_keyexpr();
-  zenoh::ZResult err;
   auto token = session->liveliness_declare_token(
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
@@ -178,9 +154,6 @@ std::shared_ptr<PublisherData> PublisherData::make(
       "Unable to create liveliness token for the publisher.");
     return nullptr;
   }
-
-  undeclare_z_publisher_cache.cancel();
-  undeclare_z_publisher.cancel();
 
   return std::shared_ptr<PublisherData>(
     new PublisherData{
@@ -198,8 +171,8 @@ std::shared_ptr<PublisherData> PublisherData::make(
 PublisherData::PublisherData(
   const rmw_node_t * rmw_node,
   std::shared_ptr<liveliness::Entity> entity,
-  z_owned_publisher_t pub,
-  std::optional<ze_owned_publication_cache_t> pub_cache,
+  zenoh::Publisher pub,
+  std::optional<zenoh::ext::PublicationCache> pub_cache,
   zenoh::LivelinessToken token,
   const void * type_support_impl,
   std::unique_ptr<MessageTypeSupport> type_support)
@@ -295,24 +268,21 @@ rmw_ret_t PublisherData::publish(
   // The encoding is simply forwarded and is useful when key expressions in the
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
-  z_publisher_put_options_t options;
-  z_publisher_put_options_default(&options);
-  z_owned_bytes_t attachment;
   uint8_t local_gid[RMW_GID_STORAGE_SIZE];
   entity_->copy_gid(local_gid);
-  create_map_and_set_sequence_num(&attachment, sequence_number_++, local_gid);
-  options.attachment = z_move(attachment);
+  zenoh::ZResult err;
+  auto options = zenoh::Publisher::PutOptions::create_default();
+  options.attachment = create_map_and_set_sequence_num(sequence_number_++, local_gid);
 
-  z_owned_bytes_t payload;
-  if (shmbuf.has_value()) {
-    z_bytes_from_shm_mut(&payload, z_move(shmbuf.value()));
-  } else {
-    z_bytes_copy_from_buf(&payload, reinterpret_cast<const uint8_t *>(msg_bytes), data_length);
-  }
+  // TODO(ahcorde): shmbuf
+  std::vector<uint8_t> raw_image(
+    reinterpret_cast<const uint8_t *>(msg_bytes),
+    reinterpret_cast<const uint8_t *>(msg_bytes) + data_length);
+  zenoh::Bytes payload(raw_image);
 
-  z_result_t res = z_publisher_put(z_loan(pub_), z_move(payload), &options);
-  if (res != Z_OK) {
-    if (res == Z_ESESSION_CLOSED) {
+  pub_.put(std::move(payload), std::move(options), &err);
+  if (err != Z_OK) {
+    if (err == Z_ESESSION_CLOSED) {
       RMW_ZENOH_LOG_WARN_NAMED(
         "rmw_zenoh_cpp",
         "unable to publish message since the zenoh session is closed");
@@ -340,27 +310,25 @@ rmw_ret_t PublisherData::publish_serialized_message(
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-
   const size_t data_length = ser.get_serialized_data_length();
 
   // The encoding is simply forwarded and is useful when key expressions in the
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
-  z_publisher_put_options_t options;
-  z_publisher_put_options_default(&options);
   uint8_t local_gid[RMW_GID_STORAGE_SIZE];
   entity_->copy_gid(local_gid);
-  z_owned_bytes_t attachment;
-  create_map_and_set_sequence_num(&attachment, sequence_number_++, local_gid);
+  zenoh::ZResult err;
+  auto options = zenoh::Publisher::PutOptions::create_default();
+  options.attachment = create_map_and_set_sequence_num(sequence_number_++, local_gid);
 
-  options.attachment = z_move(attachment);
+  std::vector<uint8_t> raw_image(
+    serialized_message->buffer,
+    serialized_message->buffer + data_length);
+  zenoh::Bytes payload(raw_image);
 
-  z_owned_bytes_t payload;
-  z_bytes_copy_from_buf(&payload, serialized_message->buffer, data_length);
-
-  z_result_t res = z_publisher_put(z_loan(pub_), z_move(payload), &options);
-  if (res != Z_OK) {
-    if (res == Z_ESESSION_CLOSED) {
+  pub_.put(std::move(payload), std::move(options), &err);
+  if (err != Z_OK) {
+    if (err == Z_ESESSION_CLOSED) {
       RMW_ZENOH_LOG_WARN_NAMED(
         "rmw_zenoh_cpp",
         "unable to publish message since the zenoh session is closed");
@@ -369,7 +337,6 @@ rmw_ret_t PublisherData::publish_serialized_message(
       return RMW_RET_ERROR;
     }
   }
-
   return RMW_RET_OK;
 }
 
@@ -432,10 +399,14 @@ rmw_ret_t PublisherData::shutdown()
         "Unable to undeclare liveliness token");
     return RMW_RET_ERROR;
   }
-  if (pub_cache_.has_value()) {
-    z_drop(z_move(pub_cache_.value()));
+  std::move(pub_).undeclare(&err);
+  if (err != Z_OK)
+  {
+    RMW_ZENOH_LOG_ERROR_NAMED(
+        "rmw_zenoh_cpp",
+        "Unable to undeclare publisher");
+    return RMW_RET_ERROR;
   }
-  z_undeclare_publisher(z_move(pub_));
 
   is_shutdown_ = true;
   return RMW_RET_OK;

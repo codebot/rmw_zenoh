@@ -15,12 +15,30 @@
 #ifndef DETAIL__ATTACHMENT_HELPERS_HPP_
 #define DETAIL__ATTACHMENT_HELPERS_HPP_
 
-#include <zenoh.h>
+#include <zenoh.hxx>
 
 #include "rmw/types.h"
 
 namespace rmw_zenoh_cpp
 {
+
+class AttachementData final
+{
+public:
+  explicit AttachementData(
+    const int64_t _sequence_number,
+    const int64_t _source_timestamp,
+    const uint8_t _source_gid[RMW_GID_STORAGE_SIZE]);
+
+  // explicit AttachementData(const zenoh::Bytes & bytes);
+  explicit AttachementData(AttachementData && data);
+
+  int64_t sequence_number;
+  int64_t source_timestamp;
+  std::vector<uint8_t> source_gid;
+
+  zenoh::Bytes serialize_to_zbytes();
+};
 
 class attachement_data_t final
 {

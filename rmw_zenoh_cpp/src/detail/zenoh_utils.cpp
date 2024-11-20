@@ -34,6 +34,18 @@ void create_map_and_set_sequence_num(
 }
 
 ///=============================================================================
+zenoh::Bytes create_map_and_set_sequence_num(
+   int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE])
+{
+  auto now = std::chrono::system_clock::now().time_since_epoch();
+  auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);
+  int64_t source_timestamp = now_ns.count();
+
+  rmw_zenoh_cpp::AttachementData data(sequence_number, source_timestamp, gid);
+  return std::move(data.serialize_to_zbytes());
+}
+
+///=============================================================================
 ZenohQuery::ZenohQuery(z_owned_query_t query) {query_ = query;}
 
 ///=============================================================================

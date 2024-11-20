@@ -27,6 +27,38 @@
 namespace rmw_zenoh_cpp
 {
 
+AttachementData::AttachementData(
+  const int64_t _sequence_number,
+  const int64_t _source_timestamp,
+  const uint8_t _source_gid[RMW_GID_STORAGE_SIZE])
+{
+  sequence_number = _sequence_number;
+  source_timestamp = _source_timestamp;
+  for (size_t i = 0; i < RMW_GID_STORAGE_SIZE; ++i)
+  {
+    source_gid.push_back(_source_gid[RMW_GID_STORAGE_SIZE - 1 - i]);
+  }
+}
+
+AttachementData::AttachementData(AttachementData && data)
+{
+  sequence_number = std::move(data.sequence_number);
+  source_timestamp = std::move(data.source_timestamp);
+  source_gid = data.source_gid;
+}
+
+zenoh::Bytes AttachementData::serialize_to_zbytes()
+{
+  auto serializer = zenoh::ext::Serializer();
+  serializer.serialize(std::string("sequence_number"));
+  serializer.serialize(this->sequence_number);
+  serializer.serialize(std::string("source_timestamp"));
+  serializer.serialize(this->source_timestamp);
+  serializer.serialize(std::string("source_gid"));
+  serializer.serialize(this->source_gid);
+  return std::move(serializer).finish();
+}
+
 attachement_data_t::attachement_data_t(
   const int64_t _sequence_number,
   const int64_t _source_timestamp,
