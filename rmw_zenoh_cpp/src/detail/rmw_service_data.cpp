@@ -52,9 +52,10 @@ void service_data_handler(z_loaned_query_t * query, void * data)
     return;
   }
 
-  z_owned_query_t owned_query;
-  z_query_clone(&owned_query, query);
-  service_data->add_new_query(std::make_unique<ZenohQuery>(owned_query));
+  std::chrono::nanoseconds::rep received_timestamp =
+    std::chrono::system_clock::now().time_since_epoch().count();
+
+  service_data->add_new_query(std::make_unique<ZenohQuery>(query, received_timestamp));
 }
 
 ///=============================================================================
@@ -322,10 +323,7 @@ rmw_ret_t ServiceData::take_request(
     RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
     return RMW_RET_ERROR;
   }
-
-  auto now = std::chrono::system_clock::now().time_since_epoch();
-  auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);
-  request_header->received_timestamp = now_ns.count();
+  request_header->received_timestamp = query->get_received_timestamp();
 
   // Add this query to the map, so that rmw_send_response can quickly look it up later.
   const size_t hash = rmw_zenoh_cpp::hash_gid(request_header->request_id.writer_guid);

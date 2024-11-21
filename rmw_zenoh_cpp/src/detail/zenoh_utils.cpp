@@ -34,7 +34,16 @@ void create_map_and_set_sequence_num(
 }
 
 ///=============================================================================
-ZenohQuery::ZenohQuery(z_owned_query_t query) {query_ = query;}
+ZenohQuery::ZenohQuery(const z_loaned_query_t * query, std::chrono::nanoseconds::rep received_timestamp) {
+  z_query_clone(&query_, query);
+  received_timestamp_ = received_timestamp;
+}
+
+///=============================================================================
+std::chrono::nanoseconds::rep ZenohQuery::get_received_timestamp() const
+{
+  return received_timestamp_;
+}
 
 ///=============================================================================
 ZenohQuery::~ZenohQuery() {z_drop(z_move(query_));}
@@ -44,10 +53,10 @@ const z_loaned_query_t * ZenohQuery::get_query() const {return z_loan(query_);}
 
 ///=============================================================================
 ZenohReply::ZenohReply(
-  z_owned_reply_t reply,
+  const z_loaned_reply_t * reply,
   std::chrono::nanoseconds::rep received_timestamp)
 {
-  reply_ = reply;
+  z_reply_clone(&reply_, reply);
   received_timestamp_ = received_timestamp;
 }
 

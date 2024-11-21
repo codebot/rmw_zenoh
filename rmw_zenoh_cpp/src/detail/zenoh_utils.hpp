@@ -35,7 +35,7 @@ create_map_and_set_sequence_num(
 class ZenohReply final
 {
 public:
-  ZenohReply(z_owned_reply_t reply, std::chrono::nanoseconds::rep received_timestamp);
+  ZenohReply(const z_loaned_reply_t * reply, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohReply();
 
@@ -53,14 +53,17 @@ private:
 class ZenohQuery final
 {
 public:
-  ZenohQuery(z_owned_query_t query);
+  ZenohQuery(const z_loaned_query_t * query, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohQuery();
 
   const z_loaned_query_t * get_query() const;
 
+  std::chrono::nanoseconds::rep get_received_timestamp() const;
+
 private:
   z_owned_query_t query_;
+  std::chrono::nanoseconds::rep received_timestamp_;
 };
 }  // namespace rmw_zenoh_cpp
 
