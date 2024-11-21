@@ -49,15 +49,15 @@ public:
   struct Message
   {
     explicit Message(
-      z_owned_slice_t p,
+      zenoh::Bytes p,
       uint64_t recv_ts,
-      attachement_data_t && attachment);
+      AttachementData && attachment);
 
     ~Message();
 
-    z_owned_slice_t payload;
+    zenoh::Bytes payload;
     uint64_t recv_timestamp;
-    attachement_data_t attachment;
+    AttachementData attachment;
   };
 
   // Make a shared_ptr of SubscriptionData.
@@ -137,7 +137,7 @@ private:
   // The Entity generated for the subscription.
   std::shared_ptr<liveliness::Entity> entity_;
   // An owned subscriber or querying_subscriber depending on the QoS settings.
-  std::variant<z_owned_subscriber_t, ze_owned_querying_subscriber_t> sub_;
+  std::optional<std::variant<zenoh::Subscriber<void>, zenoh::ext::QueryingSubscriber<void>>> sub_;
   // Liveliness token for the subscription.
   std::optional<zenoh::LivelinessToken> token_;
   // Type support fields

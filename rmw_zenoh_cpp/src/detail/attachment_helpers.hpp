@@ -30,7 +30,7 @@ public:
     const int64_t _source_timestamp,
     const uint8_t _source_gid[RMW_GID_STORAGE_SIZE]);
 
-  // explicit AttachementData(const zenoh::Bytes & bytes);
+  explicit AttachementData(const zenoh::Bytes & bytes);
   explicit AttachementData(AttachementData && data);
 
   int64_t sequence_number;

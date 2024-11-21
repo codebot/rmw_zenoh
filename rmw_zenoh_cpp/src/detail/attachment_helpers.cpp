@@ -59,6 +59,31 @@ zenoh::Bytes AttachementData::serialize_to_zbytes()
   return std::move(serializer).finish();
 }
 
+AttachementData::AttachementData(const zenoh::Bytes & attachment)
+{
+  zenoh::ext::Deserializer deserializer(std::move(attachment));
+  const auto sequence_number_str = deserializer.deserialize<std::string>();
+  if (sequence_number_str != "sequence_number")
+  {
+    throw std::runtime_error("sequence_number is not found in the attachment.");
+  }
+  this->sequence_number = deserializer.deserialize<int64_t>();
+
+  const auto source_timestamp_str = deserializer.deserialize<std::string>();
+  if (source_timestamp_str != "source_timestamp")
+  {
+    throw std::runtime_error("source_timestamp is not found in the attachment.");
+  }
+  this->source_timestamp = deserializer.deserialize<int64_t>();
+
+  const auto source_gid_str = deserializer.deserialize<std::string>();
+  if (source_gid_str != "source_gid")
+  {
+    throw std::runtime_error("source_gid is not found in the attachment.");
+  }
+  this->source_gid = deserializer.deserialize<std::vector<uint8_t>>();
+}
+
 attachement_data_t::attachement_data_t(
   const int64_t _sequence_number,
   const int64_t _source_timestamp,
