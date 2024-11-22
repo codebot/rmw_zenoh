@@ -133,14 +133,6 @@ public:
     NodeInfo node_info,
     std::optional<TopicInfo> topic_info = std::nullopt);
 
-  static EntityPtr make(
-    z_id_t zid,
-    const std::string & nid,
-    const std::string & id,
-    EntityType type,
-    NodeInfo node_info,
-    std::optional<TopicInfo> topic_info = std::nullopt);
-
   /// Make an Entity from a liveliness keyexpr.
   static EntityPtr make(const std::string & keyexpr);
 
@@ -238,10 +230,6 @@ std::string qos_to_keyexpr(const rmw_qos_profile_t & qos);
 ///=============================================================================
 /// Convert a rmw_qos_profile_t from a keyexpr. Return std::nullopt if invalid.
 std::optional<rmw_qos_profile_t> keyexpr_to_qos(const std::string & keyexpr);
-
-///=============================================================================
-/// Convert a Zenoh id to a string.
-std::string zid_to_str(const z_id_t & id);
 }  // namespace liveliness
 
 ///=============================================================================

@@ -371,16 +371,6 @@ std::optional<rmw_qos_profile_t> keyexpr_to_qos(const std::string & keyexpr)
 }
 
 ///=============================================================================
-std::string zid_to_str(const z_id_t & id)
-{
-  z_owned_string_t z_str;
-  z_id_to_string(&id, &z_str);
-  std::string str(z_string_data(z_loan(z_str)), z_string_len(z_loan(z_str)));
-  z_drop(z_move(z_str));
-  return str;
-}
-
-///=============================================================================
 std::string subscription_token(size_t domain_id)
 {
   std::string token = std::string(ADMIN_SPACE) + "/" + std::to_string(domain_id) + "/**";
@@ -480,41 +470,6 @@ std::shared_ptr<Entity> Entity::make(
   return std::make_shared<Entity>(
     Entity{
         std::string(zid.to_string()),
-        nid,
-        id,
-        std::move(type),
-        std::move(node_info),
-        std::move(topic_info)});
-}
-
-std::shared_ptr<Entity> Entity::make(
-  z_id_t zid,
-  const std::string & nid,
-  const std::string & id,
-  EntityType type,
-  NodeInfo node_info,
-  std::optional<TopicInfo> topic_info)
-{
-  if (id.empty()) {
-    RCUTILS_SET_ERROR_MSG("Invalid id.");
-    return nullptr;
-  }
-  if (entity_to_str.find(type) == entity_to_str.end()) {
-    RCUTILS_SET_ERROR_MSG("Invalid entity type.");
-    return nullptr;
-  }
-  if (node_info.ns_.empty() || node_info.name_.empty()) {
-    RCUTILS_SET_ERROR_MSG("Invalid node_info for entity.");
-    return nullptr;
-  }
-  if (type != EntityType::Node && !topic_info.has_value()) {
-    RCUTILS_SET_ERROR_MSG("Invalid topic_info for entity.");
-    return nullptr;
-  }
-
-  return std::make_shared<Entity>(
-    Entity{
-        zid_to_str(zid),
         nid,
         id,
         std::move(type),
