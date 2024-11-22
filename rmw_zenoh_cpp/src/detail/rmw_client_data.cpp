@@ -76,7 +76,7 @@ void client_data_handler(z_loaned_reply_t * reply, void * data)
   z_owned_reply_t owned_reply;
   z_reply_clone(&owned_reply, reply);
   client_data->add_new_reply(
-    std::make_unique<rmw_zenoh_cpp::ZenohReply>(owned_reply, received_timestamp));
+    std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
 }
 
 ///=============================================================================
@@ -431,12 +431,13 @@ rmw_ret_t ClientData::send_request(
 
   // TODO(Yadunund): Once we switch to zenoh-cpp with lambda closures,
   // capture shared_from_this() instead of this.
-  z_owned_closure_reply_t callback;
-  z_closure(&callback, client_data_handler, client_data_drop, this);
+  num_in_flight_++;
+  z_owned_closure_reply_t zn_closure_reply;
+  z_closure(&zn_closure_reply, client_data_handler, client_data_drop, this);
   z_get(
     context_impl->session(),
     z_loan(keyexpr_.value()._0), "",
-    z_move(callback),
+    z_move(zn_closure_reply),
     &opts);
 
   return RMW_RET_OK;
@@ -526,7 +527,7 @@ bool ClientData::shutdown_and_query_in_flight()
 ///=============================================================================
 void ClientData::decrement_in_flight_and_conditionally_remove()
 {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  std::unique_lock<std::recursive_mutex> lock(mutex_);
   --num_in_flight_;
 
   if (is_shutdown_ && num_in_flight_ == 0) {
@@ -538,6 +539,8 @@ void ClientData::decrement_in_flight_and_conditionally_remove()
     if (node_data == nullptr) {
       return;
     }
+    // We have to unlock here since we are about to delete ourself, and thus the unlock would be UB.
+    lock.unlock();
     node_data->delete_client_data(rmw_client_);
   }
 }

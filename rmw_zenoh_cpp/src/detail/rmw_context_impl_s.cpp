@@ -101,15 +101,21 @@ public:
 
     rmw_ret_t ret;
 
-    // TODO(Yadunund) Move this check into a separate thread.
     // Verify if the zenoh router is running if configured.
     const std::optional<uint64_t> configured_connection_attempts =
       rmw_zenoh_cpp::zenoh_router_check_attempts();
     if (configured_connection_attempts.has_value()) {
-      ret = RMW_RET_ERROR;
       uint64_t connection_attempts = 0;
       // Retry until the connection is successful.
+      constexpr std::chrono::milliseconds sleep_time(1000);
+      constexpr int64_t ticks_between_print(std::chrono::milliseconds(1000) / sleep_time);
       while (ret != RMW_RET_OK && connection_attempts < configured_connection_attempts.value()) {
+        if ((connection_attempts % ticks_between_print) == 0) {
+          RMW_ZENOH_LOG_WARN_NAMED(
+            "rmw_zenoh_cpp",
+            "Unable to connect to a Zenoh router. "
+            "Have you started a router with `ros2 run rmw_zenoh_cpp rmw_zenohd`?");
+        }
         zenoh::ZResult err;
         this->session_->get_routers_z_id(&err);
         if (err != Z_OK) {
@@ -117,13 +123,10 @@ public:
         } else {
           ret = RMW_RET_OK;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      }
-      if (ret != RMW_RET_OK) {
-        throw std::runtime_error(
-                "Unable to connect to a Zenoh router after " +
-                std::to_string(configured_connection_attempts.value()) +
-                " retries.");
+        if (++connection_attempts >= configured_connection_attempts.value()) {
+          break;
+        }
+        std::this_thread::sleep_for(sleep_time);
       }
     }
 
