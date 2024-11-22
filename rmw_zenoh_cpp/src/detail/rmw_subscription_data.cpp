@@ -197,7 +197,7 @@ bool SubscriptionData::init()
     sub_options.query_consolidation = zenoh::QueryConsolidation(zenoh::ConsolidationMode::Z_CONSOLIDATION_MODE_NONE);
 
     std::weak_ptr<SubscriptionData> data_wp = shared_from_this();
-    auto sub = context_impl->session_cpp()->declare_querying_subscriber(
+    auto sub = context_impl->session()->declare_querying_subscriber(
       sub_ke,
       [data_wp](const zenoh::Sample& sample) {
         auto sub_data = data_wp.lock();
@@ -284,7 +284,7 @@ bool SubscriptionData::init()
   } else {
     zenoh::Session::SubscriberOptions sub_options = zenoh::Session::SubscriberOptions::create_default();
     std::weak_ptr<SubscriptionData> data_wp = shared_from_this();
-    zenoh::Subscriber<void> sub = context_impl->session_cpp()->declare_subscriber(
+    zenoh::Subscriber<void> sub = context_impl->session()->declare_subscriber(
       sub_ke,
       [data_wp](const zenoh::Sample & sample) {
 
@@ -330,7 +330,7 @@ bool SubscriptionData::init()
 
   // Publish to the graph that a new subscription is in town.
   std::string liveliness_keyexpr = entity_->liveliness_keyexpr();
-  token_ = context_impl->session_cpp()->liveliness_declare_token(
+  token_ = context_impl->session()->liveliness_declare_token(
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
     &err);

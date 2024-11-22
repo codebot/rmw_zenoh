@@ -48,14 +48,13 @@ public:
   std::string enclave() const;
 
   // Loan the Zenoh session.
-  const z_loaned_session_t * session() const;
+  const std::shared_ptr<zenoh::Session> session() const;
 
-  const std::shared_ptr<zenoh::Session> session_cpp() const;
   // Get a reference to the shm_provider.
   // Note: This is not thread-safe.
   // TODO(Yadunund): Remove this API and instead include a publish() API
   // that handles the shm_provider once the context manages publishers.
-  std::optional<z_owned_shm_provider_t> & shm_provider();
+  std::optional<zenoh::ShmProvider> & shm_provider();
 
   // Get the graph guard condition.
   rmw_guard_condition_t * graph_guard_condition();

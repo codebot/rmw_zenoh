@@ -50,12 +50,12 @@ public:
   // Publish a ROS message.
   rmw_ret_t publish(
     const void * ros_message,
-    std::optional<z_owned_shm_provider_t> & shm_provider);
+    std::optional<zenoh::ShmProvider> & shm_provider);
 
   // Publish a serialized ROS message.
   rmw_ret_t publish_serialized_message(
     const rmw_serialized_message_t * serialized_message,
-    std::optional<z_owned_shm_provider_t> & shm_provider);
+    std::optional<zenoh::ShmProvider> & shm_provider);
 
   // Get a copy of the keyexpr_hash of this PublisherData's liveliness::Entity.
   std::size_t keyexpr_hash() const;

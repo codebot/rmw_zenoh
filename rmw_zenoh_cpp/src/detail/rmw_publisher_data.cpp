@@ -192,7 +192,7 @@ PublisherData::PublisherData(
 ///=============================================================================
 rmw_ret_t PublisherData::publish(
   const void * ros_message,
-  std::optional<z_owned_shm_provider_t> & shm_provider)
+  std::optional<zenoh::ShmProvider> & shm_provider)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   if (is_shutdown_) {
@@ -228,7 +228,7 @@ rmw_ret_t PublisherData::publish(
   if (shm_provider.has_value()) {
     RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled.");
 
-    auto provider = shm_provider.value();
+    auto provider = shm_provider.value()._0;
     z_buf_layout_alloc_result_t alloc;
     // TODO(yuyuan): SHM, configure this
     z_alloc_alignment_t alignment = {5};
@@ -298,7 +298,7 @@ rmw_ret_t PublisherData::publish(
 ///=============================================================================
 rmw_ret_t PublisherData::publish_serialized_message(
   const rmw_serialized_message_t * serialized_message,
-  std::optional<z_owned_shm_provider_t> & /*shm_provider*/)
+  std::optional<zenoh::ShmProvider> & /*shm_provider*/)
 {
   eprosima::fastcdr::FastBuffer buffer(
     reinterpret_cast<char *>(serialized_message->buffer), serialized_message->buffer_length);

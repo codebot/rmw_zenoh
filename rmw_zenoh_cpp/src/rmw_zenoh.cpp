@@ -413,7 +413,7 @@ rmw_create_publisher(
 
   if (!node_data->create_pub_data(
       rmw_publisher,
-      context_impl->session_cpp(),
+      context_impl->session(),
       context_impl->get_next_entity_id(),
       topic_name,
       type_support,
@@ -939,7 +939,7 @@ rmw_create_subscription(
 
   if (!node_data->create_sub_data(
       rmw_subscription,
-      context_impl->session_cpp(),
+      context_impl->session(),
       context_impl->graph_cache(),
       context_impl->get_next_entity_id(),
       topic_name,
@@ -1416,7 +1416,7 @@ rmw_create_client(
 
   if (!node_data->create_client_data(
       rmw_client,
-      context_impl->session_cpp(),
+      context_impl->session(),
       context_impl->get_next_entity_id(),
       service_name,
       type_support,
@@ -1660,7 +1660,7 @@ rmw_create_service(
 
   if (!node_data->create_service_data(
       rmw_service,
-      context_impl->session_cpp(),
+      context_impl->session(),
       context_impl->get_next_entity_id(),
       service_name,
       type_support,

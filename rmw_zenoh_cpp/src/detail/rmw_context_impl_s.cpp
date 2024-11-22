@@ -81,16 +81,18 @@ public:
       throw std::runtime_error("Error configuring Zenoh session.");
     }
 
-    // // Check if shm is enabled.
-    // z_owned_string_t shm_enabled;
-    // zc_config_get_from_str(z_loan(config), Z_CONFIG_SHARED_MEMORY_KEY, &shm_enabled);
-    // auto always_free_shm_enabled = rcpputils::make_scope_exit(
-    //   [&shm_enabled]() {
-    //     z_drop(z_move(shm_enabled));
-    //   });
+    zenoh::ZResult result;
+
+    // Check if shm is enabled.
+    std::string shm_enabled = config.value().get(Z_CONFIG_SHARED_MEMORY_KEY, &result);
+    if (result != Z_OK) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
+            "rmw_zenoh_cpp",
+            "Not able to get %s from the config file",
+            Z_CONFIG_SHARED_MEMORY_KEY);
+    }
 
     // Initialize the zenoh session.
-    zenoh::ZResult result;
     session_ = std::make_shared<zenoh::Session>(
         std::move(config.value()),
         zenoh::Session::SessionOptions::create_default(),
@@ -183,29 +185,15 @@ public:
 
     // Initialize the shm manager if shared_memory is enabled in the config.
     shm_provider_ = std::nullopt;
-    // if (strncmp(
-    //   z_string_data(z_loan(shm_enabled)),
-    //   "true",
-    //   z_string_len(z_loan(shm_enabled))) == 0)
-    // {
-    //   // TODO(yuyuan): determine the default alignment of SHM
-    //   z_alloc_alignment_t alignment = {5};
-    //   z_owned_memory_layout_t layout;
-    //   z_memory_layout_new(&layout, SHM_BUFFER_SIZE_MB * 1024 * 1024, alignment);
+    if (shm_enabled == "true") {
+      auto layout = zenoh::MemoryLayout(SHM_BUFFER_SIZE_MB * 1024 * 1024, zenoh::AllocAlignment({5}));
+      zenoh::PosixShmProvider provider(layout, &result);
+      if (result != Z_OK) {
+        throw std::runtime_error("Unable to create shm provider.");
+      }
+      shm_provider_ = std::move(provider);
 
-    //   z_owned_shm_provider_t provider;
-    //   if (z_posix_shm_provider_new(&provider, z_loan(layout)) != Z_OK) {
-    //     RMW_ZENOH_LOG_ERROR_NAMED("rmw_zenoh_cpp", "Unable to create a SHM provider.");
-    //     throw std::runtime_error("Unable to create shm provider.");
-    //   }
-    //   shm_provider_ = provider;
-    // }
-    // auto free_shm_provider = rcpputils::make_scope_exit(
-    //   [this]() {
-    //     if (shm_provider_.has_value()) {
-    //       z_drop(z_move(shm_provider_.value()));
-    //     }
-    //   });
+    }
 
     graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
     graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
@@ -277,9 +265,6 @@ public:
         return RMW_RET_ERROR;
       }
 
-      if (shm_provider_.has_value()) {
-        z_drop(z_move(shm_provider_.value()));
-      }
       is_shutdown_ = true;
 
       // We specifically do *not* hold the mutex_ while tearing down the session; this allows us
@@ -295,19 +280,13 @@ public:
     return enclave_;
   }
 
-  const z_loaned_session_t * session() const
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return z_loan(session_->_0);
-  }
-
-  const std::shared_ptr<zenoh::Session> session_cpp() const
+  const std::shared_ptr<zenoh::Session> session() const
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     return session_;
   }
 
-  std::optional<z_owned_shm_provider_t> & shm_provider()
+  std::optional<zenoh::ShmProvider> & shm_provider()
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     return shm_provider_;
@@ -334,7 +313,7 @@ public:
   bool session_is_valid() const
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return !z_session_is_closed(z_loan(session_->_0));
+    return !session_->is_closed();
   }
 
   std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache()
@@ -365,7 +344,7 @@ public:
     auto node_data = rmw_zenoh_cpp::NodeData::make(
       node,
       this->get_next_entity_id(),
-      session_cpp(),
+      session(),
       domain_id_,
       ns,
       node_name,
@@ -445,7 +424,7 @@ private:
   std::shared_ptr<zenoh::Session> session_;
   // An optional SHM manager that is initialized of SHM is enabled in the
   // zenoh session config.
-  std::optional<z_owned_shm_provider_t> shm_provider_;
+  std::optional<zenoh::ShmProvider> shm_provider_;
   // Graph cache.
   std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache_;
   // ROS graph liveliness subscriber.
@@ -487,19 +466,13 @@ std::string rmw_context_impl_s::enclave() const
 }
 
 ///=============================================================================
-const z_loaned_session_t * rmw_context_impl_s::session() const
+const std::shared_ptr<zenoh::Session> rmw_context_impl_s::session() const
 {
-  return data_->session();
+return data_->session();
 }
 
 ///=============================================================================
-const std::shared_ptr<zenoh::Session> rmw_context_impl_s::session_cpp() const
-{
-return data_->session_cpp();
-}
-
-///=============================================================================
-std::optional<z_owned_shm_provider_t> & rmw_context_impl_s::shm_provider()
+std::optional<zenoh::ShmProvider> & rmw_context_impl_s::shm_provider()
 {
   return data_->shm_provider();
 }

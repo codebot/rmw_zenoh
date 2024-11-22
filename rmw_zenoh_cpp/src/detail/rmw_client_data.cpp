@@ -385,7 +385,7 @@ rmw_ret_t ClientData::send_request(
   std::weak_ptr<rmw_zenoh_cpp::ClientData> client_data = shared_from_this();
   zenoh::ZResult err;
   std::string parameters;
-  context_impl->session_cpp()->get(
+  context_impl->session()->get(
     keyexpr_.value(),
     parameters,
     [client_data](const zenoh::Reply& reply) {
