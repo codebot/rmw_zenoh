@@ -135,26 +135,27 @@ std::shared_ptr<ServiceData> ServiceData::make(
     return nullptr;
   }
 
-  zenoh::Session::QueryableOptions qable_options = zenoh::Session::QueryableOptions::create_default();
+  zenoh::Session::QueryableOptions qable_options =
+    zenoh::Session::QueryableOptions::create_default();
   qable_options.complete = true;
 
   std::weak_ptr<rmw_zenoh_cpp::ServiceData> data_wp = service_data;
   service_data->qable_ = session->declare_queryable(
     service_ke,
-    [data_wp](const zenoh::Query& query){
-        auto sub_data = data_wp.lock();
-        if (sub_data == nullptr) {
-          RMW_ZENOH_LOG_ERROR_NAMED(
+    [data_wp](const zenoh::Query & query){
+      auto sub_data = data_wp.lock();
+      if (sub_data == nullptr) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
             "rmw_zenoh_cpp",
             "Unable to obtain ServiceData from data for %s.",
             std::string(query.get_keyexpr().as_string_view()));
-          return;
-        }
+        return;
+      }
 
-        std::chrono::nanoseconds::rep received_timestamp =
-          std::chrono::system_clock::now().time_since_epoch().count();
+      std::chrono::nanoseconds::rep received_timestamp =
+      std::chrono::system_clock::now().time_since_epoch().count();
 
-        sub_data->add_new_query(std::make_unique<ZenohQuery>(query, received_timestamp));
+      sub_data->add_new_query(std::make_unique<ZenohQuery>(query, received_timestamp));
     },
     zenoh::closures::none,
     std::move(qable_options),
@@ -169,8 +170,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
     &err);
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the service.");
@@ -262,15 +262,14 @@ rmw_ret_t ServiceData::take_request(
 
   // DESERIALIZE MESSAGE ========================================================
   auto payload = loaned_query.get_payload();
-  if (!payload.has_value())
-  {
+  if (!payload.has_value()) {
     RMW_ZENOH_LOG_DEBUG_NAMED(
       "rmw_zenoh_cpp",
       "ServiceData take_request payload is empty");
     return RMW_RET_ERROR;
   }
 
-  auto slice =  payload.value().get().slice_iter().next();
+  auto slice = payload.value().get().slice_iter().next();
 
   if (slice.has_value()) {
     const uint8_t * payload = slice.value().data;
@@ -293,15 +292,15 @@ rmw_ret_t ServiceData::take_request(
 
     // Fill in the request header.
     // Get the sequence_number out of the attachment
-    if (!loaned_query.get_attachment().has_value())
-    {
+    if (!loaned_query.get_attachment().has_value()) {
       RMW_ZENOH_LOG_DEBUG_NAMED(
         "rmw_zenoh_cpp",
         "ServiceData take_request attachment is empty");
       return RMW_RET_ERROR;
     }
 
-    rmw_zenoh_cpp::AttachmentData attachment(std::move(loaned_query.get_attachment().value().get()));
+    rmw_zenoh_cpp::AttachmentData attachment(std::move(
+        loaned_query.get_attachment().value().get()));
 
     request_header->request_id.sequence_number = attachment.sequence_number;
     if (request_header->request_id.sequence_number < 0) {
@@ -309,7 +308,8 @@ rmw_ret_t ServiceData::take_request(
       return RMW_RET_ERROR;
     }
 
-    memcpy(request_header->request_id.writer_guid, attachment.source_gid.data(), RMW_GID_STORAGE_SIZE);
+    memcpy(request_header->request_id.writer_guid, attachment.source_gid.data(),
+        RMW_GID_STORAGE_SIZE);
 
     request_header->source_timestamp = attachment.source_timestamp;
     if (request_header->source_timestamp < 0) {
@@ -336,10 +336,10 @@ rmw_ret_t ServiceData::take_request(
     it->second.insert(std::make_pair(request_header->request_id.sequence_number, std::move(query)));
     *taken = true;
   } else {
-      RMW_ZENOH_LOG_DEBUG_NAMED(
+    RMW_ZENOH_LOG_DEBUG_NAMED(
         "rmw_zenoh_cpp",
         "ServiceData not able to get slice data");
-      return RMW_RET_ERROR;
+    return RMW_RET_ERROR;
   }
   return RMW_RET_OK;
 }
@@ -493,8 +493,7 @@ rmw_ret_t ServiceData::shutdown()
   // Unregister this node from the ROS graph.
   zenoh::ZResult err;
   std::move(token_).value().undeclare(&err);
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare liveliness token");
@@ -502,8 +501,7 @@ rmw_ret_t ServiceData::shutdown()
   }
 
   std::move(qable_).value().undeclare(&err);
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare liveliness token");

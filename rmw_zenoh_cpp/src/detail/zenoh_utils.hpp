@@ -26,7 +26,7 @@ namespace rmw_zenoh_cpp
 {
 ///=============================================================================
 zenoh::Bytes create_map_and_set_sequence_num(
-   int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE]);
+  int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE]);
 
 ///=============================================================================
 // A class to store the replies to service requests.

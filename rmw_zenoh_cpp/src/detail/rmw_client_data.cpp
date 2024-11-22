@@ -174,8 +174,7 @@ bool ClientData::init(const std::shared_ptr<zenoh::Session> & session)
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
     &err);
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the client.");
@@ -248,8 +247,7 @@ rmw_ret_t ClientData::take_response(
 
   auto & reply = latest_reply->get_sample();
 
-  if(!reply.is_ok())
-  {
+  if(!reply.is_ok()) {
     RMW_SET_ERROR_MSG("invalid reply sample");
     return RMW_RET_ERROR;
   }
@@ -258,7 +256,7 @@ rmw_ret_t ClientData::take_response(
 
   // Object that manages the raw buffer
   auto & payload = sample.get_payload();
-  auto slice =  payload.slice_iter().next();
+  auto slice = payload.slice_iter().next();
   if (slice.has_value()) {
     const uint8_t * payload = slice.value().data;
     const size_t payload_len = slice.value().len;
@@ -278,8 +276,7 @@ rmw_ret_t ClientData::take_response(
     }
 
     // Fill in the request_header
-    if (!sample.get_attachment().has_value())
-    {
+    if (!sample.get_attachment().has_value()) {
       RMW_ZENOH_LOG_DEBUG_NAMED(
         "rmw_zenoh_cpp",
         "ClientData take_request attachment is empty");
@@ -296,15 +293,16 @@ rmw_ret_t ClientData::take_response(
       RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
       return RMW_RET_ERROR;
     }
-    memcpy(request_header->request_id.writer_guid, attachment.source_gid.data(), RMW_GID_STORAGE_SIZE);
+    memcpy(request_header->request_id.writer_guid, attachment.source_gid.data(),
+        RMW_GID_STORAGE_SIZE);
     request_header->received_timestamp = latest_reply->get_received_timestamp();
 
     *taken = true;
   } else {
-      RMW_ZENOH_LOG_DEBUG_NAMED(
+    RMW_ZENOH_LOG_DEBUG_NAMED(
         "rmw_zenoh_cpp",
         "ClientData not able to get slice data");
-      return RMW_RET_ERROR;
+    return RMW_RET_ERROR;
   }
 
   return RMW_RET_OK;
@@ -388,34 +386,34 @@ rmw_ret_t ClientData::send_request(
   context_impl->session()->get(
     keyexpr_.value(),
     parameters,
-    [client_data](const zenoh::Reply& reply) {
+    [client_data](const zenoh::Reply & reply) {
 
-        if (!reply.is_ok()) {
-          RMW_ZENOH_LOG_ERROR_NAMED(
+      if (!reply.is_ok()) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
             "rmw_zenoh_cpp",
             "z_reply_is_ok returned False Reason: %s",
             reply.get_err().get_payload().as_string())
-          return;
-        }
-        const zenoh::Sample & sample = reply.get_ok();
+        return;
+      }
+      const zenoh::Sample & sample = reply.get_ok();
 
-        auto sub_data = client_data.lock();
-        if (sub_data == nullptr) {
-          RMW_ZENOH_LOG_ERROR_NAMED(
+      auto sub_data = client_data.lock();
+      if (sub_data == nullptr) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
             "rmw_zenoh_cpp",
             "Unable to obtain ClientData from data for %s.",
             std::string(sample.get_keyexpr().as_string_view()));
-          return;
-        }
+        return;
+      }
 
-        if (sub_data->is_shutdown()) {
-          return;
-        }
+      if (sub_data->is_shutdown()) {
+        return;
+      }
 
-        std::chrono::nanoseconds::rep received_timestamp =
-          std::chrono::system_clock::now().time_since_epoch().count();
+      std::chrono::nanoseconds::rep received_timestamp =
+      std::chrono::system_clock::now().time_since_epoch().count();
 
-        sub_data->add_new_reply(
+      sub_data->add_new_reply(
           std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
     },
     zenoh::closures::none,
@@ -478,8 +476,7 @@ void ClientData::_shutdown()
   // Unregister this node from the ROS graph.
   zenoh::ZResult err;
   std::move(token_).value().undeclare(&err);
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare liveliness token");

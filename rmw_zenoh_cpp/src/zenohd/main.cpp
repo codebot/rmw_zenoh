@@ -80,8 +80,8 @@ int main(int argc, char ** argv)
       zenoh::Session::SessionOptions::create_default(),
       &result);
   if(result != Z_OK) {
-      std::cout << "Error opening Session!" << "\\n";
-      return 1;
+    std::cout << "Error opening Session!" << "\\n";
+    return 1;
   }
 
   std::cout << "Started Zenoh router with id"

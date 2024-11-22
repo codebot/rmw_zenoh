@@ -23,7 +23,7 @@ namespace rmw_zenoh_cpp
 {
 ///=============================================================================
 zenoh::Bytes create_map_and_set_sequence_num(
-   int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE])
+  int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE])
 {
   auto now = std::chrono::system_clock::now().time_since_epoch();
   auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);

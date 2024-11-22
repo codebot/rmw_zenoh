@@ -116,8 +116,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
 
     pub_cache = session->declare_publication_cache(pub_ke, std::move(pub_cache_opts), &err);
 
-    if (err != Z_OK)
-    {
+    if (err != Z_OK) {
       RMW_SET_ERROR_MSG("unable to create zenoh publisher cache");
       return nullptr;
     }
@@ -136,8 +135,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
   }
   auto pub = session->declare_publisher(pub_ke, std::move(opts), &err);
 
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_SET_ERROR_MSG("Unable to create Zenoh publisher.");
     return nullptr;
   }
@@ -147,8 +145,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
     &err);
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the publisher.");
@@ -392,16 +389,14 @@ rmw_ret_t PublisherData::shutdown()
   // Unregister this publisher from the ROS graph.
   zenoh::ZResult err;
   std::move(token_).value().undeclare(&err);
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare liveliness token");
     return RMW_RET_ERROR;
   }
   std::move(pub_).undeclare(&err);
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare publisher");

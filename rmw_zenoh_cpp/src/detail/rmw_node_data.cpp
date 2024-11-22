@@ -63,8 +63,7 @@ std::shared_ptr<NodeData> NodeData::make(
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
     &err);
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the node.");
@@ -402,8 +401,7 @@ rmw_ret_t NodeData::shutdown()
   // Unregister this node from the ROS graph.
   zenoh::ZResult err;
   std::move(token_).value().undeclare(&err);
-  if (err != Z_OK)
-  {
+  if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare liveliness token");

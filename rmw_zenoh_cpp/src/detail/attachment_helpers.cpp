@@ -34,8 +34,7 @@ AttachmentData::AttachmentData(
 {
   sequence_number = _sequence_number;
   source_timestamp = _source_timestamp;
-  for (size_t i = 0; i < RMW_GID_STORAGE_SIZE; ++i)
-  {
+  for (size_t i = 0; i < RMW_GID_STORAGE_SIZE; ++i) {
     source_gid.push_back(_source_gid[RMW_GID_STORAGE_SIZE - 1 - i]);
   }
 }
@@ -63,22 +62,19 @@ AttachmentData::AttachmentData(const zenoh::Bytes & attachment)
 {
   zenoh::ext::Deserializer deserializer(std::move(attachment));
   const auto sequence_number_str = deserializer.deserialize<std::string>();
-  if (sequence_number_str != "sequence_number")
-  {
+  if (sequence_number_str != "sequence_number") {
     throw std::runtime_error("sequence_number is not found in the attachment.");
   }
   this->sequence_number = deserializer.deserialize<int64_t>();
 
   const auto source_timestamp_str = deserializer.deserialize<std::string>();
-  if (source_timestamp_str != "source_timestamp")
-  {
+  if (source_timestamp_str != "source_timestamp") {
     throw std::runtime_error("source_timestamp is not found in the attachment.");
   }
   this->source_timestamp = deserializer.deserialize<int64_t>();
 
   const auto source_gid_str = deserializer.deserialize<std::string>();
-  if (source_gid_str != "source_gid")
-  {
+  if (source_gid_str != "source_gid") {
     throw std::runtime_error("source_gid is not found in the attachment.");
   }
   this->source_gid = deserializer.deserialize<std::vector<uint8_t>>();
