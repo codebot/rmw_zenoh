@@ -25,12 +25,6 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-void
-create_map_and_set_sequence_num(
-  z_owned_bytes_t * out_bytes, int64_t sequence_number,
-  uint8_t gid[RMW_GID_STORAGE_SIZE]);
-
-///=============================================================================
 zenoh::Bytes create_map_and_set_sequence_num(
    int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE]);
 
