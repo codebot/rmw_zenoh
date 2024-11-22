@@ -272,15 +272,14 @@ void ClientData::add_new_reply(std::unique_ptr<ZenohReply> reply)
     reply_queue_.size() >= adapted_qos_profile.depth)
   {
     // Log warning if message is discarded due to hitting the queue depth
-    z_view_string_t keystr;
-    z_keyexpr_as_view_string(z_loan(keyexpr_.value()._0), &keystr);
+    std::string keystr = std::string(keyexpr_.value().as_string_view());
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Query queue depth of %ld reached, discarding oldest Query "
       "for client for %.*s",
       adapted_qos_profile.depth,
-      static_cast<int>(z_string_len(z_loan(keystr))),
-      z_string_data(z_loan(keystr)));
+      keystr.size(),
+      keystr.c_str());
     reply_queue_.pop_front();
   }
   reply_queue_.emplace_back(std::move(reply));
