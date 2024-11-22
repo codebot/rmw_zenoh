@@ -15,7 +15,7 @@
 #ifndef DETAIL__RMW_SERVICE_DATA_HPP_
 #define DETAIL__RMW_SERVICE_DATA_HPP_
 
-#include <zenoh.h>
+#include <zenoh.hxx>
 
 #include <cstddef>
 #include <cstdint>
@@ -36,7 +36,7 @@ namespace rmw_zenoh_cpp
 {
 
 ///=============================================================================
-class ServiceData final
+class ServiceData final : public std::enable_shared_from_this<ServiceData>
 {
 public:
   // Make a shared_ptr of ServiceData.
@@ -104,7 +104,7 @@ private:
   // The keyexpr string.
   std::string keyexpr_;
   // An owned queryable.
-  z_owned_queryable_t qable_;
+  std::optional<zenoh::Queryable<void>> qable_;
   // Liveliness token for the service.
   std::optional<zenoh::LivelinessToken> token_;
   // Type support fields.

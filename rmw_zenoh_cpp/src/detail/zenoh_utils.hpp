@@ -57,16 +57,16 @@ private:
 class ZenohQuery final
 {
 public:
-  ZenohQuery(const z_loaned_query_t * query, std::chrono::nanoseconds::rep received_timestamp);
+  ZenohQuery(const zenoh::Query & query, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohQuery();
 
-  const z_loaned_query_t * get_query() const;
+  const zenoh::Query & get_query() const;
 
   std::chrono::nanoseconds::rep get_received_timestamp() const;
 
 private:
-  z_owned_query_t query_;
+  std::optional<zenoh::Query> query_;
   std::chrono::nanoseconds::rep received_timestamp_;
 };
 }  // namespace rmw_zenoh_cpp

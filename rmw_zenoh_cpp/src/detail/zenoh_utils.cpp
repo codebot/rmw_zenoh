@@ -29,7 +29,7 @@ void create_map_and_set_sequence_num(
   auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);
   int64_t source_timestamp = now_ns.count();
 
-  rmw_zenoh_cpp::attachement_data_t data(sequence_number, source_timestamp, gid);
+  rmw_zenoh_cpp::attachment_data_t data(sequence_number, source_timestamp, gid);
   data.serialize_to_zbytes(out_bytes);
 }
 
@@ -41,13 +41,14 @@ zenoh::Bytes create_map_and_set_sequence_num(
   auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);
   int64_t source_timestamp = now_ns.count();
 
-  rmw_zenoh_cpp::AttachementData data(sequence_number, source_timestamp, gid);
+  rmw_zenoh_cpp::AttachmentData data(sequence_number, source_timestamp, gid);
   return std::move(data.serialize_to_zbytes());
 }
 
 ///=============================================================================
-ZenohQuery::ZenohQuery(const z_loaned_query_t * query, std::chrono::nanoseconds::rep received_timestamp) {
-  z_query_clone(&query_, query);
+ZenohQuery::ZenohQuery(const zenoh::Query & query, std::chrono::nanoseconds::rep received_timestamp)
+{
+  query_ = query.clone();
   received_timestamp_ = received_timestamp;
 }
 
@@ -58,10 +59,10 @@ std::chrono::nanoseconds::rep ZenohQuery::get_received_timestamp() const
 }
 
 ///=============================================================================
-ZenohQuery::~ZenohQuery() {z_drop(z_move(query_));}
+ZenohQuery::~ZenohQuery() {}
 
 ///=============================================================================
-const z_loaned_query_t * ZenohQuery::get_query() const {return z_loan(query_);}
+const zenoh::Query & ZenohQuery::get_query() const {return query_.value();}
 
 ///=============================================================================
 ZenohReply::ZenohReply(

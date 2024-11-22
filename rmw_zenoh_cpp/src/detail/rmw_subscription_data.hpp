@@ -51,13 +51,13 @@ public:
     explicit Message(
       zenoh::Bytes p,
       uint64_t recv_ts,
-      AttachementData && attachment);
+      AttachmentData && attachment);
 
     ~Message();
 
     zenoh::Bytes payload;
     uint64_t recv_timestamp;
-    AttachementData attachment;
+    AttachmentData attachment;
   };
 
   // Make a shared_ptr of SubscriptionData.

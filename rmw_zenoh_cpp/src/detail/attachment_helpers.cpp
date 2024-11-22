@@ -27,7 +27,7 @@
 namespace rmw_zenoh_cpp
 {
 
-AttachementData::AttachementData(
+AttachmentData::AttachmentData(
   const int64_t _sequence_number,
   const int64_t _source_timestamp,
   const uint8_t _source_gid[RMW_GID_STORAGE_SIZE])
@@ -40,14 +40,14 @@ AttachementData::AttachementData(
   }
 }
 
-AttachementData::AttachementData(AttachementData && data)
+AttachmentData::AttachmentData(AttachmentData && data)
 {
   sequence_number = std::move(data.sequence_number);
   source_timestamp = std::move(data.source_timestamp);
   source_gid = data.source_gid;
 }
 
-zenoh::Bytes AttachementData::serialize_to_zbytes()
+zenoh::Bytes AttachmentData::serialize_to_zbytes()
 {
   auto serializer = zenoh::ext::Serializer();
   serializer.serialize(std::string("sequence_number"));
@@ -59,7 +59,7 @@ zenoh::Bytes AttachementData::serialize_to_zbytes()
   return std::move(serializer).finish();
 }
 
-AttachementData::AttachementData(const zenoh::Bytes & attachment)
+AttachmentData::AttachmentData(const zenoh::Bytes & attachment)
 {
   zenoh::ext::Deserializer deserializer(std::move(attachment));
   const auto sequence_number_str = deserializer.deserialize<std::string>();
@@ -84,7 +84,7 @@ AttachementData::AttachementData(const zenoh::Bytes & attachment)
   this->source_gid = deserializer.deserialize<std::vector<uint8_t>>();
 }
 
-attachement_data_t::attachement_data_t(
+attachment_data_t::attachment_data_t(
   const int64_t _sequence_number,
   const int64_t _source_timestamp,
   const uint8_t _source_gid[RMW_GID_STORAGE_SIZE])
@@ -94,14 +94,14 @@ attachement_data_t::attachement_data_t(
   memcpy(source_gid, _source_gid, RMW_GID_STORAGE_SIZE);
 }
 
-attachement_data_t::attachement_data_t(attachement_data_t && data)
+attachment_data_t::attachment_data_t(attachment_data_t && data)
 {
   sequence_number = std::move(data.sequence_number);
   source_timestamp = std::move(data.source_timestamp);
   memcpy(source_gid, data.source_gid, RMW_GID_STORAGE_SIZE);
 }
 
-void attachement_data_t::serialize_to_zbytes(z_owned_bytes_t * attachment)
+void attachment_data_t::serialize_to_zbytes(z_owned_bytes_t * attachment)
 {
   ze_owned_serializer_t serializer;
   ze_serializer_empty(&serializer);
@@ -114,7 +114,7 @@ void attachement_data_t::serialize_to_zbytes(z_owned_bytes_t * attachment)
   ze_serializer_finish(z_move(serializer), attachment);
 }
 
-attachement_data_t::attachement_data_t(const z_loaned_bytes_t * attachment)
+attachment_data_t::attachment_data_t(const z_loaned_bytes_t * attachment)
 {
   ze_deserializer_t deserializer = ze_deserializer_from_bytes(attachment);
   z_owned_string_t key;

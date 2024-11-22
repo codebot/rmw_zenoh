@@ -43,7 +43,7 @@ namespace rmw_zenoh_cpp
 SubscriptionData::Message::Message(
   zenoh::Bytes p,
   uint64_t recv_ts,
-  AttachementData && attachment_)
+  AttachmentData && attachment_)
 : payload(std::move(p)), recv_timestamp(recv_ts), attachment(std::move(attachment_))
 {
 }
@@ -209,17 +209,17 @@ bool SubscriptionData::init()
           return;
         }
 
-        auto attachement = sample.get_attachment();
-        if (!attachement.has_value())
+        auto attachment = sample.get_attachment();
+        if (!attachment.has_value())
         {
           RMW_ZENOH_LOG_ERROR_NAMED(
             "rmw_zenoh_cpp",
-            "Unable to obtain attachement")
+            "Unable to obtain attachment")
           return;
         }
 
-        auto attachement_value = attachement.value();
-        AttachementData attachment_data(attachement_value);
+        auto attachment_value = attachment.value();
+        AttachmentData attachment_data(attachment_value);
 
         sub_data->add_new_message(
           std::make_unique<SubscriptionData::Message>(
@@ -298,18 +298,18 @@ bool SubscriptionData::init()
           );
           return;
         }
-        auto attachement = sample.get_attachment();
-        if (!attachement.has_value())
+        auto attachment = sample.get_attachment();
+        if (!attachment.has_value())
         {
           RMW_ZENOH_LOG_ERROR_NAMED(
             "rmw_zenoh_cpp",
-            "Unable to obtain attachement")
+            "Unable to obtain attachment")
           return;
         }
         auto payload = sample.get_payload().clone();
-        auto attachement_value = attachement.value();
+        auto attachment_value = attachment.value();
 
-        AttachementData attachment_data(attachement_value);
+        AttachmentData attachment_data(attachment_value);
         sub_data->add_new_message(
           std::make_unique<SubscriptionData::Message>(
             sample.get_payload().clone(),
