@@ -22,18 +22,6 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-void create_map_and_set_sequence_num(
-  z_owned_bytes_t * out_bytes, int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE])
-{
-  auto now = std::chrono::system_clock::now().time_since_epoch();
-  auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);
-  int64_t source_timestamp = now_ns.count();
-
-  rmw_zenoh_cpp::attachment_data_t data(sequence_number, source_timestamp, gid);
-  data.serialize_to_zbytes(out_bytes);
-}
-
-///=============================================================================
 zenoh::Bytes create_map_and_set_sequence_num(
    int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE])
 {
@@ -66,24 +54,20 @@ const zenoh::Query & ZenohQuery::get_query() const {return query_.value();}
 
 ///=============================================================================
 ZenohReply::ZenohReply(
-  const z_loaned_reply_t * reply,
+  const zenoh::Reply & reply,
   std::chrono::nanoseconds::rep received_timestamp)
 {
-  z_reply_clone(&reply_, reply);
+  reply_ = reply.clone();
   received_timestamp_ = received_timestamp;
 }
 
 ///=============================================================================
-ZenohReply::~ZenohReply() {z_drop(z_move(reply_));}
+ZenohReply::~ZenohReply() {}
 
 ///=============================================================================
-std::optional<const z_loaned_sample_t *> ZenohReply::get_sample() const
+const zenoh::Reply & ZenohReply::get_sample() const
 {
-  if (z_reply_is_ok(z_loan(reply_))) {
-    return z_reply_ok(z_loan(reply_));
-  }
-
-  return std::nullopt;
+  return reply_.value();
 }
 
 ///=============================================================================

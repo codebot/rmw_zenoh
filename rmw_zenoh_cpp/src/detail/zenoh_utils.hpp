@@ -39,16 +39,16 @@ zenoh::Bytes create_map_and_set_sequence_num(
 class ZenohReply final
 {
 public:
-  ZenohReply(const z_loaned_reply_t * reply, std::chrono::nanoseconds::rep received_timestamp);
+  ZenohReply(const zenoh::Reply & reply, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohReply();
 
-  std::optional<const z_loaned_sample_t *> get_sample() const;
+  const zenoh::Reply & get_sample() const;
 
   std::chrono::nanoseconds::rep get_received_timestamp() const;
 
 private:
-  z_owned_reply_t reply_;
+  std::optional<zenoh::Reply> reply_;
   std::chrono::nanoseconds::rep received_timestamp_;
 };
 
