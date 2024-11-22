@@ -29,7 +29,7 @@
 #include "ordered_map.hpp"
 
 #include "rcutils/allocator.h"
-#include "rcutils/string_array.h"
+#include "rcutils/types/string_array.h"
 
 #include "rmw/topic_endpoint_info_array.h"
 #include "rmw/names_and_types.h"
