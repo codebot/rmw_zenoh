@@ -15,13 +15,15 @@
 #include "rmw_service_data.hpp"
 
 #include <fastcdr/FastBuffer.h>
-#include <zenoh.h>
 
 #include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
+
+#include <zenoh.hxx>
 
 #include "attachment_helpers.hpp"
 #include "cdr.hpp"

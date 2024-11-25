@@ -15,12 +15,12 @@
 #ifndef DETAIL__RMW_CONTEXT_IMPL_S_HPP_
 #define DETAIL__RMW_CONTEXT_IMPL_S_HPP_
 
-#include <zenoh.h>
-
 #include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
+
+#include <zenoh.hxx>
 
 #include "graph_cache.hpp"
 #include "rmw_node_data.hpp"

@@ -15,14 +15,14 @@
 #ifndef DETAIL__RMW_CLIENT_DATA_HPP_
 #define DETAIL__RMW_CLIENT_DATA_HPP_
 
-#include <zenoh.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <memory>
 #include <mutex>
 #include <string>
+
+#include <zenoh.hxx>
 
 #include "event.hpp"
 #include "liveliness_utils.hpp"

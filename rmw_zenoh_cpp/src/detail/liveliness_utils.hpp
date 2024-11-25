@@ -15,14 +15,14 @@
 #ifndef DETAIL__LIVELINESS_UTILS_HPP_
 #define DETAIL__LIVELINESS_UTILS_HPP_
 
-#include <zenoh.hxx>
-
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+
+#include <zenoh.hxx>
 
 #include "rmw/types.h"
 

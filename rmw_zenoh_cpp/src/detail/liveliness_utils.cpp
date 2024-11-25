@@ -14,8 +14,6 @@
 
 #include "liveliness_utils.hpp"
 
-#include <zenoh.h>
-
 #include <functional>
 #include <limits>
 #include <optional>
@@ -26,6 +24,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <zenoh.hxx>
 
 #include "logging_macros.hpp"
 #include "qos.hpp"

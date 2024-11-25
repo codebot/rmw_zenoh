@@ -15,13 +15,13 @@
 #ifndef DETAIL__RMW_NODE_DATA_HPP_
 #define DETAIL__RMW_NODE_DATA_HPP_
 
-#include <zenoh.hxx>
-
 #include <cstddef>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
+
+#include <zenoh.hxx>
 
 #include "graph_cache.hpp"
 #include "liveliness_utils.hpp"

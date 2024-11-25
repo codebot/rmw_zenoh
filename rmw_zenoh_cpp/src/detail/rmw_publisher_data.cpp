@@ -20,6 +20,7 @@
 #include <mutex>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "cdr.hpp"
 #include "message_type_support.hpp"
@@ -104,7 +105,6 @@ std::shared_ptr<PublisherData> PublisherData::make(
   zenoh::KeyExpr pub_ke(entity->topic_info()->topic_keyexpr_);
   // Create a Publication Cache if durability is transient_local.
   if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
-
     zenoh::Session::PublicationCacheOptions pub_cache_opts =
       zenoh::Session::PublicationCacheOptions::create_default();
 

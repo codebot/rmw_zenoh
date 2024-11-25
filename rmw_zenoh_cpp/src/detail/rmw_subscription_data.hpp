@@ -15,8 +15,6 @@
 #ifndef DETAIL__RMW_SUBSCRIPTION_DATA_HPP_
 #define DETAIL__RMW_SUBSCRIPTION_DATA_HPP_
 
-#include <zenoh.h>
-
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -27,6 +25,8 @@
 #include <string>
 #include <unordered_map>
 #include <variant>
+
+#include <zenoh.hxx>
 
 #include "event.hpp"
 #include "graph_cache.hpp"

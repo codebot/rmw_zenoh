@@ -14,7 +14,6 @@
 
 #include <fastcdr/FastBuffer.h>
 #include <rmw/get_topic_endpoint_info.h>
-#include <zenoh.h>
 
 #include <chrono>
 #include <cinttypes>
@@ -22,6 +21,8 @@
 #include <mutex>
 #include <string>
 #include <utility>
+
+#include <zenoh.hxx>
 
 #include "detail/cdr.hpp"
 #include "detail/guard_condition.hpp"

@@ -15,6 +15,9 @@
 #ifndef DETAIL__ATTACHMENT_HELPERS_HPP_
 #define DETAIL__ATTACHMENT_HELPERS_HPP_
 
+#include <cstdint>
+#include <vector>
+
 #include <zenoh.hxx>
 
 #include "rmw/types.h"

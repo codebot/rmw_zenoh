@@ -286,7 +286,6 @@ bool SubscriptionData::init()
     zenoh::Subscriber<void> sub = context_impl->session()->declare_subscriber(
       sub_ke,
       [data_wp](const zenoh::Sample & sample) {
-
         zenoh::KeyExpr keystr(std::string(sample.get_keyexpr().as_string_view()));
 
         auto sub_data = data_wp.lock();
@@ -426,7 +425,6 @@ rmw_ret_t SubscriptionData::shutdown()
           return RMW_RET_ERROR;
         }
       }
-
     }
   }
 

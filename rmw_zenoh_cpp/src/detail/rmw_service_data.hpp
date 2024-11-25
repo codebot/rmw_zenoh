@@ -15,8 +15,6 @@
 #ifndef DETAIL__RMW_SERVICE_DATA_HPP_
 #define DETAIL__RMW_SERVICE_DATA_HPP_
 
-#include <zenoh.hxx>
-
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -24,6 +22,8 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+
+#include <zenoh.hxx>
 
 #include "event.hpp"
 #include "liveliness_utils.hpp"

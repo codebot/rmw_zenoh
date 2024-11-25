@@ -15,14 +15,14 @@
 #ifndef DETAIL__RMW_PUBLISHER_DATA_HPP_
 #define DETAIL__RMW_PUBLISHER_DATA_HPP_
 
-#include <zenoh.hxx>
-
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
+
+#include <zenoh.hxx>
 
 #include "event.hpp"
 #include "liveliness_utils.hpp"

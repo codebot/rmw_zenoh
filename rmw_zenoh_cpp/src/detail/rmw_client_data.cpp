@@ -15,7 +15,6 @@
 #include "rmw_client_data.hpp"
 
 #include <fastcdr/FastBuffer.h>
-#include <zenoh.h>
 
 #include <chrono>
 #include <limits>
@@ -23,6 +22,9 @@
 #include <mutex>
 #include <string>
 #include <utility>
+#include <vector>
+
+#include <zenoh.hxx>
 
 #include "cdr.hpp"
 #include "liveliness_utils.hpp"
@@ -387,7 +389,6 @@ rmw_ret_t ClientData::send_request(
     keyexpr_.value(),
     parameters,
     [client_data](const zenoh::Reply & reply) {
-
       if (!reply.is_ok()) {
         RMW_ZENOH_LOG_ERROR_NAMED(
             "rmw_zenoh_cpp",

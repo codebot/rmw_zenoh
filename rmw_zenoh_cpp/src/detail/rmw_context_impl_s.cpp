@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "rmw_context_impl_s.hpp"
-#include <zenoh.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -25,6 +24,8 @@
 #include <thread>
 #include <unordered_map>
 #include <utility>
+
+#include <zenoh.hxx>
 
 #include "graph_cache.hpp"
 #include "guard_condition.hpp"
@@ -153,10 +154,9 @@ public:
     // the code will be simpler, and if we're just going to spin over the non-blocking
     // reads until we obtain responses, we'll just be hogging CPU time by convincing
     // the OS that we're doing actual work when it could instead park the thread.
-    // z_owned_fifo_handler_reply_t handler;
-    // z_owned_closure_reply_t closure;
-    // z_fifo_channel_reply_new(&closure, &handler, SIZE_MAX - 1);
-    // Intuitively use a FIFO channel rather than building it up with a closure and a handler to FIFO channel
+
+    // Intuitively use a FIFO channel rather than building it up with a closure and a
+    // handler to FIFO channel
     zenoh::KeyExpr keyexpr(liveliness_str);
 
     zenoh::Session::GetOptions options = zenoh::Session::GetOptions::create_default();
@@ -177,7 +177,6 @@ public:
     for (auto res = replies.recv(); std::holds_alternative<zenoh::Reply>(res);
       res = replies.recv())
     {
-
       const zenoh::Reply & reply = std::get<zenoh::Reply>(res);
       if (reply.is_ok()) {
         const auto & sample = reply.get_ok();
@@ -195,7 +194,6 @@ public:
         throw std::runtime_error("Unable to create shm provider.");
       }
       shm_provider_ = std::move(provider);
-
     }
 
     graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
@@ -211,9 +209,8 @@ public:
     graph_subscriber_cpp_ = session_->liveliness_declare_subscriber(
       keyexpr_cpp,
       [&](const zenoh::Sample & sample) {
-
-          // // Look up the data shared_ptr in the global map.  If it is in there, use it.
-          // If not, it is being shutdown so we can just ignore this update.
+        // Look up the data shared_ptr in the global map. If it is in there, use it.
+        // If not, it is being shutdown so we can just ignore this update.
         std::shared_ptr<rmw_context_impl_s::Data> data_shared_ptr{nullptr};
         {
           std::lock_guard<std::mutex> lk(data_to_data_shared_ptr_map_mutex);

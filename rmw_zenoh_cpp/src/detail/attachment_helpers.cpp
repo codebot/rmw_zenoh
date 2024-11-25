@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <zenoh.h>
-
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
+
+#include <zenoh.hxx>
 
 #include "rmw/types.h"
 

@@ -15,9 +15,10 @@
 #ifndef DETAIL__ZENOH_CONFIG_HPP_
 #define DETAIL__ZENOH_CONFIG_HPP_
 
+#include <optional>
+
 #include <zenoh.hxx>
 #include <zenoh/api/config.hxx>
-#include <optional>
 
 #include "rmw/ret_types.h"
 
