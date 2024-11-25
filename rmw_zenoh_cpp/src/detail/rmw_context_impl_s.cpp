@@ -76,7 +76,7 @@ public:
   {
     // Initialize the zenoh configuration.
     std::optional<zenoh::Config> config = rmw_zenoh_cpp::get_z_config(
-        rmw_zenoh_cpp::ConfigurableEntity::Session);
+      rmw_zenoh_cpp::ConfigurableEntity::Session);
 
     if (!config.has_value()) {
       throw std::runtime_error("Error configuring Zenoh session.");
@@ -95,9 +95,9 @@ public:
 
     // Initialize the zenoh session.
     session_ = std::make_shared<zenoh::Session>(
-        std::move(config.value()),
-        zenoh::Session::SessionOptions::create_default(),
-        &result);
+      std::move(config.value()),
+      zenoh::Session::SessionOptions::create_default(),
+      &result);
     if(result != Z_OK) {
       throw std::runtime_error("Error setting up zenoh session. ");
     }

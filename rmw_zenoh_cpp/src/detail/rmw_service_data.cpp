@@ -148,8 +148,8 @@ std::shared_ptr<ServiceData> ServiceData::make(
       auto sub_data = data_wp.lock();
       if (sub_data == nullptr) {
         RMW_ZENOH_LOG_ERROR_NAMED(
-            "rmw_zenoh_cpp",
-        "Unable to obtain ServiceData from data for %s.",
+          "rmw_zenoh_cpp",
+          "Unable to obtain ServiceData from data for %s.",
           std::string(query.get_keyexpr().as_string_view()));
         return;
       }
@@ -310,8 +310,10 @@ rmw_ret_t ServiceData::take_request(
       return RMW_RET_ERROR;
     }
 
-    memcpy(request_header->request_id.writer_guid, attachment.source_gid.data(),
-        RMW_GID_STORAGE_SIZE);
+    memcpy(
+      request_header->request_id.writer_guid,
+      attachment.source_gid.data(),
+      RMW_GID_STORAGE_SIZE);
 
     request_header->source_timestamp = attachment.source_timestamp;
     if (request_header->source_timestamp < 0) {

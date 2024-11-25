@@ -269,9 +269,10 @@ bool SubscriptionData::init()
 
         zenoh::ZResult err;
         std::get<zenoh::ext::QueryingSubscriber<void>>(
-          sub_data->sub_.value()).get(zenoh::KeyExpr(selector),
-          std::move(opts),
-          &err);
+          sub_data->sub_.value()).get(
+            zenoh::KeyExpr(selector),
+            std::move(opts),
+            &err);
 
         if (err != Z_OK) {
           RMW_SET_ERROR_MSG("unable to get querying subscriber.");
@@ -508,8 +509,10 @@ rmw_ret_t SubscriptionData::take_one_message(
       // TODO(clalancette): fill in reception_sequence_number
       message_info->reception_sequence_number = 0;
       message_info->publisher_gid.implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-      memcpy(message_info->publisher_gid.data, msg_data->attachment.source_gid.data(),
-          RMW_GID_STORAGE_SIZE);
+      memcpy(
+        message_info->publisher_gid.data,
+        msg_data->attachment.source_gid.data(),
+        RMW_GID_STORAGE_SIZE);
       message_info->from_intra_process = false;
     }
     *taken = true;
@@ -563,8 +566,10 @@ rmw_ret_t SubscriptionData::take_serialized_message(
       // TODO(clalancette): fill in reception_sequence_number
       message_info->reception_sequence_number = 0;
       message_info->publisher_gid.implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-      memcpy(message_info->publisher_gid.data, msg_data->attachment.source_gid.data(),
-          RMW_GID_STORAGE_SIZE);
+      memcpy(
+        message_info->publisher_gid.data,
+        msg_data->attachment.source_gid.data(),
+        RMW_GID_STORAGE_SIZE);
       message_info->from_intra_process = false;
     }
   } else {

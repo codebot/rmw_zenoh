@@ -67,7 +67,7 @@ int main(int argc, char ** argv)
   zenoh::try_init_log_from_env();
 
   std::optional<zenoh::Config> config = rmw_zenoh_cpp::get_z_config(
-      rmw_zenoh_cpp::ConfigurableEntity::Router);
+    rmw_zenoh_cpp::ConfigurableEntity::Router);
 
   if (!config.has_value()) {
     RMW_SET_ERROR_MSG("Error configuring Zenoh router.");
@@ -76,9 +76,9 @@ int main(int argc, char ** argv)
 
   zenoh::ZResult result;
   auto session = zenoh::Session::open(
-      std::move(config.value()),
-      zenoh::Session::SessionOptions::create_default(),
-      &result);
+    std::move(config.value()),
+    zenoh::Session::SessionOptions::create_default(),
+    &result);
   if(result != Z_OK) {
     std::cout << "Error opening Session!" << "\\n";
     return 1;

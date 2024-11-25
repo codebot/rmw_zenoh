@@ -295,15 +295,17 @@ rmw_ret_t ClientData::take_response(
       RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
       return RMW_RET_ERROR;
     }
-    memcpy(request_header->request_id.writer_guid, attachment.source_gid.data(),
-        RMW_GID_STORAGE_SIZE);
+    memcpy(
+      request_header->request_id.writer_guid,
+      attachment.source_gid.data(),
+      RMW_GID_STORAGE_SIZE);
     request_header->received_timestamp = latest_reply->get_received_timestamp();
 
     *taken = true;
   } else {
     RMW_ZENOH_LOG_DEBUG_NAMED(
-        "rmw_zenoh_cpp",
-        "ClientData not able to get slice data");
+      "rmw_zenoh_cpp",
+      "ClientData not able to get slice data");
     return RMW_RET_ERROR;
   }
 
@@ -391,9 +393,9 @@ rmw_ret_t ClientData::send_request(
     [client_data](const zenoh::Reply & reply) {
       if (!reply.is_ok()) {
         RMW_ZENOH_LOG_ERROR_NAMED(
-            "rmw_zenoh_cpp",
-            "z_reply_is_ok returned False Reason: %s",
-            reply.get_err().get_payload().as_string())
+          "rmw_zenoh_cpp",
+          "z_reply_is_ok returned False Reason: %s",
+          reply.get_err().get_payload().as_string())
         return;
       }
       const zenoh::Sample & sample = reply.get_ok();
@@ -401,9 +403,9 @@ rmw_ret_t ClientData::send_request(
       auto sub_data = client_data.lock();
       if (sub_data == nullptr) {
         RMW_ZENOH_LOG_ERROR_NAMED(
-            "rmw_zenoh_cpp",
-            "Unable to obtain ClientData from data for %s.",
-            std::string(sample.get_keyexpr().as_string_view()));
+          "rmw_zenoh_cpp",
+          "Unable to obtain ClientData from data for %s.",
+          std::string(sample.get_keyexpr().as_string_view()));
         return;
       }
 
@@ -415,7 +417,7 @@ rmw_ret_t ClientData::send_request(
       std::chrono::system_clock::now().time_since_epoch().count();
 
       sub_data->add_new_reply(
-          std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
+        std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
     },
     zenoh::closures::none,
     std::move(opts),

@@ -269,7 +269,9 @@ rmw_ret_t PublisherData::publish(
   entity_->copy_gid(local_gid);
   zenoh::ZResult err;
   auto options = zenoh::Publisher::PutOptions::create_default();
-  options.attachment = create_map_and_set_sequence_num(sequence_number_++, local_gid);
+  options.attachment = create_map_and_set_sequence_num(
+    sequence_number_++,
+    local_gid);
 
   // TODO(ahcorde): shmbuf
   std::vector<uint8_t> raw_image(
@@ -398,8 +400,8 @@ rmw_ret_t PublisherData::shutdown()
   std::move(pub_).undeclare(&err);
   if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to undeclare publisher");
+      "rmw_zenoh_cpp",
+      "Unable to undeclare publisher");
     return RMW_RET_ERROR;
   }
 
