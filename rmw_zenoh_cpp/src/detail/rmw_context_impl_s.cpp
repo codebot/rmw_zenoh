@@ -98,7 +98,7 @@ public:
       std::move(config.value()),
       zenoh::Session::SessionOptions::create_default(),
       &result);
-    if(result != Z_OK) {
+    if (result != Z_OK) {
       throw std::runtime_error("Error setting up zenoh session. ");
     }
 
@@ -225,7 +225,7 @@ public:
         data_shared_ptr->update_graph_cache(
           sample,
           std::string(sample.get_keyexpr().as_string_view()));
-        },
+      },
       zenoh::closures::none,
       std::move(sub_options),
       &err);
