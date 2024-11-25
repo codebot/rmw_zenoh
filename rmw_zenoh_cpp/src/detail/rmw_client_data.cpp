@@ -479,8 +479,8 @@ void ClientData::_shutdown()
   std::move(token_).value().undeclare(&err);
   if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to undeclare liveliness token");
+      "rmw_zenoh_cpp",
+      "Unable to undeclare liveliness token");
     return;
   }
 

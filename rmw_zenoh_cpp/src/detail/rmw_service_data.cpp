@@ -149,8 +149,8 @@ std::shared_ptr<ServiceData> ServiceData::make(
       if (sub_data == nullptr) {
         RMW_ZENOH_LOG_ERROR_NAMED(
             "rmw_zenoh_cpp",
-            "Unable to obtain ServiceData from data for %s.",
-            std::string(query.get_keyexpr().as_string_view()));
+        "Unable to obtain ServiceData from data for %s.",
+          std::string(query.get_keyexpr().as_string_view()));
         return;
       }
 
@@ -339,8 +339,8 @@ rmw_ret_t ServiceData::take_request(
     *taken = true;
   } else {
     RMW_ZENOH_LOG_DEBUG_NAMED(
-        "rmw_zenoh_cpp",
-        "ServiceData not able to get slice data");
+      "rmw_zenoh_cpp",
+      "ServiceData not able to get slice data");
     return RMW_RET_ERROR;
   }
   return RMW_RET_OK;
@@ -497,16 +497,16 @@ rmw_ret_t ServiceData::shutdown()
   std::move(token_).value().undeclare(&err);
   if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to undeclare liveliness token");
+      "rmw_zenoh_cpp",
+      "Unable to undeclare liveliness token");
     return RMW_RET_ERROR;
   }
 
   std::move(qable_).value().undeclare(&err);
   if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to undeclare liveliness token");
+      "rmw_zenoh_cpp",
+      "Unable to undeclare queryable");
     return RMW_RET_ERROR;
   }
 

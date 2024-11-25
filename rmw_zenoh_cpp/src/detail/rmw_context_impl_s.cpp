@@ -88,9 +88,9 @@ public:
     std::string shm_enabled = config.value().get(Z_CONFIG_SHARED_MEMORY_KEY, &result);
     if (result != Z_OK) {
       RMW_ZENOH_LOG_ERROR_NAMED(
-            "rmw_zenoh_cpp",
-            "Not able to get %s from the config file",
-            Z_CONFIG_SHARED_MEMORY_KEY);
+        "rmw_zenoh_cpp",
+        "Not able to get %s from the config file",
+        Z_CONFIG_SHARED_MEMORY_KEY);
     }
 
     // Initialize the zenoh session.
@@ -187,7 +187,8 @@ public:
     // Initialize the shm manager if shared_memory is enabled in the config.
     shm_provider_ = std::nullopt;
     if (shm_enabled == "true") {
-      auto layout = zenoh::MemoryLayout(SHM_BUFFER_SIZE_MB * 1024 * 1024,
+      auto layout = zenoh::MemoryLayout(
+        SHM_BUFFER_SIZE_MB * 1024 * 1024,
         zenoh::AllocAlignment({5}));
       zenoh::PosixShmProvider provider(layout, &result);
       if (result != Z_OK) {
@@ -220,9 +221,10 @@ public:
           data_shared_ptr = data_to_data_shared_ptr_map[this];
         }
 
-          // Update the graph cache.
-        data_shared_ptr->update_graph_cache(sample,
-        std::string(sample.get_keyexpr().as_string_view()));
+        // Update the graph cache.
+        data_shared_ptr->update_graph_cache(
+          sample,
+          std::string(sample.get_keyexpr().as_string_view()));
         },
       zenoh::closures::none,
       std::move(sub_options),
@@ -260,8 +262,8 @@ public:
       std::move(graph_subscriber_cpp_).value().undeclare(&err);
       if (err != Z_OK) {
         RMW_ZENOH_LOG_ERROR_NAMED(
-            "rmw_zenoh_cpp",
-            "Unable to undeclare liveliness token");
+          "rmw_zenoh_cpp",
+          "Unable to undeclare liveliness token");
         return RMW_RET_ERROR;
       }
 

@@ -398,8 +398,8 @@ rmw_ret_t SubscriptionData::shutdown()
   std::move(token_).value().undeclare(&err);
   if (err != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to undeclare liveliness token");
+      "rmw_zenoh_cpp",
+      "Unable to undeclare liveliness token");
     return RMW_RET_ERROR;
   }
 
@@ -409,8 +409,8 @@ rmw_ret_t SubscriptionData::shutdown()
       std::move(*sub).undeclare(&err);
       if (err != Z_OK) {
         RMW_ZENOH_LOG_ERROR_NAMED(
-            "rmw_zenoh_cpp",
-            "failed to undeclare sub.");
+          "rmw_zenoh_cpp",
+          "failed to undeclare sub.");
         return RMW_RET_ERROR;
       }
     } else {
@@ -420,8 +420,8 @@ rmw_ret_t SubscriptionData::shutdown()
         std::move(*sub).undeclare(&err);
         if (err != Z_OK) {
           RMW_ZENOH_LOG_ERROR_NAMED(
-              "rmw_zenoh_cpp",
-              "failed to undeclare querying sub.");
+            "rmw_zenoh_cpp",
+            "failed to undeclare querying sub.");
           return RMW_RET_ERROR;
         }
       }
