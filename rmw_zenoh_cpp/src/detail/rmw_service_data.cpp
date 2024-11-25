@@ -144,7 +144,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
   std::weak_ptr<rmw_zenoh_cpp::ServiceData> data_wp = service_data;
   service_data->qable_ = session->declare_queryable(
     service_ke,
-    [data_wp](const zenoh::Query & query){
+    [data_wp](const zenoh::Query & query) {
       auto sub_data = data_wp.lock();
       if (sub_data == nullptr) {
         RMW_ZENOH_LOG_ERROR_NAMED(
@@ -417,7 +417,8 @@ rmw_ret_t ServiceData::send_response(
 
   const zenoh::Query & loaned_query = query->get_query();
   zenoh::Query::ReplyOptions options = zenoh::Query::ReplyOptions::create_default();
-  options.attachment = create_map_and_set_sequence_num(request_id->sequence_number,
+  options.attachment = create_map_and_set_sequence_num(
+    request_id->sequence_number,
     request_id->writer_guid);
 
   std::vector<uint8_t> raw_bytes(

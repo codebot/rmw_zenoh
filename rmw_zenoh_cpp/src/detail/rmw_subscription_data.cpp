@@ -268,11 +268,10 @@ bool SubscriptionData::init()
         opts.accept_replies = ZC_REPLY_KEYEXPR_ANY;
 
         zenoh::ZResult err;
-        std::get<zenoh::ext::QueryingSubscriber<void>>(
-          sub_data->sub_.value()).get(
-            zenoh::KeyExpr(selector),
-            std::move(opts),
-            &err);
+        std::get<zenoh::ext::QueryingSubscriber<void>>(sub_data->sub_.value()).get(
+          zenoh::KeyExpr(selector),
+          std::move(opts),
+          &err);
 
         if (err != Z_OK) {
           RMW_SET_ERROR_MSG("unable to get querying subscriber.");

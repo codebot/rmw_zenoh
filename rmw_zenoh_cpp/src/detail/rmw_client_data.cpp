@@ -249,7 +249,7 @@ rmw_ret_t ClientData::take_response(
 
   auto & reply = latest_reply->get_sample();
 
-  if(!reply.is_ok()) {
+  if (!reply.is_ok()) {
     RMW_SET_ERROR_MSG("invalid reply sample");
     return RMW_RET_ERROR;
   }
