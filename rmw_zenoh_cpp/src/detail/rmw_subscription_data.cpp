@@ -65,12 +65,14 @@ void sub_data_handler(z_loaned_sample_t * sample, void * data)
   z_owned_slice_t slice;
   z_bytes_to_slice(payload, &slice);
 
+  std::string topic_name(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
+
   sub_data->add_new_message(
     std::make_unique<SubscriptionData::Message>(
       slice,
       z_timestamp_ntp64_time(z_sample_timestamp(sample)),
       std::move(attachment)),
-    z_string_data(z_loan(keystr)));
+    &topic_name);
 }
 }  // namespace
 

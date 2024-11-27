@@ -34,7 +34,10 @@ void create_map_and_set_sequence_num(
 }
 
 ///=============================================================================
-ZenohQuery::ZenohQuery(const z_loaned_query_t * query, std::chrono::nanoseconds::rep received_timestamp) {
+ZenohQuery::ZenohQuery(
+  const z_loaned_query_t * query,
+  std::chrono::nanoseconds::rep received_timestamp)
+{
   z_query_clone(&query_, query);
   received_timestamp_ = received_timestamp;
 }
