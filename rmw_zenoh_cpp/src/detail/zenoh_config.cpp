@@ -61,7 +61,6 @@ rmw_ret_t _get_z_config(
   // If the environment variable is set, try to read the configuration from the file,
   // if the environment variable is not set use internal configuration
   configured_uri = envar_uri[0] != '\0' ? envar_uri : default_uri;
-
   // Try to read the configuration
   if (zc_config_from_file(config, configured_uri) != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(

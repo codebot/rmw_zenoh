@@ -16,6 +16,7 @@
 #define DETAIL__ZENOH_CONFIG_HPP_
 
 #include <zenoh.h>
+
 #include <optional>
 
 #include "rmw/ret_types.h"

@@ -97,7 +97,7 @@ public:
 
     // Initialize the zenoh session.
     if (z_open(&session_, z_move(config), NULL) != Z_OK) {
-      RMW_SET_ERROR_MSG("Error setting up zenoh session");
+      RMW_SET_ERROR_MSG("Error setting up zenoh session.");
       throw std::runtime_error("Error setting up zenoh session.");
     }
     atexit(update_is_exiting);
@@ -155,23 +155,21 @@ public:
     z_owned_closure_reply_t closure;
     z_fifo_channel_reply_new(&closure, &handler, SIZE_MAX - 1);
 
-
     z_view_keyexpr_t keyexpr;
     z_view_keyexpr_from_str(&keyexpr, liveliness_str.c_str());
     zc_liveliness_get(
       z_loan(session_), z_loan(keyexpr),
       z_move(closure), NULL);
-
     z_owned_reply_t reply;
     while (z_recv(z_loan(handler), &reply) == Z_OK) {
       if (z_reply_is_ok(z_loan(reply))) {
         const z_loaned_sample_t * sample = z_reply_ok(z_loan(reply));
         z_view_string_t keystr;
         z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
-        std::string str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
+        std::string livelines_str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
         // Ignore tokens from the same session to avoid race conditions from this
         // query and the liveliness subscription.
-        graph_cache_->parse_put(str, true);
+        graph_cache_->parse_put(std::move(livelines_str), true);
       } else {
         RMW_ZENOH_LOG_DEBUG_NAMED(
           "rmw_zenoh_cpp", "[rmw_context_impl_s] z_call received an invalid reply.\n");
@@ -194,8 +192,8 @@ public:
 
       z_owned_shm_provider_t provider;
       if (z_posix_shm_provider_new(&provider, z_loan(layout)) != Z_OK) {
-        RMW_ZENOH_LOG_ERROR_NAMED("rmw_zenoh_cpp", "Unable to create a SHM provider.");
-        throw std::runtime_error("Unable to create shm provider.");
+        RMW_ZENOH_LOG_ERROR_NAMED("rmw_zenoh_cpp", "Unable to create an SHM provider.");
+        throw std::runtime_error("Unable to create an SHM provider.");
       }
       shm_provider_ = provider;
     }
@@ -462,8 +460,8 @@ static void graph_sub_data_handler(z_loaned_sample_t * sample, void * data)
   }
 
   // Update the graph cache.
-  std::string str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
-  data_shared_ptr->update_graph_cache(z_sample_kind(sample), str);
+  std::string livelines_str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
+  data_shared_ptr->update_graph_cache(z_sample_kind(sample), std::move(livelines_str));
 }
 
 ///=============================================================================

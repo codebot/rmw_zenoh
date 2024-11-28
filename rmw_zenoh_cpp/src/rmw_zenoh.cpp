@@ -104,9 +104,6 @@ const rosidl_service_type_support_t * find_service_type_support(
 
 extern "C"
 {
-// TODO(yuyuan): SHM, make this configurable
-#define SHM_BUF_OK_SIZE 2621440
-
 //==============================================================================
 /// Get the name of the rmw implementation being used
 const char *
@@ -446,8 +443,7 @@ rmw_create_publisher(
 }
 
 //==============================================================================
-/// Finalize a given publisher handle, reclaim the resources, and deallocate the
-/// publisher handle.
+/// Finalize a given publisher handle, reclaim the resources, and deallocate the publisher handle.
 rmw_ret_t
 rmw_destroy_publisher(rmw_node_t * node, rmw_publisher_t * publisher)
 {
