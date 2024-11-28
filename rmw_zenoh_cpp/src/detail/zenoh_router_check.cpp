@@ -16,6 +16,8 @@
 
 #include <rcutils/env.h>
 
+#include <iomanip>
+#include <sstream>
 #include <string>
 
 #include "logging_macros.hpp"

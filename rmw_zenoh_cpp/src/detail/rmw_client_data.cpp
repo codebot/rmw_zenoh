@@ -15,23 +15,30 @@
 #include "rmw_client_data.hpp"
 
 #include <fastcdr/FastBuffer.h>
-#include <zenoh.h>
 
 #include <chrono>
+#include <cinttypes>
 #include <limits>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
+#include "attachment_helpers.hpp"
 #include "cdr.hpp"
 #include "liveliness_utils.hpp"
 #include "logging_macros.hpp"
+#include "message_type_support.hpp"
 #include "qos.hpp"
 #include "rmw_context_impl_s.hpp"
 
 #include "rcpputils/scope_exit.hpp"
+
 #include "rmw/error_handling.h"
+#include "rmw/get_topic_endpoint_info.h"
+#include "rmw/impl/cpp/macros.hpp"
 
 namespace
 {

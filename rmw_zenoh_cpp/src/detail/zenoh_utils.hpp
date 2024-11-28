@@ -18,6 +18,7 @@
 #include <zenoh.h>
 
 #include <chrono>
+#include <functional>
 #include <optional>
 
 #include "rmw/types.h"

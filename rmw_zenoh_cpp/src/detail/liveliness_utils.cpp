@@ -14,8 +14,6 @@
 
 #include "liveliness_utils.hpp"
 
-#include <zenoh.h>
-
 #include <functional>
 #include <limits>
 #include <optional>
@@ -23,6 +21,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -30,6 +29,8 @@
 #include "logging_macros.hpp"
 #include "qos.hpp"
 #include "simplified_xxhash3.hpp"
+
+#include "rcpputils/scope_exit.hpp"
 
 #include "rmw/error_handling.h"
 

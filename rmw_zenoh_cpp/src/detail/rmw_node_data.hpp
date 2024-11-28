@@ -30,6 +30,8 @@
 #include "rmw_subscription_data.hpp"
 #include "rmw_service_data.hpp"
 
+#include "rmw/rmw.h"
+
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================

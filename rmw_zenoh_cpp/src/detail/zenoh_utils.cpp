@@ -15,9 +15,12 @@
 #include "zenoh_utils.hpp"
 
 #include <chrono>
+#include <cinttypes>
 
 #include "attachment_helpers.hpp"
-#include "rmw/types.h"
+#include "rcpputils/scope_exit.hpp"
+
+#include "rmw/error_handling.h"
 
 namespace rmw_zenoh_cpp
 {

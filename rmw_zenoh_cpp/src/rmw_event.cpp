@@ -14,6 +14,7 @@
 
 #include "rmw/error_handling.h"
 #include "rmw/event.h"
+#include "rmw/events_statuses/events_statuses.h"
 #include "rmw/types.h"
 
 #include "detail/event.hpp"
