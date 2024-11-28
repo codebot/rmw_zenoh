@@ -232,19 +232,6 @@ public:
         return ret;
       }
 
-      // Shutdown all the nodes in this context.
-      for (auto node_it = nodes_.begin(); node_it != nodes_.end(); ++node_it) {
-        ret = node_it->second->shutdown();
-        if (ret != RMW_RET_OK) {
-          RMW_ZENOH_LOG_ERROR_NAMED(
-            "rmw_zenoh_cpp",
-            "Unable to shutdown node with id %zu. rmw_ret_t code: %zu.",
-            node_it->second->id(),
-            ret
-          );
-        }
-      }
-
       z_undeclare_subscriber(z_move(graph_subscriber_));
       if (shm_manager_.has_value()) {
         z_drop(z_move(shm_manager_.value()));
