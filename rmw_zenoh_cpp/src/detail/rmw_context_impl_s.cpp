@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "rmw_context_impl_s.hpp"
-#include <zenoh.h>
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -40,16 +40,6 @@
 // Megabytes of SHM to reserve.
 // TODO(clalancette): Make this configurable, or get it from the configuration
 #define SHM_BUFFER_SIZE_MB 10
-
-// The variable is used to identify whether the process is trying to exit or not.
-// The atexit function we registered will set the flag and prevent us from closing
-// Zenoh Session. Zenoh API can't be used in atexit function, because Tokio context
-// is already destroyed. It will cause panic if we do so.
-static bool is_exiting = false;
-void update_is_exiting()
-{
-  is_exiting = true;
-}
 
 // This global mapping of raw Data pointers to Data shared pointers allows graph_sub_data_handler()
 // to lookup the pointer, and gain a reference to a shared_ptr if it exists.
@@ -100,13 +90,9 @@ public:
       RMW_SET_ERROR_MSG("Error setting up zenoh session.");
       throw std::runtime_error("Error setting up zenoh session.");
     }
-    atexit(update_is_exiting);
     auto close_session = rcpputils::make_scope_exit(
       [this]() {
-        // Don't touch Zenoh Session if the ROS process is exiting, it will cause panic.
-        if (!is_exiting) {
-          z_close(z_loan_mut(session_), NULL);
-        }
+        z_close(z_loan_mut(session_), NULL);
       });
 
     // Verify if the zenoh router is running if configured.
@@ -254,13 +240,10 @@ public:
       // to avoid an AB/BA deadlock if shutdown is racing with graph_sub_data_handler().
     }
 
-    // Don't touch Zenoh Session if the ROS process is exiting, it will cause panic.
-    if (!is_exiting) {
-      // Close the zenoh session
-      if (z_close(z_loan_mut(session_), NULL) != Z_OK) {
-        RMW_SET_ERROR_MSG("Error while closing zenoh session");
-        return RMW_RET_ERROR;
-      }
+    // Close the zenoh session
+    if (z_close(z_loan_mut(session_), NULL) != Z_OK) {
+      RMW_SET_ERROR_MSG("Error while closing zenoh session");
+      return RMW_RET_ERROR;
     }
     return RMW_RET_OK;
   }
