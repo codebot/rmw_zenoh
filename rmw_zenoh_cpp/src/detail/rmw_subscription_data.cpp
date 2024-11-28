@@ -72,7 +72,7 @@ void sub_data_handler(z_loaned_sample_t * sample, void * data)
       slice,
       z_timestamp_ntp64_time(z_sample_timestamp(sample)),
       std::move(attachment)),
-    &topic_name);
+    topic_name);
 }
 }  // namespace
 
