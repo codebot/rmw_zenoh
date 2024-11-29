@@ -94,7 +94,7 @@ SubscriptionData::Message::~Message()
 
 ///=============================================================================
 std::shared_ptr<SubscriptionData> SubscriptionData::make(
-  const z_loaned_session_t * session,
+  std::shared_ptr<ZenohSession> session,
   std::shared_ptr<GraphCache> graph_cache,
   const rmw_node_t * const node,
   liveliness::NodeInfo node_info,
@@ -136,7 +136,7 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
   // with Zenoh; after this, callbacks may come in at any time.
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
-    z_info_zid(session),
+    z_info_zid(session->loan()),
     std::to_string(node_id),
     std::to_string(subscription_id),
     liveliness::EntityType::Subscription,
@@ -161,6 +161,7 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
       node,
       graph_cache,
       std::move(entity),
+      std::move(session),
       type_support->data,
       std::move(message_type_support)
     });
@@ -178,11 +179,13 @@ SubscriptionData::SubscriptionData(
   const rmw_node_t * rmw_node,
   std::shared_ptr<GraphCache> graph_cache,
   std::shared_ptr<liveliness::Entity> entity,
+  std::shared_ptr<ZenohSession> sess,
   const void * type_support_impl,
   std::unique_ptr<MessageTypeSupport> type_support)
 : rmw_node_(rmw_node),
   graph_cache_(std::move(graph_cache)),
   entity_(std::move(entity)),
+  sess_(std::move(sess)),
   type_support_impl_(type_support_impl),
   type_support_(std::move(type_support)),
   last_known_published_msg_({}),
@@ -212,6 +215,8 @@ bool SubscriptionData::init()
 
   rmw_context_impl_t * context_impl = static_cast<rmw_context_impl_t *>(rmw_node_->context->impl);
 
+  sess_ = context_impl->session();
+
   // Instantiate the subscription with suitable options depending on the
   // adapted_qos_profile.
   // TODO(Yadunund): Rely on a separate function to return the sub
@@ -238,7 +243,7 @@ bool SubscriptionData::init()
     sub_options.query_consolidation = z_query_consolidation_none();
     ze_owned_querying_subscriber_t sub;
     if (ze_declare_querying_subscriber(
-        context_impl->session(), &sub, z_loan(sub_ke), z_move(callback), &sub_options))
+        sess_->loan(), &sub, z_loan(sub_ke), z_move(callback), &sub_options))
     {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
       return false;
@@ -292,7 +297,7 @@ bool SubscriptionData::init()
 
     z_owned_subscriber_t sub;
     if (z_declare_subscriber(
-        context_impl->session(), &sub, z_loan(sub_ke), z_move(callback),
+        sess_->loan(), &sub, z_loan(sub_ke), z_move(callback),
         &sub_options) != Z_OK)
     {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
@@ -325,7 +330,7 @@ bool SubscriptionData::init()
       z_drop(z_move(token_));
     });
   if (z_liveliness_declare_token(
-      context_impl->session(), &token_, z_loan(liveliness_ke), NULL) != Z_OK)
+      sess_->loan(), &token_, z_loan(liveliness_ke), NULL) != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
@@ -422,6 +427,7 @@ rmw_ret_t SubscriptionData::shutdown()
     }
   }
 
+  sess_.reset();
   is_shutdown_ = true;
   initialized_ = false;
   return ret;
