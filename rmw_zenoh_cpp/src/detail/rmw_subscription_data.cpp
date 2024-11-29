@@ -324,7 +324,7 @@ bool SubscriptionData::init()
     [this]() {
       z_drop(z_move(token_));
     });
-  if (zc_liveliness_declare_token(
+  if (z_liveliness_declare_token(
       context_impl->session(), &token_, z_loan(liveliness_ke), NULL) != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(
@@ -393,7 +393,7 @@ rmw_ret_t SubscriptionData::shutdown()
   graph_cache_->remove_qos_event_callbacks(entity_->keyexpr_hash());
 
   // Unregister this subscription from the ROS graph.
-  zc_liveliness_undeclare_token(z_move(token_));
+  z_liveliness_undeclare_token(z_move(token_));
 
   z_owned_subscriber_t * sub = std::get_if<z_owned_subscriber_t>(&sub_);
   if (sub != nullptr) {

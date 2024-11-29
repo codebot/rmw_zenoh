@@ -131,7 +131,7 @@ private:
   // An owned keyexpression.
   z_owned_keyexpr_t keyexpr_;
   // Liveliness token for the service.
-  zc_owned_liveliness_token_t token_;
+  z_owned_liveliness_token_t token_;
   // Type support fields.
   const void * request_type_support_impl_;
   const void * response_type_support_impl_;

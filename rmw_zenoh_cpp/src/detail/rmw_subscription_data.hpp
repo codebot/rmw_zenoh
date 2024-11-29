@@ -139,7 +139,7 @@ private:
   // An owned subscriber or querying_subscriber depending on the QoS settings.
   std::variant<z_owned_subscriber_t, ze_owned_querying_subscriber_t> sub_;
   // Liveliness token for the subscription.
-  zc_owned_liveliness_token_t token_;
+  z_owned_liveliness_token_t token_;
   // Type support fields
   const void * type_support_impl_;
   std::unique_ptr<MessageTypeSupport> type_support_;

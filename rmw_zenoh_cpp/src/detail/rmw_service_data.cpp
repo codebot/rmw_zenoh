@@ -195,7 +195,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
         z_drop(z_move(service_data->token_));
       }
     });
-  if (zc_liveliness_declare_token(
+  if (z_liveliness_declare_token(
       session, &service_data->token_, z_loan(liveliness_ke),
       NULL) != Z_OK)
   {
@@ -495,7 +495,7 @@ rmw_ret_t ServiceData::shutdown()
   }
 
   // Unregister this node from the ROS graph.
-  zc_liveliness_undeclare_token(z_move(token_));
+  z_liveliness_undeclare_token(z_move(token_));
   z_undeclare_queryable(z_move(qable_));
 
   is_shutdown_ = true;

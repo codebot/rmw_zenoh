@@ -124,7 +124,7 @@ public:
 
     // Query router/liveliness participants to get graph information before the session was started.
     // We create a blocking channel that is unbounded, ie. `bound` = 0, to receive
-    // replies for the zc_liveliness_get() call. This is necessary as if the `bound`
+    // replies for the z_liveliness_get() call. This is necessary as if the `bound`
     // is too low, the channel may starve the zenoh executor of its threads which
     // would lead to deadlocks when trying to receive replies and block the
     // execution here.
@@ -143,7 +143,7 @@ public:
 
     z_view_keyexpr_t keyexpr;
     z_view_keyexpr_from_str(&keyexpr, liveliness_str.c_str());
-    zc_liveliness_get(
+    z_liveliness_get(
       z_loan(session_), z_loan(keyexpr),
       z_move(closure), NULL);
     z_owned_reply_t reply;
@@ -196,8 +196,8 @@ public:
 
     // Setup the liveliness subscriber to receives updates from the ROS graph
     // and update the graph cache.
-    zc_liveliness_subscriber_options_t sub_options;
-    zc_liveliness_subscriber_options_default(&sub_options);
+    z_liveliness_subscriber_options_t sub_options;
+    z_liveliness_subscriber_options_default(&sub_options);
     z_owned_closure_sample_t callback;
     z_closure(&callback, graph_sub_data_handler, nullptr, this);
     z_view_keyexpr_t liveliness_ke;
@@ -206,7 +206,7 @@ public:
       [this]() {
         z_undeclare_subscriber(z_move(this->graph_subscriber_));
       });
-    if (zc_liveliness_declare_subscriber(
+    if (z_liveliness_declare_subscriber(
         z_loan(session_),
         &graph_subscriber_, z_loan(liveliness_ke),
         z_move(callback), &sub_options) != Z_OK)
@@ -245,6 +245,7 @@ public:
       RMW_SET_ERROR_MSG("Error while closing zenoh session");
       return RMW_RET_ERROR;
     }
+
     return RMW_RET_OK;
   }
 

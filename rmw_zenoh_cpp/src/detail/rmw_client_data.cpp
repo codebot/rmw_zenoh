@@ -252,7 +252,7 @@ bool ClientData::init(const z_loaned_session_t * session)
     [this]() {
       z_drop(z_move(this->token_));
     });
-  if (zc_liveliness_declare_token(
+  if (z_liveliness_declare_token(
       session,
       &this->token_,
       z_loan(liveliness_ke),
@@ -518,7 +518,7 @@ void ClientData::_shutdown()
   }
 
   // Unregister this node from the ROS graph.
-  zc_liveliness_undeclare_token(z_move(token_));
+  z_liveliness_undeclare_token(z_move(token_));
 
   z_drop(z_move(keyexpr_));
 
