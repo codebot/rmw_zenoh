@@ -61,17 +61,12 @@ std::shared_ptr<NodeData> NodeData::make(
   z_view_keyexpr_t liveliness_ke;
   z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
   z_owned_liveliness_token_t token;
-  auto free_token = rcpputils::make_scope_exit(
-    [&token]() {
-      z_drop(z_move(token));
-    });
   if (z_liveliness_declare_token(session, &token, z_loan(liveliness_ke), NULL) != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the node.");
     return nullptr;
   }
-  free_token.cancel();
 
   return std::shared_ptr<NodeData>(
     new NodeData{

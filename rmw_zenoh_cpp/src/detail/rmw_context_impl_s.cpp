@@ -202,10 +202,6 @@ public:
     z_closure(&callback, graph_sub_data_handler, nullptr, this);
     z_view_keyexpr_t liveliness_ke;
     z_view_keyexpr_from_str(&liveliness_ke, liveliness_str.c_str());
-    auto undeclare_z_sub = rcpputils::make_scope_exit(
-      [this]() {
-        z_undeclare_subscriber(z_move(this->graph_subscriber_));
-      });
     if (z_liveliness_declare_subscriber(
         z_loan(session_),
         &graph_subscriber_, z_loan(liveliness_ke),
@@ -217,7 +213,6 @@ public:
 
     close_session.cancel();
     free_shm_provider.cancel();
-    undeclare_z_sub.cancel();
   }
 
   // Shutdown the Zenoh session.

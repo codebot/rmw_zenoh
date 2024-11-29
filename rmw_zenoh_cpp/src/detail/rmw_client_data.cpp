@@ -236,22 +236,18 @@ ClientData::ClientData(
 bool ClientData::init(const z_loaned_session_t * session)
 {
   std::string topic_keyexpr = this->entity_->topic_info().value().topic_keyexpr_;
-  auto free_ros_keyexpr = rcpputils::make_scope_exit(
-    [this]() {
-      z_drop(z_move(this->keyexpr_));
-    });
   if (z_keyexpr_from_str(&this->keyexpr_, topic_keyexpr.c_str()) != Z_OK) {
     RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
     return false;
   }
+  auto free_ros_keyexpr = rcpputils::make_scope_exit(
+    [this]() {
+      z_drop(z_move(this->keyexpr_));
+    });
 
   std::string liveliness_keyexpr = this->entity_->liveliness_keyexpr();
   z_view_keyexpr_t liveliness_ke;
   z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
-  auto free_token = rcpputils::make_scope_exit(
-    [this]() {
-      z_drop(z_move(this->token_));
-    });
   if (z_liveliness_declare_token(
       session,
       &this->token_,
@@ -266,7 +262,6 @@ bool ClientData::init(const z_loaned_session_t * session)
   }
 
   free_ros_keyexpr.cancel();
-  free_token.cancel();
 
   return true;
 }

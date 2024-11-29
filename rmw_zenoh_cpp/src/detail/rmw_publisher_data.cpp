@@ -111,12 +111,6 @@ std::shared_ptr<PublisherData> PublisherData::make(
 
   // Create a Publication Cache if durability is transient_local.
   std::optional<ze_owned_publication_cache_t> pub_cache = std::nullopt;
-  auto undeclare_z_publisher_cache = rcpputils::make_scope_exit(
-    [&pub_cache]() {
-      if (pub_cache.has_value()) {
-        z_drop(z_move(pub_cache.value()));
-      }
-    });
   if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
     ze_publication_cache_options_t pub_cache_opts;
     ze_publication_cache_options_default(&pub_cache_opts);
@@ -142,6 +136,12 @@ std::shared_ptr<PublisherData> PublisherData::make(
     }
     pub_cache = pub_cache_;
   }
+  auto undeclare_z_publisher_cache = rcpputils::make_scope_exit(
+    [&pub_cache]() {
+      if (pub_cache.has_value()) {
+        z_drop(z_move(pub_cache.value()));
+      }
+    });
 
   // Set congestion_control to BLOCK if appropriate.
   z_publisher_options_t opts;
@@ -157,25 +157,21 @@ std::shared_ptr<PublisherData> PublisherData::make(
   }
   z_owned_publisher_t pub;
   // TODO(clalancette): What happens if the key name is a valid but empty string?
-  auto undeclare_z_publisher = rcpputils::make_scope_exit(
-    [&pub]() {
-      z_undeclare_publisher(z_move(pub));
-    });
   if (z_declare_publisher(
       session, &pub, z_loan(pub_ke), &opts) != Z_OK)
   {
     RMW_SET_ERROR_MSG("Unable to create Zenoh publisher.");
     return nullptr;
   }
+  auto undeclare_z_publisher = rcpputils::make_scope_exit(
+    [&pub]() {
+      z_undeclare_publisher(z_move(pub));
+    });
 
   std::string liveliness_keyexpr = entity->liveliness_keyexpr();
   z_view_keyexpr_t liveliness_ke;
   z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
   z_owned_liveliness_token_t token;
-  auto free_token = rcpputils::make_scope_exit(
-    [&token]() {
-      z_drop(z_move(token));
-    });
   if (z_liveliness_declare_token(
       z_loan(owned_session), &token, z_loan(liveliness_ke),
       NULL) != Z_OK)

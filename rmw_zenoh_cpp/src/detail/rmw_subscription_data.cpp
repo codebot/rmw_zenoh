@@ -212,20 +212,6 @@ bool SubscriptionData::init()
 
   rmw_context_impl_t * context_impl = static_cast<rmw_context_impl_t *>(rmw_node_->context->impl);
 
-  auto undeclare_z_sub = rcpputils::make_scope_exit(
-    [this]() {
-      z_owned_subscriber_t * sub = std::get_if<z_owned_subscriber_t>(&sub_);
-      if (sub == nullptr || z_undeclare_subscriber(z_move(*sub))) {
-        RMW_SET_ERROR_MSG("failed to undeclare sub");
-      } else {
-        ze_owned_querying_subscriber_t * querying_sub =
-        std::get_if<ze_owned_querying_subscriber_t>(&sub_);
-        if (querying_sub == nullptr || ze_undeclare_querying_subscriber(z_move(*querying_sub))) {
-          RMW_SET_ERROR_MSG("failed to undeclare sub");
-        }
-      }
-    });
-
   // Instantiate the subscription with suitable options depending on the
   // adapted_qos_profile.
   // TODO(Yadunund): Rely on a separate function to return the sub
@@ -314,6 +300,20 @@ bool SubscriptionData::init()
     }
     sub_ = sub;
   }
+
+  auto undeclare_z_sub = rcpputils::make_scope_exit(
+    [this]() {
+      z_owned_subscriber_t * sub = std::get_if<z_owned_subscriber_t>(&sub_);
+      if (sub == nullptr || z_undeclare_subscriber(z_move(*sub))) {
+        RMW_SET_ERROR_MSG("failed to undeclare sub");
+      } else {
+        ze_owned_querying_subscriber_t * querying_sub =
+        std::get_if<ze_owned_querying_subscriber_t>(&sub_);
+        if (querying_sub == nullptr || ze_undeclare_querying_subscriber(z_move(*querying_sub))) {
+          RMW_SET_ERROR_MSG("failed to undeclare sub");
+        }
+      }
+    });
 
   // Publish to the graph that a new subscription is in town.
   std::string liveliness_keyexpr = entity_->liveliness_keyexpr();

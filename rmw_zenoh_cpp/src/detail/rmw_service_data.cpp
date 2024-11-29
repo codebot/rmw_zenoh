@@ -171,10 +171,6 @@ std::shared_ptr<ServiceData> ServiceData::make(
   z_queryable_options_t qable_options;
   z_queryable_options_default(&qable_options);
   qable_options.complete = true;
-  auto undeclare_z_queryable = rcpputils::make_scope_exit(
-    [service_data]() {
-      z_undeclare_queryable(z_move(service_data->qable_));
-    });
   if (z_declare_queryable(
       session, &service_data->qable_, z_loan(service_ke),
       z_move(callback), &qable_options) != Z_OK)
@@ -182,6 +178,10 @@ std::shared_ptr<ServiceData> ServiceData::make(
     RMW_SET_ERROR_MSG("unable to create zenoh queryable");
     return nullptr;
   }
+  auto undeclare_z_queryable = rcpputils::make_scope_exit(
+    [service_data]() {
+      z_undeclare_queryable(z_move(service_data->qable_));
+    });
 
   std::string liveliness_keyexpr = service_data->entity_->liveliness_keyexpr();
   z_view_keyexpr_t liveliness_ke;
