@@ -47,8 +47,8 @@ public:
   // Get a copy of the enclave.
   std::string enclave() const;
 
-  // Loan the Zenoh session.
-  const z_loaned_session_t * session() const;
+  // Share the Zenoh session.
+  std::shared_ptr<rmw_zenoh_cpp::ZenohSession> session() const;
 
   // Get a reference to the shm_provider.
   // Note: This is not thread-safe.

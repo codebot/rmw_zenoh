@@ -25,6 +25,21 @@
 
 namespace rmw_zenoh_cpp
 {
+
+/// A wrapped zenoh session with customized destruction.
+///=============================================================================
+class ZenohSession final
+{
+public:
+  ZenohSession(z_owned_session_t sess)
+  : inner_(sess) {}
+  const z_loaned_session_t * loan();
+  ~ZenohSession();
+
+private:
+  z_owned_session_t inner_;
+};
+
 ///=============================================================================
 void
 create_map_and_set_sequence_num(

@@ -107,7 +107,7 @@ namespace rmw_zenoh_cpp
 {
 ///=============================================================================
 std::shared_ptr<ClientData> ClientData::make(
-  const z_loaned_session_t * session,
+  std::shared_ptr<ZenohSession> session,
   const rmw_node_t * const node,
   const rmw_client_t * client,
   liveliness::NodeInfo node_info,
@@ -169,7 +169,7 @@ std::shared_ptr<ClientData> ClientData::make(
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
-    z_info_zid(session),
+    z_info_zid(session->loan()),
     std::to_string(node_id),
     std::to_string(service_id),
     liveliness::EntityType::Client,
@@ -194,6 +194,7 @@ std::shared_ptr<ClientData> ClientData::make(
       node,
       client,
       entity,
+      session,
       request_members,
       response_members,
       request_type_support,
@@ -213,6 +214,7 @@ ClientData::ClientData(
   const rmw_node_t * rmw_node,
   const rmw_client_t * rmw_client,
   std::shared_ptr<liveliness::Entity> entity,
+  std::shared_ptr<ZenohSession> sess,
   const void * request_type_support_impl,
   const void * response_type_support_impl,
   std::shared_ptr<RequestTypeSupport> request_type_support,
@@ -220,6 +222,7 @@ ClientData::ClientData(
 : rmw_node_(rmw_node),
   rmw_client_(rmw_client),
   entity_(std::move(entity)),
+  sess_(std::move(sess)),
   request_type_support_impl_(request_type_support_impl),
   response_type_support_impl_(response_type_support_impl),
   request_type_support_(request_type_support),
@@ -233,7 +236,7 @@ ClientData::ClientData(
 }
 
 ///=============================================================================
-bool ClientData::init(const z_loaned_session_t * session)
+bool ClientData::init(std::shared_ptr<ZenohSession> session)
 {
   std::string topic_keyexpr = this->entity_->topic_info().value().topic_keyexpr_;
   if (z_keyexpr_from_str(&this->keyexpr_, topic_keyexpr.c_str()) != Z_OK) {
@@ -249,7 +252,7 @@ bool ClientData::init(const z_loaned_session_t * session)
   z_view_keyexpr_t liveliness_ke;
   z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
   if (z_liveliness_declare_token(
-      session,
+      session->loan(),
       &this->token_,
       z_loan(liveliness_ke),
       NULL
@@ -388,6 +391,7 @@ rmw_ret_t ClientData::send_request(
   if (context_impl == nullptr) {
     return RMW_RET_INVALID_ARGUMENT;
   }
+  sess_ = context_impl->session();
 
   size_t max_data_length = (
     request_type_support_->get_estimated_serialized_size(
@@ -453,7 +457,7 @@ rmw_ret_t ClientData::send_request(
   z_owned_closure_reply_t zn_closure_reply;
   z_closure(&zn_closure_reply, client_data_handler, client_data_drop, this);
   z_get(
-    context_impl->session(),
+    sess_->loan(),
     z_loan(keyexpr_), "",
     z_move(zn_closure_reply),
     &opts);
@@ -517,6 +521,7 @@ void ClientData::_shutdown()
 
   z_drop(z_move(keyexpr_));
 
+  sess_.reset();
   is_shutdown_ = true;
 }
 

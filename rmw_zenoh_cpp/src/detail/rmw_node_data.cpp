@@ -116,7 +116,7 @@ std::size_t NodeData::id() const
 ///=============================================================================
 bool NodeData::create_pub_data(
   const rmw_publisher_t * const publisher,
-  const z_loaned_session_t * session,
+  std::shared_ptr<ZenohSession> session,
   std::size_t id,
   const std::string & topic_name,
   const rosidl_message_type_support_t * type_support,
@@ -182,7 +182,7 @@ void NodeData::delete_pub_data(const rmw_publisher_t * const publisher)
 ///=============================================================================
 bool NodeData::create_sub_data(
   const rmw_subscription_t * const subscription,
-  const z_loaned_session_t * session,
+  std::shared_ptr<ZenohSession> session,
   std::shared_ptr<GraphCache> graph_cache,
   std::size_t id,
   const std::string & topic_name,
@@ -250,7 +250,7 @@ void NodeData::delete_sub_data(const rmw_subscription_t * const subscription)
 ///=============================================================================
 bool NodeData::create_service_data(
   const rmw_service_t * const service,
-  const z_loaned_session_t * session,
+  std::shared_ptr<ZenohSession> session,
   std::size_t id,
   const std::string & service_name,
   const rosidl_service_type_support_t * type_supports,
@@ -317,7 +317,7 @@ void NodeData::delete_service_data(const rmw_service_t * const service)
 ///=============================================================================
 bool NodeData::create_client_data(
   const rmw_client_t * const client,
-  const z_loaned_session_t * session,
+  std::shared_ptr<ZenohSession> session,
   std::size_t id,
   const std::string & service_name,
   const rosidl_service_type_support_t * type_supports,

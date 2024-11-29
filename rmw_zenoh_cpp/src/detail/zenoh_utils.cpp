@@ -18,12 +18,27 @@
 #include <cinttypes>
 
 #include "attachment_helpers.hpp"
+#include "logging_macros.hpp"
 #include "rcpputils/scope_exit.hpp"
 
 #include "rmw/error_handling.h"
 
 namespace rmw_zenoh_cpp
 {
+/// Close the zenoh session if destructed.
+///=============================================================================
+const z_loaned_session_t * ZenohSession::loan()
+{
+  return z_loan(inner_);
+}
+
+/// Close the zenoh session if destructed.
+///=============================================================================
+ZenohSession::~ZenohSession()
+{
+  z_close(z_loan_mut(inner_), NULL);
+}
+
 ///=============================================================================
 void create_map_and_set_sequence_num(
   z_owned_bytes_t * out_bytes, int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE])
