@@ -392,6 +392,10 @@ rmw_create_publisher(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (!context_impl->session_is_valid()) {
+    RMW_SET_ERROR_MSG("zenoh session is invalid");
+    return nullptr;
+  }
 
   rcutils_allocator_t * allocator = &node->context->options.allocator;
   if (!rcutils_allocator_is_valid(allocator)) {
@@ -917,6 +921,10 @@ rmw_create_subscription(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (!context_impl->session_is_valid()) {
+    RMW_SET_ERROR_MSG("zenoh session is invalid");
+    return nullptr;
+  }
 
   rcutils_allocator_t * allocator = &node->context->options.allocator;
   if (!rcutils_allocator_is_valid(allocator)) {
@@ -1385,6 +1393,10 @@ rmw_create_client(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (!context_impl->session_is_valid()) {
+    RMW_SET_ERROR_MSG("zenoh session is invalid");
+    return nullptr;
+  }
 
   // Get the service type support.
   const rosidl_service_type_support_t * type_support = find_service_type_support(type_supports);
@@ -1629,6 +1641,10 @@ rmw_create_service(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (!context_impl->session_is_valid()) {
+    RMW_SET_ERROR_MSG("zenoh session is invalid");
+    return nullptr;
+  }
 
   // Get the RMW type support.
   const rosidl_service_type_support_t * type_support = find_service_type_support(type_supports);
