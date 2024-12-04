@@ -168,7 +168,8 @@ public:
     // if (shm_enabled._cstr != nullptr &&
     //   strcmp(shm_enabled._cstr, "true") == 0)
     // {
-    //   char idstr[sizeof(zid.id) * 2 + 1];  // 2 bytes for each byte of the id, plus the trailing \0
+    //   // 2 bytes for each byte of the id, plus the trailing \0
+    //   char idstr[sizeof(zid.id) * 2 + 1]; 
     //   static constexpr size_t max_size_of_each = 3;  // 2 for each byte, plus the trailing \0
     //   for (size_t i = 0; i < sizeof(zid.id); ++i) {
     //     snprintf(idstr + 2 * i, max_size_of_each, "%02x", zid.id[i]);
