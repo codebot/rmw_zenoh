@@ -182,7 +182,6 @@ std::shared_ptr<PublisherData> PublisherData::make(
     return nullptr;
   }
 
-  free_token.cancel();
   undeclare_z_publisher_cache.cancel();
   undeclare_z_publisher.cancel();
 
