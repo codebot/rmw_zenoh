@@ -62,9 +62,8 @@ attachment_data_t::attachment_data_t(const z_loaned_bytes_t * attachment)
   ze_deserializer_t deserializer = ze_deserializer_from_bytes(attachment);
   z_owned_string_t key;
 
-  ze_deserializer_deserialize_string(&deserializer, &key);
-
   // Deserialize the sequence_number
+  ze_deserializer_deserialize_string(&deserializer, &key);
   if (std::string_view(
       z_string_data(z_loan(key)),
       z_string_len(z_loan(key))) != "sequence_number")
