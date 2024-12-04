@@ -206,6 +206,7 @@ std::shared_ptr<ClientData> ClientData::make(
     return nullptr;
   }
 
+  client_data->initialized_ = true;
   return client_data;
 }
 
@@ -230,6 +231,7 @@ ClientData::ClientData(
   wait_set_data_(nullptr),
   sequence_number_(1),
   is_shutdown_(false),
+  initialized_(false),
   num_in_flight_(0)
 {
   // Do nothing.
@@ -265,7 +267,6 @@ bool ClientData::init(std::shared_ptr<ZenohSession> session)
   }
 
   free_ros_keyexpr.cancel();
-
   return true;
 }
 
@@ -512,7 +513,7 @@ bool ClientData::detach_condition_and_queue_is_empty()
 ///=============================================================================
 void ClientData::_shutdown()
 {
-  if (is_shutdown_) {
+  if (is_shutdown_ || !initialized_) {
     return;
   }
 
@@ -523,6 +524,7 @@ void ClientData::_shutdown()
 
   sess_.reset();
   is_shutdown_ = true;
+  initialized_ = false;
 }
 
 ///=============================================================================

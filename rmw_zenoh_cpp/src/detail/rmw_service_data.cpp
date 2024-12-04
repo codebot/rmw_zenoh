@@ -209,6 +209,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
   undeclare_z_queryable.cancel();
   free_token.cancel();
 
+  service_data->initialized_ = true;
   return service_data;
 }
 
@@ -229,7 +230,8 @@ ServiceData::ServiceData(
   request_type_support_(std::move(request_type_support)),
   response_type_support_(std::move(response_type_support)),
   wait_set_data_(nullptr),
-  is_shutdown_(false)
+  is_shutdown_(false),
+  initialized_(false)
 {
   // Do nothing.
 }
@@ -493,7 +495,7 @@ rmw_ret_t ServiceData::shutdown()
 {
   rmw_ret_t ret = RMW_RET_OK;
   std::lock_guard<std::mutex> lock(mutex_);
-  if (is_shutdown_) {
+  if (is_shutdown_ || !initialized_) {
     return ret;
   }
 
@@ -503,6 +505,7 @@ rmw_ret_t ServiceData::shutdown()
 
   sess_.reset();
   is_shutdown_ = true;
+  initialized_ = false;
   return RMW_RET_OK;
 }
 

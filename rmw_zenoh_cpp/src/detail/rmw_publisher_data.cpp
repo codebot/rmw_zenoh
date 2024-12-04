@@ -186,7 +186,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
   undeclare_z_publisher_cache.cancel();
   undeclare_z_publisher.cancel();
 
-  return std::shared_ptr<PublisherData>(
+  auto pub_data = std::shared_ptr<PublisherData>(
     new PublisherData{
       node,
       std::move(entity),
@@ -197,6 +197,8 @@ std::shared_ptr<PublisherData> PublisherData::make(
       type_support->data,
       std::move(message_type_support)
     });
+  pub_data->initialized_ = true;
+  return pub_data;
 }
 
 ///=============================================================================
@@ -218,7 +220,8 @@ PublisherData::PublisherData(
   type_support_impl_(type_support_impl),
   type_support_(std::move(type_support)),
   sequence_number_(1),
-  is_shutdown_(false)
+  is_shutdown_(false),
+  initialized_(false)
 {
   events_mgr_ = std::make_shared<EventsManager>();
 }
@@ -425,7 +428,7 @@ PublisherData::~PublisherData()
 rmw_ret_t PublisherData::shutdown()
 {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (is_shutdown_) {
+  if (is_shutdown_ || !initialized_) {
     return RMW_RET_OK;
   }
 
@@ -442,6 +445,7 @@ rmw_ret_t PublisherData::shutdown()
 
   sess_.reset();
   is_shutdown_ = true;
+  initialized_ = false;
   return RMW_RET_OK;
 }
 

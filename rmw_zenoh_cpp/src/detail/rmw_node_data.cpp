@@ -68,13 +68,15 @@ std::shared_ptr<NodeData> NodeData::make(
     return nullptr;
   }
 
-  return std::shared_ptr<NodeData>(
+  auto node_data = std::shared_ptr<NodeData>(
     new NodeData{
       node,
       id,
       std::move(entity),
       std::move(token)
     });
+  node_data->initialized_ = true;
+  return node_data;
 }
 
 ///=============================================================================
@@ -88,6 +90,7 @@ NodeData::NodeData(
   entity_(std::move(entity)),
   token_(std::move(token)),
   is_shutdown_(false),
+  initialized_(false),
   pubs_({})
 {
   // Do nothing.
@@ -392,7 +395,7 @@ rmw_ret_t NodeData::shutdown()
 {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   rmw_ret_t ret = RMW_RET_OK;
-  if (is_shutdown_) {
+  if (is_shutdown_ || !initialized_) {
     return ret;
   }
 
@@ -400,6 +403,7 @@ rmw_ret_t NodeData::shutdown()
   z_liveliness_undeclare_token(z_move(token_));
 
   is_shutdown_ = true;
+  initialized_ = false;
   return ret;
 }
 

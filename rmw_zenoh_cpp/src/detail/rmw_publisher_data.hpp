@@ -116,6 +116,8 @@ private:
   size_t sequence_number_;
   // Shutdown flag.
   bool is_shutdown_;
+  // Whether the object has ever successfully been initialized.
+  bool initialized_;
 };
 using PublisherDataPtr = std::shared_ptr<PublisherData>;
 using PublisherDataConstPtr = std::shared_ptr<const PublisherData>;

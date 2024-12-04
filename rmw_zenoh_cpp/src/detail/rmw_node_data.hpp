@@ -142,6 +142,8 @@ private:
   z_owned_liveliness_token_t token_;
   // Shutdown flag.
   bool is_shutdown_;
+  // Whether the object has ever successfully been initialized.
+  bool initialized_;
   // Map of publishers.
   std::unordered_map<const rmw_publisher_t *, PublisherDataPtr> pubs_;
   // Map of subscriptions.

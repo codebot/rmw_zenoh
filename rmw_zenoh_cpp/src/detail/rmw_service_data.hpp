@@ -132,6 +132,8 @@ private:
   DataCallbackManager data_callback_mgr_;
   // Shutdown flag.
   bool is_shutdown_;
+  // Whether the object has ever successfully been initialized.
+  bool initialized_;
 };
 using ServiceDataPtr = std::shared_ptr<ServiceData>;
 using ServiceDataConstPtr = std::shared_ptr<const ServiceData>;

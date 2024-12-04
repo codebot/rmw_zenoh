@@ -150,6 +150,8 @@ private:
   size_t sequence_number_;
   // Shutdown flag.
   bool is_shutdown_;
+  // Whether the object has ever successfully been initialized.
+  bool initialized_;
   size_t num_in_flight_;
 };
 using ClientDataPtr = std::shared_ptr<ClientData>;
