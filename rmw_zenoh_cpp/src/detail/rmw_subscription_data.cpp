@@ -38,6 +38,8 @@
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
 
+#include "zenoh_utils.hpp"
+
 namespace rmw_zenoh_cpp
 {
 namespace
@@ -224,7 +226,9 @@ bool SubscriptionData::init()
 {
   // TODO(Yadunund): Instead of passing a rawptr, rely on capturing weak_ptr<SubscriptionData>
   // in the closure callback once we switch to zenoh-cpp.
-  z_owned_closure_sample_t callback = z_closure(sub_data_handler, nullptr, this);
+  z_owned_closure_sample_t callback =
+    rmw_zenoh_cpp::make_z_closure<z_owned_closure_sample_t, const z_sample_t>(
+      static_cast<void *>(this), sub_data_handler, nullptr);
   z_owned_keyexpr_t keyexpr =
     z_keyexpr_new(entity_->topic_info()->topic_keyexpr_.c_str());
   auto always_free_ros_keyexpr = rcpputils::make_scope_exit(

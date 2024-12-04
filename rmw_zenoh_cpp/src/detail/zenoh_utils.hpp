@@ -68,6 +68,17 @@ private:
   z_owned_query_t query_;
   std::chrono::nanoseconds::rep received_timestamp_;
 };
+
+///=============================================================================
+template<typename T, typename H>
+T make_z_closure(void * context, void (* call)(H *, void *), void (* drop)(void *))
+{
+  T closure;
+  closure.context = context;
+  closure.call = call;
+  closure.drop = drop;
+  return closure;
+}
 }  // namespace rmw_zenoh_cpp
 
 #endif  // DETAIL__ZENOH_UTILS_HPP_

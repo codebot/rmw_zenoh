@@ -36,6 +36,8 @@
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
 
+#include "zenoh_utils.hpp"
+
 namespace rmw_zenoh_cpp
 {
 ///==============================================================================
@@ -160,7 +162,11 @@ std::shared_ptr<ServiceData> ServiceData::make(
 
   // TODO(Yadunund): Instead of passing a rawptr, rely on capturing weak_ptr<ServiceData>
   // in the closure callback once we switch to zenoh-cpp.
-  z_owned_closure_query_t callback = z_closure(service_data_handler, nullptr, service_data.get());
+  z_owned_closure_query_t callback =
+    rmw_zenoh_cpp::make_z_closure<z_owned_closure_query_t, const z_query_t>(
+      static_cast<void *>(service_data.get()),
+      &rmw_zenoh_cpp::service_data_handler,
+      nullptr);
   service_data->keyexpr_ =
     z_keyexpr_new(service_data->entity_->topic_info().value().topic_keyexpr_.c_str());
   auto free_ros_keyexpr = rcpputils::make_scope_exit(

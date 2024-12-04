@@ -33,6 +33,7 @@
 #include "rmw_node_data.hpp"
 #include "zenoh_config.hpp"
 #include "zenoh_router_check.hpp"
+#include "zenoh_utils.hpp"
 
 #include "rcpputils/scope_exit.hpp"
 #include "rmw/error_handling.h"
@@ -78,11 +79,11 @@ public:
     }
 
     // Check if shm is enabled.
-    z_owned_str_t shm_enabled = zc_config_get(z_loan(config), "transport/shared_memory/enabled");
-    auto always_free_shm_enabled = rcpputils::make_scope_exit(
-      [&shm_enabled]() {
-        z_drop(z_move(shm_enabled));
-      });
+    // z_owned_str_t shm_enabled = zc_config_get(z_loan(config), "transport/shared_memory/enabled");
+    // auto always_free_shm_enabled = rcpputils::make_scope_exit(
+    //   [&shm_enabled]() {
+    //     z_drop(z_move(shm_enabled));
+    //   });
 
     // Initialize the zenoh session.
     session_ = z_open(z_move(config));
@@ -164,34 +165,34 @@ public:
 
     // Initialize the shm manager if shared_memory is enabled in the config.
     shm_manager_ = std::nullopt;
-    if (shm_enabled._cstr != nullptr &&
-      strcmp(shm_enabled._cstr, "true") == 0)
-    {
-      char idstr[sizeof(zid.id) * 2 + 1];  // 2 bytes for each byte of the id, plus the trailing \0
-      static constexpr size_t max_size_of_each = 3;  // 2 for each byte, plus the trailing \0
-      for (size_t i = 0; i < sizeof(zid.id); ++i) {
-        snprintf(idstr + 2 * i, max_size_of_each, "%02x", zid.id[i]);
-      }
-      idstr[sizeof(zid.id) * 2] = '\0';
-      // TODO(yadunund): Can we get the size of the shm from the config even though it's not
-      // a standard parameter?
-      shm_manager_ =
-        zc_shm_manager_new(
-        z_loan(session_),
-        idstr,
-        SHM_BUFFER_SIZE_MB * 1024 * 1024);
-      if (!shm_manager_.has_value() ||
-        !zc_shm_manager_check(&shm_manager_.value()))
-      {
-        throw std::runtime_error("Unable to create shm manager.");
-      }
-    }
-    auto free_shm_manager = rcpputils::make_scope_exit(
-      [this]() {
-        if (shm_manager_.has_value()) {
-          z_drop(z_move(shm_manager_.value()));
-        }
-      });
+    // if (shm_enabled._cstr != nullptr &&
+    //   strcmp(shm_enabled._cstr, "true") == 0)
+    // {
+    //   char idstr[sizeof(zid.id) * 2 + 1];  // 2 bytes for each byte of the id, plus the trailing \0
+    //   static constexpr size_t max_size_of_each = 3;  // 2 for each byte, plus the trailing \0
+    //   for (size_t i = 0; i < sizeof(zid.id); ++i) {
+    //     snprintf(idstr + 2 * i, max_size_of_each, "%02x", zid.id[i]);
+    //   }
+    //   idstr[sizeof(zid.id) * 2] = '\0';
+    //   // TODO(yadunund): Can we get the size of the shm from the config even though it's not
+    //   // a standard parameter?
+    //   shm_manager_ =
+    //     zc_shm_manager_new(
+    //     z_loan(session_),
+    //     idstr,
+    //     SHM_BUFFER_SIZE_MB * 1024 * 1024);
+    //   if (!shm_manager_.has_value() ||
+    //     !zc_shm_manager_check(&shm_manager_.value()))
+    //   {
+    //     throw std::runtime_error("Unable to create shm manager.");
+    //   }
+    // }
+    // auto free_shm_manager = rcpputils::make_scope_exit(
+    //   [this]() {
+    //     if (shm_manager_.has_value()) {
+    //       z_drop(z_move(shm_manager_.value()));
+    //     }
+    //   });
 
     graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
     graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
@@ -200,8 +201,11 @@ public:
     // Setup the liveliness subscriber to receives updates from the ROS graph
     // and update the graph cache.
     auto sub_options = zc_liveliness_subscriber_options_null();
-    z_owned_closure_sample_t callback = z_closure(
-      graph_sub_data_handler, nullptr, this);
+    z_owned_closure_sample_t callback =
+      rmw_zenoh_cpp::make_z_closure<z_owned_closure_sample_t, const z_sample_t>(
+        static_cast<void *>(this),
+        graph_sub_data_handler,
+        nullptr);
     graph_subscriber_ = zc_liveliness_declare_subscriber(
       z_loan(session_),
       z_keyexpr(liveliness_str.c_str()),
@@ -218,7 +222,7 @@ public:
     }
 
     close_session.cancel();
-    free_shm_manager.cancel();
+    // free_shm_manager.cancel();
     undeclare_z_sub.cancel();
   }
 

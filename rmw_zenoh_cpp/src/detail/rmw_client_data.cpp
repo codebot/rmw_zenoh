@@ -473,7 +473,10 @@ rmw_ret_t ClientData::send_request(
   // capture shared_from_this() instead of this.
   num_in_flight_++;
   z_owned_closure_reply_t zn_closure_reply =
-    z_closure(client_data_handler, client_data_drop, this);
+    rmw_zenoh_cpp::make_z_closure<z_owned_closure_reply_t, z_owned_reply_t>(
+      static_cast<void *>(this),
+      &client_data_handler,
+      client_data_drop);
   z_get(
     context_impl->session(),
     z_loan(keyexpr_), "",
