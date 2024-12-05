@@ -62,8 +62,11 @@ public:
   // Get a unique id for a new entity.
   std::size_t get_next_entity_id();
 
-  // Shutdown the Zenoh session.
+  // Asynchronously shutdown the Zenoh session.
   rmw_ret_t shutdown();
+
+  // Wait for Zenoh session shutdown to comlete.
+  rmw_ret_t wait_for_session_close();
 
   // Check if the Zenoh session is shutdown.
   bool is_shutdown() const;

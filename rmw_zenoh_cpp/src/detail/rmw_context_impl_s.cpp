@@ -218,29 +218,43 @@ public:
   // Shutdown the Zenoh session.
   rmw_ret_t shutdown()
   {
-    {
-      std::lock_guard<std::recursive_mutex> lock(mutex_);
-      rmw_ret_t ret = RMW_RET_OK;
-      if (is_shutdown_) {
-        return ret;
-      }
-
-      z_undeclare_subscriber(z_move(graph_subscriber_));
-      if (shm_provider_.has_value()) {
-        z_drop(z_move(shm_provider_.value()));
-      }
-      is_shutdown_ = true;
-
-      // We specifically do *not* hold the mutex_ while tearing down the session; this allows us
-      // to avoid an AB/BA deadlock if shutdown is racing with graph_sub_data_handler().
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    rmw_ret_t ret = RMW_RET_OK;
+    if (is_shutdown_) {
+      return ret;
     }
 
-    // Close the zenoh session
-    if (z_close(z_loan_mut(session_), NULL) != Z_OK) {
-      RMW_SET_ERROR_MSG("Error while closing zenoh session");
+    z_undeclare_subscriber(z_move(graph_subscriber_));
+    if (shm_provider_.has_value()) {
+      z_drop(z_move(shm_provider_.value()));
+    }
+    is_shutdown_ = true;
+
+    // Close the zenoh session in background
+    close_handle = zc_owned_concurrent_close_handle_t();
+    z_close_options_t options;
+    z_close_options_default(&options);
+    options.internal_out_concurrent = &close_handle.value();
+    if (z_close(z_loan_mut(session_), &options) != Z_OK) {
+      close_handle.reset();
+      RMW_SET_ERROR_MSG("Error while starting zenoh session close!");
       return RMW_RET_ERROR;
     }
+    
+    return RMW_RET_OK;
+  }
 
+  ///=============================================================================
+  rmw_ret_t wait_for_session_close()
+  {
+    if (close_handle.has_value()) {
+      zc_owned_concurrent_close_handle_t handle = close_handle.value();
+      close_handle.reset();
+      if (zc_concurrent_close_handle_wait(z_move(handle)) < 0) {
+        RMW_SET_ERROR_MSG("Error closing session!");
+        return RMW_RET_ERROR;
+      }
+    }
     return RMW_RET_OK;
   }
 
@@ -379,8 +393,10 @@ public:
   ~Data()
   {
     auto ret = this->shutdown();
+    auto ret2 = this->wait_for_session_close();
     nodes_.clear();
     static_cast<void>(ret);
+    static_cast<void>(ret2);
   }
 
 private:
@@ -406,6 +422,8 @@ private:
   rmw_zenoh_cpp::GuardCondition guard_condition_data_;
   // Shutdown flag.
   bool is_shutdown_;
+  // Close operation handle
+  std::optional<zc_owned_concurrent_close_handle_t> close_handle;
   // A counter to assign a local id for every entity created in this session.
   std::size_t next_entity_id_;
   // Nodes created from this context.
@@ -499,6 +517,12 @@ rmw_ret_t rmw_context_impl_s::shutdown()
   }
 
   return data_->shutdown();
+}
+
+///=============================================================================
+rmw_ret_t rmw_context_impl_s::wait_for_session_close()
+{
+  return data_->wait_for_session_close();
 }
 
 ///=============================================================================
