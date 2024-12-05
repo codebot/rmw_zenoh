@@ -331,14 +331,14 @@ rmw_ret_t ServiceData::take_request(
   request_header->request_id.sequence_number =
     get_int64_from_attachment(&attachment, "sequence_number");
   if (request_header->request_id.sequence_number < 0) {
-    RMW_SET_ERROR_MSG("Failed to get sequence_number from client call attachment");
+    RMW_SET_ERROR_MSG("Failed to get sequence_number from service call attachment");
     return RMW_RET_ERROR;
   }
   request_header->source_timestamp = get_int64_from_attachment(
     &attachment,
     "source_timestamp");
   if (request_header->source_timestamp < 0) {
-    RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
+    RMW_SET_ERROR_MSG("Failed to get source_timestamp from service call attachment");
     return RMW_RET_ERROR;
   }
   if (!get_gid_from_attachment(

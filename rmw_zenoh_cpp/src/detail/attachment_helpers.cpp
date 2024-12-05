@@ -78,7 +78,7 @@ int64_t get_int64_from_attachment(
 
   errno = 0;
   char * endptr;
-  int64_t num = strtol(int64_str, &endptr, 10);
+  int64_t num = std::strtoll(int64_str, &endptr, 10);
   if (num == 0) {
     // This is an error regardless; the client should never send this
     return -1;
