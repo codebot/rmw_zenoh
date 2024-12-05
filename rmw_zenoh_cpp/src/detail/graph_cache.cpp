@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <array>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -233,7 +234,7 @@ void GraphCache::handle_matched_events_for_put(
       update_event_counters(
         topic_info.name_,
         ZENOH_EVENT_PUBLICATION_MATCHED,
-        match_count_for_entity);
+        static_cast<int32_t>(match_count_for_entity));
       if (is_entity_local(*entity) && match_count_for_entity > 0) {
         local_entities_with_events[entity].insert(ZENOH_EVENT_PUBLICATION_MATCHED);
       }
@@ -260,7 +261,7 @@ void GraphCache::handle_matched_events_for_put(
       update_event_counters(
         topic_info.name_,
         ZENOH_EVENT_SUBSCRIPTION_MATCHED,
-        match_count_for_entity);
+        static_cast<int32_t>(match_count_for_entity));
       if (is_entity_local(*entity) && match_count_for_entity > 0) {
         local_entities_with_events[entity].insert(ZENOH_EVENT_SUBSCRIPTION_MATCHED);
       }

@@ -28,6 +28,10 @@
 #include "rmw/ret_types.h"
 #include "rmw/types.h"
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4099)
+#endif
 ///=============================================================================
 class rmw_context_impl_s final
 {
@@ -95,6 +99,8 @@ public:
 private:
   std::shared_ptr<Data> data_{nullptr};
 };
-
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif  // DETAIL__RMW_CONTEXT_IMPL_S_HPP_
