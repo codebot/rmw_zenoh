@@ -43,11 +43,21 @@
 namespace
 {
 
+struct ClientDataWrapper
+{
+  explicit ClientDataWrapper(std::shared_ptr<rmw_zenoh_cpp::ClientData> data)
+  : client_data(data)
+  {
+  }
+
+  std::shared_ptr<rmw_zenoh_cpp::ClientData> client_data;
+};
+
 ///=============================================================================
 void client_data_handler(z_loaned_reply_t * reply, void * data)
 {
-  auto client_data = static_cast<rmw_zenoh_cpp::ClientData *>(data);
-  if (client_data == nullptr) {
+  auto wrapper = static_cast<ClientDataWrapper *>(data);
+  if (wrapper == nullptr) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to obtain client_data_t from data in client_data_handler."
@@ -55,7 +65,7 @@ void client_data_handler(z_loaned_reply_t * reply, void * data)
     return;
   }
 
-  if (client_data->is_shutdown()) {
+  if (wrapper->client_data->is_shutdown()) {
     return;
   }
 
@@ -69,7 +79,7 @@ void client_data_handler(z_loaned_reply_t * reply, void * data)
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "z_reply_is_ok returned False for keyexpr %s. Reason: %.*s",
-      client_data->topic_info().topic_keyexpr_.c_str(),
+      wrapper->client_data->topic_info().topic_keyexpr_.c_str(),
       static_cast<int>(z_string_len(z_loan(err_str))),
       z_string_data(z_loan(err_str)));
     z_drop(z_move(err_str));
@@ -80,15 +90,15 @@ void client_data_handler(z_loaned_reply_t * reply, void * data)
   std::chrono::nanoseconds::rep received_timestamp =
     std::chrono::system_clock::now().time_since_epoch().count();
 
-  client_data->add_new_reply(
+  wrapper->client_data->add_new_reply(
     std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
 }
 
 ///=============================================================================
 void client_data_drop(void * data)
 {
-  auto client_data = static_cast<rmw_zenoh_cpp::ClientData *>(data);
-  if (client_data == nullptr) {
+  auto wrapper = static_cast<ClientDataWrapper *>(data);
+  if (wrapper == nullptr) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to obtain client_data_t from data in client_data_drop."
@@ -96,7 +106,7 @@ void client_data_drop(void * data)
     return;
   }
 
-  client_data->decrement_in_flight_and_conditionally_remove();
+  delete wrapper;
 }
 
 }  // namespace
@@ -228,8 +238,7 @@ ClientData::ClientData(
   wait_set_data_(nullptr),
   sequence_number_(1),
   is_shutdown_(false),
-  initialized_(false),
-  num_in_flight_(0)
+  initialized_(false)
 {
   // Do nothing.
 }
@@ -470,9 +479,9 @@ rmw_ret_t ClientData::send_request(
 
   // TODO(Yadunund): Once we switch to zenoh-cpp with lambda closures,
   // capture shared_from_this() instead of this.
-  num_in_flight_++;
+  ClientDataWrapper * wrapper = new ClientDataWrapper(shared_from_this());
   z_owned_closure_reply_t zn_closure_reply;
-  z_closure(&zn_closure_reply, client_data_handler, client_data_drop, this);
+  z_closure(&zn_closure_reply, client_data_handler, client_data_drop, wrapper);
   z_get(
     sess_->loan(),
     z_loan(keyexpr_), "",
@@ -527,10 +536,11 @@ bool ClientData::detach_condition_and_queue_is_empty()
 }
 
 ///=============================================================================
-void ClientData::_shutdown()
+rmw_ret_t ClientData::shutdown()
 {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   if (is_shutdown_) {
-    return;
+    return RMW_RET_OK;
   }
 
   // Unregister this node from the ROS graph.
@@ -541,43 +551,8 @@ void ClientData::_shutdown()
 
   sess_.reset();
   is_shutdown_ = true;
-}
 
-///=============================================================================
-rmw_ret_t ClientData::shutdown()
-{
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  _shutdown();
   return RMW_RET_OK;
-}
-
-///=============================================================================
-bool ClientData::shutdown_and_query_in_flight()
-{
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  _shutdown();
-  return num_in_flight_ > 0;
-}
-
-///=============================================================================
-void ClientData::decrement_in_flight_and_conditionally_remove()
-{
-  std::unique_lock<std::recursive_mutex> lock(mutex_);
-  --num_in_flight_;
-
-  if (is_shutdown_ && num_in_flight_ == 0) {
-    rmw_context_impl_s * context_impl = static_cast<rmw_context_impl_s *>(rmw_node_->data);
-    if (context_impl == nullptr) {
-      return;
-    }
-    std::shared_ptr<rmw_zenoh_cpp::NodeData> node_data = context_impl->get_node_data(rmw_node_);
-    if (node_data == nullptr) {
-      return;
-    }
-    // We have to unlock here since we are about to delete ourself, and thus the unlock would be UB.
-    lock.unlock();
-    node_data->delete_client_data(rmw_client_);
-  }
 }
 
 ///=============================================================================

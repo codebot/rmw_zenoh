@@ -387,9 +387,7 @@ void NodeData::delete_client_data(const rmw_client_t * const client)
   if (client_it == clients_.end()) {
     return;
   }
-  if (!client_it->second->shutdown_and_query_in_flight()) {
-    clients_.erase(client);
-  }
+  clients_.erase(client);
 }
 
 ///=============================================================================

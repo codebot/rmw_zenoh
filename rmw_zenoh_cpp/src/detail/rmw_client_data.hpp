@@ -95,12 +95,6 @@ public:
   // Shutdown this ClientData.
   rmw_ret_t shutdown();
 
-  // Shutdown this ClientData, and return whether there are any requests currently in flight.
-  bool shutdown_and_query_in_flight();
-
-  // Decrement the in flight requests, and if that drops to 0 remove the client from the node.
-  void decrement_in_flight_and_conditionally_remove();
-
   // Check if this ClientData is shutdown.
   bool is_shutdown() const;
 
@@ -121,9 +115,6 @@ private:
 
   // Initialize the Zenoh objects for this entity.
   bool init(std::shared_ptr<ZenohSession> session);
-
-  // Shutdown this client (the mutex is expected to be held by the caller).
-  void _shutdown();
 
   // Internal mutex.
   mutable std::recursive_mutex mutex_;
@@ -155,7 +146,6 @@ private:
   bool is_shutdown_;
   // Whether the object has ever successfully been initialized.
   bool initialized_;
-  size_t num_in_flight_;
 };
 using ClientDataPtr = std::shared_ptr<ClientData>;
 using ClientDataConstPtr = std::shared_ptr<const ClientData>;
