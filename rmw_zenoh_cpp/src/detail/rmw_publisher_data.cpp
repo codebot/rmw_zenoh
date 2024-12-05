@@ -173,7 +173,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
   z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
   z_owned_liveliness_token_t token;
   if (z_liveliness_declare_token(
-      z_loan(owned_session), &token, z_loan(liveliness_ke),
+      session, &token, z_loan(liveliness_ke),
       NULL) != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(
