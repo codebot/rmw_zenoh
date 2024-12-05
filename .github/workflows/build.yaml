@@ -23,9 +23,6 @@ jobs:
           # Jazzy (binary)
           - ROS_DISTRO: jazzy
             BUILD_TYPE: binary
-          # Iron (binary)
-          - ROS_DISTRO: iron
-            BUILD_TYPE: binary
     env:
       ROS2_REPOS_FILE_URL: 'https://raw.githubusercontent.com/ros2/ros2/${{ matrix.ROS_DISTRO }}/ros2.repos'
     runs-on: ubuntu-latest
