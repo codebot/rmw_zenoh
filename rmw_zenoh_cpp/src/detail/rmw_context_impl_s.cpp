@@ -152,10 +152,10 @@ public:
         const z_loaned_sample_t * sample = z_reply_ok(z_loan(reply));
         z_view_string_t keystr;
         z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
-        std::string livelines_str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
+        std::string liveliness_str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
         // Ignore tokens from the same session to avoid race conditions from this
         // query and the liveliness subscription.
-        graph_cache_->parse_put(std::move(livelines_str), true);
+        graph_cache_->parse_put(std::move(liveliness_str), true);
       } else {
         RMW_ZENOH_LOG_DEBUG_NAMED(
           "rmw_zenoh_cpp", "[rmw_context_impl_s] z_call received an invalid reply.\n");
@@ -439,8 +439,8 @@ static void graph_sub_data_handler(z_loaned_sample_t * sample, void * data)
   }
 
   // Update the graph cache.
-  std::string livelines_str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
-  data_shared_ptr->update_graph_cache(z_sample_kind(sample), std::move(livelines_str));
+  std::string liveliness_str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
+  data_shared_ptr->update_graph_cache(z_sample_kind(sample), std::move(liveliness_str));
 }
 
 ///=============================================================================
