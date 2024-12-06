@@ -60,6 +60,9 @@ public:
   // Get a copy of the TopicInfo of this ClientData.
   liveliness::TopicInfo topic_info() const;
 
+  // Returns true if liveliness token is still valid.
+  bool liveliness_is_valid() const;
+
   // Copy the GID of this ClientData into an rmw_gid_t.
   void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
 
@@ -147,6 +150,8 @@ private:
   size_t sequence_number_;
   // Shutdown flag.
   bool is_shutdown_;
+  // Whether the object has ever successfully been initialized.
+  bool initialized_;
   size_t num_in_flight_;
 };
 using ClientDataPtr = std::shared_ptr<ClientData>;

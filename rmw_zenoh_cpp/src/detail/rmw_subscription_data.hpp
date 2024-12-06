@@ -51,13 +51,13 @@ public:
     explicit Message(
       z_owned_slice_t p,
       uint64_t recv_ts,
-      attachment_data_t && attachment);
+      AttachmentData && attachment);
 
     ~Message();
 
     z_owned_slice_t payload;
     uint64_t recv_timestamp;
-    attachment_data_t attachment;
+    AttachmentData attachment;
   };
 
   // Make a shared_ptr of SubscriptionData.
@@ -82,6 +82,9 @@ public:
 
   // Get a copy of the TopicInfo of this SubscriptionData.
   liveliness::TopicInfo topic_info() const;
+
+  // Returns true if liveliness token is still valid.
+  bool liveliness_is_valid() const;
 
   // Get the events manager of this SubscriptionData.
   std::shared_ptr<EventsManager> events_mgr() const;

@@ -32,7 +32,7 @@ void create_map_and_set_sequence_num(
   auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);
   int64_t source_timestamp = now_ns.count();
 
-  rmw_zenoh_cpp::attachment_data_t data(sequence_number, source_timestamp, gid);
+  AttachmentData data(sequence_number, source_timestamp, gid);
   data.serialize_to_zbytes(out_bytes);
 }
 
@@ -52,7 +52,10 @@ std::chrono::nanoseconds::rep ZenohQuery::get_received_timestamp() const
 }
 
 ///=============================================================================
-ZenohQuery::~ZenohQuery() {z_drop(z_move(query_));}
+ZenohQuery::~ZenohQuery()
+{
+  z_drop(z_move(query_));
+}
 
 ///=============================================================================
 const z_loaned_query_t * ZenohQuery::get_query() const {return z_loan(query_);}
@@ -67,7 +70,10 @@ ZenohReply::ZenohReply(
 }
 
 ///=============================================================================
-ZenohReply::~ZenohReply() {z_drop(z_move(reply_));}
+ZenohReply::~ZenohReply()
+{
+  z_drop(z_move(reply_));
+}
 
 ///=============================================================================
 std::optional<const z_loaned_sample_t *> ZenohReply::get_sample() const

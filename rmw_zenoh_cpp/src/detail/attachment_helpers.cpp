@@ -23,41 +23,33 @@
 #include "rmw/types.h"
 
 #include "attachment_helpers.hpp"
+#include "liveliness_utils.hpp"
 
 namespace rmw_zenoh_cpp
 {
-
-attachment_data_t::attachment_data_t(
-  const int64_t _sequence_number,
-  const int64_t _source_timestamp,
-  const uint8_t _source_gid[RMW_GID_STORAGE_SIZE])
+///=============================================================================
+AttachmentData::AttachmentData(
+  const int64_t sequence_number,
+  const int64_t source_timestamp,
+  const uint8_t source_gid[RMW_GID_STORAGE_SIZE])
+: sequence_number_(sequence_number),
+  source_timestamp_(source_timestamp)
 {
-  sequence_number = _sequence_number;
-  source_timestamp = _source_timestamp;
-  memcpy(source_gid, _source_gid, RMW_GID_STORAGE_SIZE);
+  memcpy(source_gid_, source_gid, RMW_GID_STORAGE_SIZE);
+  gid_hash_ = hash_gid(source_gid_);
 }
 
-attachment_data_t::attachment_data_t(attachment_data_t && data)
+///=============================================================================
+AttachmentData::AttachmentData(AttachmentData && data)
+: sequence_number_(std::move(data.sequence_number_)),
+  source_timestamp_(std::move(data.source_timestamp_)),
+  gid_hash_(std::move(data.gid_hash_))
 {
-  sequence_number = std::move(data.sequence_number);
-  source_timestamp = std::move(data.source_timestamp);
-  memcpy(source_gid, data.source_gid, RMW_GID_STORAGE_SIZE);
+  memcpy(source_gid_, data.source_gid_, RMW_GID_STORAGE_SIZE);
 }
 
-void attachment_data_t::serialize_to_zbytes(z_owned_bytes_t * attachment)
-{
-  ze_owned_serializer_t serializer;
-  ze_serializer_empty(&serializer);
-  ze_serializer_serialize_str(z_loan_mut(serializer), "sequence_number");
-  ze_serializer_serialize_int64(z_loan_mut(serializer), this->sequence_number);
-  ze_serializer_serialize_str(z_loan_mut(serializer), "source_timestamp");
-  ze_serializer_serialize_int64(z_loan_mut(serializer), this->source_timestamp);
-  ze_serializer_serialize_str(z_loan_mut(serializer), "source_gid");
-  ze_serializer_serialize_buf(z_loan_mut(serializer), this->source_gid, RMW_GID_STORAGE_SIZE);
-  ze_serializer_finish(z_move(serializer), attachment);
-}
-
-attachment_data_t::attachment_data_t(const z_loaned_bytes_t * attachment)
+///=============================================================================
+AttachmentData::AttachmentData(const z_loaned_bytes_t * attachment)
 {
   ze_deserializer_t deserializer = ze_deserializer_from_bytes(attachment);
   z_owned_string_t key;
@@ -71,7 +63,7 @@ attachment_data_t::attachment_data_t(const z_loaned_bytes_t * attachment)
     throw std::runtime_error("sequence_number is not found in the attachment.");
   }
   z_drop(z_move(key));
-  if (ze_deserializer_deserialize_int64(&deserializer, &this->sequence_number)) {
+  if (ze_deserializer_deserialize_int64(&deserializer, &this->sequence_number_)) {
     throw std::runtime_error("Failed to deserialize the sequence_number.");
   }
 
@@ -84,7 +76,7 @@ attachment_data_t::attachment_data_t(const z_loaned_bytes_t * attachment)
     throw std::runtime_error("source_timestamp is not found in the attachment");
   }
   z_drop(z_move(key));
-  if (ze_deserializer_deserialize_int64(&deserializer, &this->source_timestamp)) {
+  if (ze_deserializer_deserialize_int64(&deserializer, &this->source_timestamp_)) {
     throw std::runtime_error("Failed to deserialize the source_timestamp.");
   }
 
@@ -101,7 +93,46 @@ attachment_data_t::attachment_data_t(const z_loaned_bytes_t * attachment)
   if (z_slice_len(z_loan(slice)) != RMW_GID_STORAGE_SIZE) {
     throw std::runtime_error("The length of source_gid mismatched.");
   }
-  memcpy(this->source_gid, z_slice_data(z_loan(slice)), z_slice_len(z_loan(slice)));
+  memcpy(this->source_gid_, z_slice_data(z_loan(slice)), z_slice_len(z_loan(slice)));
   z_drop(z_move(slice));
+  gid_hash_ = hash_gid(this->source_gid_);
+}
+
+///=============================================================================
+int64_t AttachmentData::sequence_number() const
+{
+  return sequence_number_;
+}
+
+///=============================================================================
+int64_t AttachmentData::source_timestamp() const
+{
+  return source_timestamp_;
+}
+
+///=============================================================================
+void AttachmentData::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
+{
+  memcpy(out_gid, source_gid_, RMW_GID_STORAGE_SIZE);
+}
+
+///=============================================================================
+size_t AttachmentData::gid_hash() const
+{
+  return gid_hash_;
+}
+
+///=============================================================================
+void AttachmentData::serialize_to_zbytes(z_owned_bytes_t * attachment)
+{
+  ze_owned_serializer_t serializer;
+  ze_serializer_empty(&serializer);
+  ze_serializer_serialize_str(z_loan_mut(serializer), "sequence_number");
+  ze_serializer_serialize_int64(z_loan_mut(serializer), this->sequence_number_);
+  ze_serializer_serialize_str(z_loan_mut(serializer), "source_timestamp");
+  ze_serializer_serialize_int64(z_loan_mut(serializer), this->source_timestamp_);
+  ze_serializer_serialize_str(z_loan_mut(serializer), "source_gid");
+  ze_serializer_serialize_buf(z_loan_mut(serializer), this->source_gid_, RMW_GID_STORAGE_SIZE);
+  ze_serializer_finish(z_move(serializer), attachment);
 }
 }  // namespace rmw_zenoh_cpp

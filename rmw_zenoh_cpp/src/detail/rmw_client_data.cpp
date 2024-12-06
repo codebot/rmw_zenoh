@@ -80,8 +80,6 @@ void client_data_handler(z_loaned_reply_t * reply, void * data)
   std::chrono::nanoseconds::rep received_timestamp =
     std::chrono::system_clock::now().time_since_epoch().count();
 
-  z_owned_reply_t owned_reply;
-  z_reply_clone(&owned_reply, reply);
   client_data->add_new_reply(
     std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
 }
@@ -227,6 +225,7 @@ ClientData::ClientData(
   wait_set_data_(nullptr),
   sequence_number_(1),
   is_shutdown_(false),
+  initialized_(false),
   num_in_flight_(0)
 {
   // Do nothing.
@@ -235,8 +234,10 @@ ClientData::ClientData(
 ///=============================================================================
 bool ClientData::init(const z_loaned_session_t * session)
 {
-  std::string topic_keyexpr = this->entity_->topic_info().value().topic_keyexpr_;
-  if (z_keyexpr_from_str(&this->keyexpr_, topic_keyexpr.c_str()) != Z_OK) {
+  if (z_keyexpr_from_str(
+    &this->keyexpr_,
+    this->entity_->topic_info().value().topic_keyexpr_.c_str()) != Z_OK)
+  {
     RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
     return false;
   }
@@ -260,8 +261,15 @@ bool ClientData::init(const z_loaned_session_t * session)
       "Unable to create liveliness token for the client.");
     return false;
   }
+  auto free_token = rcpputils::make_scope_exit(
+    [this]() {
+      z_drop(z_move(this->token_));
+    });
+
+  initialized_ = true;
 
   free_ros_keyexpr.cancel();
+  free_token.cancel();
 
   return true;
 }
@@ -271,6 +279,16 @@ liveliness::TopicInfo ClientData::topic_info() const
 {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   return entity_->topic_info().value();
+}
+
+///=============================================================================
+bool ClientData::liveliness_is_valid() const
+{
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  // The z_check function is now internal in zenoh-1.0.0 so we assume
+  // the liveliness token is still initialized as long as this entity has
+  // not been shutdown.
+  return !is_shutdown_;
 }
 
 ///=============================================================================
@@ -353,18 +371,18 @@ rmw_ret_t ClientData::take_response(
   }
 
   // Fill in the request_header
-  rmw_zenoh_cpp::attachment_data_t attachment(z_sample_attachment(sample));
-  request_header->request_id.sequence_number = attachment.sequence_number;
+  AttachmentData attachment(z_sample_attachment(sample));
+  request_header->request_id.sequence_number = attachment.sequence_number();
   if (request_header->request_id.sequence_number < 0) {
     RMW_SET_ERROR_MSG("Failed to get sequence_number from client call attachment");
     return RMW_RET_ERROR;
   }
-  request_header->source_timestamp = attachment.source_timestamp;
+  request_header->source_timestamp = attachment.source_timestamp();
   if (request_header->source_timestamp < 0) {
     RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
     return RMW_RET_ERROR;
   }
-  memcpy(request_header->request_id.writer_guid, attachment.source_gid, RMW_GID_STORAGE_SIZE);
+  attachment.copy_gid(request_header->request_id.writer_guid);
   request_header->received_timestamp = latest_reply->get_received_timestamp();
 
   z_drop(z_move(payload));
@@ -426,7 +444,7 @@ rmw_ret_t ClientData::send_request(
   z_owned_bytes_t attachment;
   uint8_t local_gid[RMW_GID_STORAGE_SIZE];
   entity_->copy_gid(local_gid);
-  rmw_zenoh_cpp::create_map_and_set_sequence_num(
+  create_map_and_set_sequence_num(
     &attachment, *sequence_id,
     local_gid);
   opts.attachment = z_move(attachment);
@@ -441,7 +459,6 @@ rmw_ret_t ClientData::send_request(
   // which optimizes bandwidth. The default is "None", which imples replies may come in any order
   // and any number.
   opts.consolidation = z_query_consolidation_latest();
-
   z_owned_bytes_t payload;
   z_bytes_copy_from_buf(
     &payload, reinterpret_cast<const uint8_t *>(request_bytes), data_length);
@@ -513,9 +530,10 @@ void ClientData::_shutdown()
   }
 
   // Unregister this node from the ROS graph.
-  z_liveliness_undeclare_token(z_move(token_));
-
-  z_drop(z_move(keyexpr_));
+  if (initialized_) {
+    z_liveliness_undeclare_token(z_move(token_));
+    z_drop(z_move(keyexpr_));
+  }
 
   is_shutdown_ = true;
 }

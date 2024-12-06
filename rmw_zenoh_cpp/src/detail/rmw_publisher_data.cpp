@@ -181,9 +181,14 @@ std::shared_ptr<PublisherData> PublisherData::make(
       "Unable to create liveliness token for the publisher.");
     return nullptr;
   }
+  auto free_token = rcpputils::make_scope_exit(
+    [&token]() {
+      z_drop(z_move(token));
+    });
 
   undeclare_z_publisher_cache.cancel();
   undeclare_z_publisher.cancel();
+  free_token.cancel();
 
   return std::shared_ptr<PublisherData>(
     new PublisherData{
@@ -343,9 +348,7 @@ rmw_ret_t PublisherData::publish_serialized_message(
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-
   const size_t data_length = ser.get_serialized_data_length();
-
   // The encoding is simply forwarded and is useful when key expressions in the
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
@@ -355,9 +358,7 @@ rmw_ret_t PublisherData::publish_serialized_message(
   entity_->copy_gid(local_gid);
   z_owned_bytes_t attachment;
   create_map_and_set_sequence_num(&attachment, sequence_number_++, local_gid);
-
   options.attachment = z_move(attachment);
-
   z_owned_bytes_t payload;
   z_bytes_copy_from_buf(&payload, serialized_message->buffer, data_length);
 
@@ -395,6 +396,16 @@ void PublisherData::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   entity_->copy_gid(out_gid);
+}
+
+///=============================================================================
+bool PublisherData::liveliness_is_valid() const
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  // The z_check function is now internal in zenoh-1.0.0 so we assume
+  // the liveliness token is still initialized as long as this entity has
+  // not been shutdown.
+  return !is_shutdown_;
 }
 
 ///=============================================================================

@@ -67,7 +67,12 @@ std::shared_ptr<NodeData> NodeData::make(
       "Unable to create liveliness token for the node.");
     return nullptr;
   }
+  auto free_token = rcpputils::make_scope_exit(
+    [&token]() {
+      z_drop(z_move(token));
+    });
 
+  free_token.cancel();
   return std::shared_ptr<NodeData>(
     new NodeData{
       node,

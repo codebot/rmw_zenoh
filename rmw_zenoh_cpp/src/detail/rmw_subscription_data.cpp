@@ -60,7 +60,7 @@ void sub_data_handler(z_loaned_sample_t * sample, void * data)
     return;
   }
 
-  attachment_data_t attachment(z_sample_attachment(sample));
+  AttachmentData attachment(z_sample_attachment(sample));
   const z_loaned_bytes_t * payload = z_sample_payload(sample);
 
   z_owned_slice_t slice;
@@ -81,7 +81,7 @@ void sub_data_handler(z_loaned_sample_t * sample, void * data)
 SubscriptionData::Message::Message(
   z_owned_slice_t p,
   uint64_t recv_ts,
-  attachment_data_t && attachment_)
+  AttachmentData && attachment_)
 : payload(p), recv_timestamp(recv_ts), attachment(std::move(attachment_))
 {
 }
@@ -356,6 +356,16 @@ liveliness::TopicInfo SubscriptionData::topic_info() const
 }
 
 ///=============================================================================
+bool SubscriptionData::liveliness_is_valid() const
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  // The z_check function is now internal in zenoh-1.0.0 so we assume
+  // the liveliness token is still initialized as long as this entity has
+  // not been shutdown.
+  return !is_shutdown_;
+}
+
+///=============================================================================
 std::shared_ptr<EventsManager> SubscriptionData::events_mgr() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -483,13 +493,13 @@ rmw_ret_t SubscriptionData::take_one_message(
   }
 
   if (message_info != nullptr) {
-    message_info->source_timestamp = msg_data->attachment.source_timestamp;
+    message_info->source_timestamp = msg_data->attachment.source_timestamp();
     message_info->received_timestamp = msg_data->recv_timestamp;
-    message_info->publication_sequence_number = msg_data->attachment.sequence_number;
+    message_info->publication_sequence_number = msg_data->attachment.sequence_number();
     // TODO(clalancette): fill in reception_sequence_number
     message_info->reception_sequence_number = 0;
     message_info->publisher_gid.implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-    memcpy(message_info->publisher_gid.data, msg_data->attachment.source_gid, RMW_GID_STORAGE_SIZE);
+    msg_data->attachment.copy_gid(message_info->publisher_gid.data);
     message_info->from_intra_process = false;
   }
 
@@ -530,13 +540,13 @@ rmw_ret_t SubscriptionData::take_serialized_message(
   *taken = true;
 
   if (message_info != nullptr) {
-    message_info->source_timestamp = msg_data->attachment.source_timestamp;
+    message_info->source_timestamp = msg_data->attachment.source_timestamp();
     message_info->received_timestamp = msg_data->recv_timestamp;
-    message_info->publication_sequence_number = msg_data->attachment.sequence_number;
+    message_info->publication_sequence_number = msg_data->attachment.sequence_number();
     // TODO(clalancette): fill in reception_sequence_number
     message_info->reception_sequence_number = 0;
     message_info->publisher_gid.implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-    memcpy(message_info->publisher_gid.data, msg_data->attachment.source_gid, RMW_GID_STORAGE_SIZE);
+    msg_data->attachment.copy_gid(message_info->publisher_gid.data);
     message_info->from_intra_process = false;
   }
 
@@ -574,11 +584,11 @@ void SubscriptionData::add_new_message(
   }
 
   // Check for messages lost if the new sequence number is not monotonically increasing.
-  const size_t gid_hash = hash_gid(msg->attachment.source_gid);
+  const size_t gid_hash = msg->attachment.gid_hash();
   auto last_known_pub_it = last_known_published_msg_.find(gid_hash);
   if (last_known_pub_it != last_known_published_msg_.end()) {
     const int64_t seq_increment = std::abs(
-      msg->attachment.sequence_number -
+      msg->attachment.sequence_number() -
       last_known_pub_it->second);
     if (seq_increment > 1) {
       const size_t num_msg_lost = seq_increment - 1;
@@ -592,7 +602,7 @@ void SubscriptionData::add_new_message(
     }
   }
   // Always update the last known sequence number for the publisher.
-  last_known_published_msg_[gid_hash] = msg->attachment.sequence_number;
+  last_known_published_msg_[gid_hash] = msg->attachment.sequence_number();
 
   message_queue_.emplace_back(std::move(msg));
 

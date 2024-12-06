@@ -59,6 +59,9 @@ public:
   // Get a copy of the TopicInfo of this ServiceData.
   liveliness::TopicInfo topic_info() const;
 
+  // Returns true if liveliness token is still valid.
+  bool liveliness_is_valid() const;
+
   // Add a new ZenohQuery to the queue.
   void add_new_query(std::unique_ptr<ZenohQuery> query);
 
@@ -107,8 +110,8 @@ private:
   const rmw_node_t * rmw_node_;
   // The Entity generated for the service.
   std::shared_ptr<liveliness::Entity> entity_;
-  // The keyexpr string.
-  std::string keyexpr_;
+  // An owned keyexpression.
+  z_owned_keyexpr_t keyexpr_;
   // An owned queryable.
   z_owned_queryable_t qable_;
   // Liveliness token for the service.
@@ -129,6 +132,8 @@ private:
   DataCallbackManager data_callback_mgr_;
   // Shutdown flag.
   bool is_shutdown_;
+  // Whether the object has ever successfully been initialized.
+  bool initialized_;
 };
 using ServiceDataPtr = std::shared_ptr<ServiceData>;
 using ServiceDataConstPtr = std::shared_ptr<const ServiceData>;

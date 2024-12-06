@@ -210,9 +210,14 @@ public:
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
       throw std::runtime_error("Unable to subscribe to ROS graph updates.");
     }
+    auto undeclare_z_sub = rcpputils::make_scope_exit(
+      [this]() {
+        z_undeclare_subscriber(z_move(this->graph_subscriber_));
+      });
 
     close_session.cancel();
     free_shm_provider.cancel();
+    undeclare_z_sub.cancel();
   }
 
   // Shutdown the Zenoh session.
@@ -304,7 +309,7 @@ public:
     }
 
     // Check that the Zenoh session is still valid.
-    if (!session_is_valid()) {
+    if (z_session_is_closed(z_loan(session_))) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to create NodeData as Zenoh session is invalid.");
