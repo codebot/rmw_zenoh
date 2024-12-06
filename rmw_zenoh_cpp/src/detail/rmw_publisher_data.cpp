@@ -15,7 +15,6 @@
 #include "rmw_publisher_data.hpp"
 
 #include <fastcdr/FastBuffer.h>
-#include <zenoh.h>
 
 #include <cinttypes>
 #include <memory>

@@ -18,7 +18,6 @@
 #include <cinttypes>
 
 #include "attachment_helpers.hpp"
-#include "logging_macros.hpp"
 #include "rcpputils/scope_exit.hpp"
 
 #include "rmw/error_handling.h"
