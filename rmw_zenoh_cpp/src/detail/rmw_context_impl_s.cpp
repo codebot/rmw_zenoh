@@ -312,7 +312,7 @@ public:
     }
 
     // Check that the Zenoh session is still valid.
-    if (z_session_is_closed(z_loan(session_))) {
+    if (z_session_is_closed(session_->loan())) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to create NodeData as Zenoh session is invalid.");

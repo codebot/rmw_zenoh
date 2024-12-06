@@ -25,7 +25,7 @@
 
 namespace rmw_zenoh_cpp
 {
-/// Close the zenoh session if destructed.
+/// Loan the zenoh session.
 ///=============================================================================
 const z_loaned_session_t * ZenohSession::loan()
 {
