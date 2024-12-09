@@ -77,13 +77,15 @@ public:
       throw std::runtime_error("Error configuring Zenoh session.");
     }
 
+#ifndef _MSC_VER
     // Check if shm is enabled.
-    // z_owned_string_t shm_enabled;
-    // zc_config_get_from_str(z_loan(config), Z_CONFIG_SHARED_MEMORY_KEY, &shm_enabled);
-    // auto always_free_shm_enabled = rcpputils::make_scope_exit(
-    //   [&shm_enabled]() {
-    //     z_drop(z_move(shm_enabled));
-    //   });
+    z_owned_string_t shm_enabled;
+    zc_config_get_from_str(z_loan(config), Z_CONFIG_SHARED_MEMORY_KEY, &shm_enabled);
+    auto always_free_shm_enabled = rcpputils::make_scope_exit(
+      [&shm_enabled]() {
+        z_drop(z_move(shm_enabled));
+      });
+#endif
 
     // Initialize the zenoh session.
     if (z_open(&session_, z_move(config), NULL) != Z_OK) {
@@ -166,30 +168,31 @@ public:
 
     // Initialize the shm manager if shared_memory is enabled in the config.
     shm_provider_ = std::nullopt;
-    // if (strncmp(
-    //     z_string_data(z_loan(shm_enabled)),
-    //     "true",
-    //     z_string_len(z_loan(shm_enabled))) == 0)
-    // {
-    //   // TODO(yuyuan): determine the default alignment of SHM
-    //   z_alloc_alignment_t alignment = {5};
-    //   z_owned_memory_layout_t layout;
-    //   z_memory_layout_new(&layout, SHM_BUFFER_SIZE_MB * 1024 * 1024, alignment);
+#ifndef _MSC_VER
+    if (strncmp(
+        z_string_data(z_loan(shm_enabled)),
+        "true",
+        z_string_len(z_loan(shm_enabled))) == 0)
+    {
+      // TODO(yuyuan): determine the default alignment of SHM
+      z_alloc_alignment_t alignment = {5};
+      z_owned_memory_layout_t layout;
+      z_memory_layout_new(&layout, SHM_BUFFER_SIZE_MB * 1024 * 1024, alignment);
 
-    //   z_owned_shm_provider_t provider;
-    //   if (z_posix_shm_provider_new(&provider, z_loan(layout)) != Z_OK) {
-    //     RMW_ZENOH_LOG_ERROR_NAMED("rmw_zenoh_cpp", "Unable to create an SHM provider.");
-    //     throw std::runtime_error("Unable to create an SHM provider.");
-    //   }
-    //   shm_provider_ = provider;
-    // }
-    // auto free_shm_provider = rcpputils::make_scope_exit(
-    //   [this]() {
-    //     if (shm_provider_.has_value()) {
-    //       z_drop(z_move(shm_provider_.value()));
-    //     }
-    //   });
-
+      z_owned_shm_provider_t provider;
+      if (z_posix_shm_provider_new(&provider, z_loan(layout)) != Z_OK) {
+        RMW_ZENOH_LOG_ERROR_NAMED("rmw_zenoh_cpp", "Unable to create an SHM provider.");
+        throw std::runtime_error("Unable to create an SHM provider.");
+      }
+      shm_provider_ = provider;
+    }
+    auto free_shm_provider = rcpputils::make_scope_exit(
+      [this]() {
+        if (shm_provider_.has_value()) {
+          z_drop(z_move(shm_provider_.value()));
+        }
+      });
+#endif
     graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
     graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
     graph_guard_condition_->data = &guard_condition_data_;
@@ -216,7 +219,9 @@ public:
       });
 
     close_session.cancel();
-    // free_shm_provider.cancel();
+#ifndef _MSC_VER
+    free_shm_provider.cancel();
+#endif _MSC_VER
     undeclare_z_sub.cancel();
   }
 
