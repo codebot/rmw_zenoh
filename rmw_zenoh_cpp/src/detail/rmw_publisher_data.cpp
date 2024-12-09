@@ -441,12 +441,8 @@ rmw_ret_t PublisherData::shutdown()
 
   // Unregister this publisher from the ROS graph.
   z_liveliness_undeclare_token(z_move(token_));
-  // if (pub_cache_.has_value() && !z_session_is_closed(z_loan(sess_))) {
   if (pub_cache_.has_value()) {
     ze_undeclare_publication_cache(z_move(pub_cache_.value()));
-    // if (z_session_is_closed(z_loan(sess_))) {
-    //   z_drop(z_move(pub_cache_.value()));
-    // }
   }
   z_undeclare_publisher(z_move(pub_));
 
