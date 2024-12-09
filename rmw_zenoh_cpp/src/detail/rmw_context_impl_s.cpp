@@ -221,7 +221,7 @@ public:
     close_session.cancel();
 #ifndef _MSC_VER
     free_shm_provider.cancel();
-#endif _MSC_VER
+#endif
     undeclare_z_sub.cancel();
   }
 
