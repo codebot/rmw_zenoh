@@ -83,7 +83,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
     return nullptr;
   }
 
-  rcutils_allocator_t * allocator = &node->context->options.allocator;
+  // rcutils_allocator_t * allocator = &node->context->options.allocator;
 
   // const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto service_members = static_cast<const service_type_support_callbacks_t *>(type_support->data);
