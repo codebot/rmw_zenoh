@@ -94,6 +94,9 @@ rmw_init(const rmw_init_options_t * options, rmw_context_t * context)
     return RMW_RET_ERROR;
   }
 
+  // Enable the zenoh built-in logger
+  zc_try_init_log_from_env();
+
   // Create the context impl.
   context->impl = static_cast<rmw_context_impl_t *>(
     allocator->zero_allocate(1, sizeof(rmw_context_impl_t), allocator->state));

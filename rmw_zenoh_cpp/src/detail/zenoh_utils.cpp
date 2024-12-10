@@ -17,6 +17,7 @@
 #include <chrono>
 #include <cinttypes>
 
+#include "attachment_helpers.hpp"
 #include "rcpputils/scope_exit.hpp"
 
 #include "rmw/error_handling.h"
@@ -24,49 +25,23 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-z_owned_bytes_map_t
-create_map_and_set_sequence_num(
-  int64_t sequence_number,
-  GIDCopier gid_copier)
+void create_map_and_set_sequence_num(
+  z_owned_bytes_t * out_bytes, int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE])
 {
-  z_owned_bytes_map_t map = z_bytes_map_new();
-  if (!z_check(map)) {
-    RMW_SET_ERROR_MSG("failed to allocate map for sequence number");
-    return z_bytes_map_null();
-  }
-  auto free_attachment_map = rcpputils::make_scope_exit(
-    [&map]() {
-      z_bytes_map_drop(z_move(map));
-    });
-
-  // The largest possible int64_t number is INT64_MAX, i.e. 9223372036854775807.
-  // That is 19 characters long, plus one for the trailing \0, means we need 20 bytes.
-  char seq_id_str[20];
-  if (rcutils_snprintf(seq_id_str, sizeof(seq_id_str), "%" PRId64, sequence_number) < 0) {
-    RMW_SET_ERROR_MSG("failed to print sequence_number into buffer");
-    return z_bytes_map_null();
-  }
-  z_bytes_map_insert_by_copy(&map, z_bytes_new("sequence_number"), z_bytes_new(seq_id_str));
-
   auto now = std::chrono::system_clock::now().time_since_epoch();
   auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);
-  char source_ts_str[20];
-  if (rcutils_snprintf(source_ts_str, sizeof(source_ts_str), "%" PRId64, now_ns.count()) < 0) {
-    RMW_SET_ERROR_MSG("failed to print sequence_number into buffer");
-    return z_bytes_map_null();
-  }
-  z_bytes_map_insert_by_copy(&map, z_bytes_new("source_timestamp"), z_bytes_new(source_ts_str));
-  gid_copier(&map, "source_gid");
+  int64_t source_timestamp = now_ns.count();
 
-  free_attachment_map.cancel();
-
-  return map;
+  AttachmentData data(sequence_number, source_timestamp, gid);
+  data.serialize_to_zbytes(out_bytes);
 }
 
 ///=============================================================================
-ZenohQuery::ZenohQuery(const z_query_t * query, std::chrono::nanoseconds::rep received_timestamp)
+ZenohQuery::ZenohQuery(
+  const z_loaned_query_t * query,
+  std::chrono::nanoseconds::rep received_timestamp)
 {
-  query_ = z_query_clone(query);
+  z_query_clone(&query_, query);
   received_timestamp_ = received_timestamp;
 }
 
@@ -83,31 +58,28 @@ ZenohQuery::~ZenohQuery()
 }
 
 ///=============================================================================
-const z_query_t ZenohQuery::get_query() const
-{
-  return z_query_loan(&query_);
-}
+const z_loaned_query_t * ZenohQuery::get_query() const {return z_loan(query_);}
 
 ///=============================================================================
 ZenohReply::ZenohReply(
-  const z_owned_reply_t * reply,
+  const z_loaned_reply_t * reply,
   std::chrono::nanoseconds::rep received_timestamp)
 {
-  reply_ = *reply;
+  z_reply_clone(&reply_, reply);
   received_timestamp_ = received_timestamp;
 }
 
 ///=============================================================================
 ZenohReply::~ZenohReply()
 {
-  z_reply_drop(z_move(reply_));
+  z_drop(z_move(reply_));
 }
 
 ///=============================================================================
-std::optional<z_sample_t> ZenohReply::get_sample() const
+std::optional<const z_loaned_sample_t *> ZenohReply::get_sample() const
 {
-  if (z_reply_is_ok(&reply_)) {
-    return z_reply_ok(&reply_);
+  if (z_reply_is_ok(z_loan(reply_))) {
+    return z_reply_ok(z_loan(reply_));
   }
 
   return std::nullopt;

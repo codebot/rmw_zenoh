@@ -47,7 +47,7 @@ class ServiceData final
 public:
   // Make a shared_ptr of ServiceData.
   static std::shared_ptr<ServiceData> make(
-    z_session_t session,
+    const z_loaned_session_t * session,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,
     std::size_t node_id,
@@ -115,7 +115,7 @@ private:
   // An owned queryable.
   z_owned_queryable_t qable_;
   // Liveliness token for the service.
-  zc_owned_liveliness_token_t token_;
+  z_owned_liveliness_token_t token_;
   // Type support fields.
   const void * request_type_support_impl_;
   const void * response_type_support_impl_;
@@ -132,6 +132,8 @@ private:
   DataCallbackManager data_callback_mgr_;
   // Shutdown flag.
   bool is_shutdown_;
+  // Whether the object has ever successfully been initialized.
+  bool initialized_;
 };
 using ServiceDataPtr = std::shared_ptr<ServiceData>;
 using ServiceDataConstPtr = std::shared_ptr<const ServiceData>;

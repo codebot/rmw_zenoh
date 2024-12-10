@@ -47,7 +47,7 @@ class ClientData final : public std::enable_shared_from_this<ClientData>
 public:
   // Make a shared_ptr of ClientData.
   static std::shared_ptr<ClientData> make(
-    z_session_t session,
+    const z_loaned_session_t * session,
     const rmw_node_t * const node,
     const rmw_client_t * client,
     liveliness::NodeInfo node_info,
@@ -119,7 +119,7 @@ private:
     std::shared_ptr<ResponseTypeSupport> response_type_support);
 
   // Initialize the Zenoh objects for this entity.
-  bool init(z_session_t session);
+  bool init(const z_loaned_session_t * session);
 
   // Shutdown this client (the mutex is expected to be held by the caller).
   void _shutdown();
@@ -134,7 +134,7 @@ private:
   // An owned keyexpression.
   z_owned_keyexpr_t keyexpr_;
   // Liveliness token for the service.
-  zc_owned_liveliness_token_t token_;
+  z_owned_liveliness_token_t token_;
   // Type support fields.
   const void * request_type_support_impl_;
   const void * response_type_support_impl_;
@@ -150,6 +150,8 @@ private:
   size_t sequence_number_;
   // Shutdown flag.
   bool is_shutdown_;
+  // Whether the object has ever successfully been initialized.
+  bool initialized_;
   size_t num_in_flight_;
 };
 using ClientDataPtr = std::shared_ptr<ClientData>;

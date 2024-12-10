@@ -43,7 +43,7 @@ public:
   static std::shared_ptr<NodeData> make(
     const rmw_node_t * const node,
     std::size_t id,
-    z_session_t session,
+    const z_loaned_session_t * session,
     std::size_t domain_id,
     const std::string & namespace_,
     const std::string & node_name,
@@ -55,7 +55,7 @@ public:
   // Create a new PublisherData for a given rmw_publisher_t.
   bool create_pub_data(
     const rmw_publisher_t * const publisher,
-    z_session_t session,
+    const z_loaned_session_t * session,
     std::size_t id,
     const std::string & topic_name,
     const rosidl_message_type_support_t * type_support,
@@ -70,7 +70,7 @@ public:
   // Create a new SubscriptionData for a given rmw_subscription_t.
   bool create_sub_data(
     const rmw_subscription_t * const subscription,
-    z_session_t session,
+    const z_loaned_session_t * session,
     std::shared_ptr<GraphCache> graph_cache,
     std::size_t id,
     const std::string & topic_name,
@@ -86,7 +86,7 @@ public:
   // Create a new ServiceData for a given rmw_service_t.
   bool create_service_data(
     const rmw_service_t * const service,
-    z_session_t session,
+    const z_loaned_session_t * session,
     std::size_t id,
     const std::string & service_name,
     const rosidl_service_type_support_t * type_support,
@@ -101,7 +101,7 @@ public:
   // Create a new ClientData for a given rmw_client_t.
   bool create_client_data(
     const rmw_client_t * const client,
-    z_session_t session,
+    const z_loaned_session_t * session,
     std::size_t id,
     const std::string & service_name,
     const rosidl_service_type_support_t * type_support,
@@ -128,7 +128,7 @@ private:
     const rmw_node_t * const node,
     std::size_t id,
     std::shared_ptr<liveliness::Entity> entity,
-    zc_owned_liveliness_token_t token);
+    z_owned_liveliness_token_t token);
   // Internal mutex.
   mutable std::recursive_mutex mutex_;
   // The rmw_node_t associated with this NodeData.
@@ -139,7 +139,7 @@ private:
   // The Entity generated for the node.
   std::shared_ptr<liveliness::Entity> entity_;
   // Liveliness token for the node.
-  zc_owned_liveliness_token_t token_;
+  z_owned_liveliness_token_t token_;
   // Shutdown flag.
   bool is_shutdown_;
   // Map of publishers.

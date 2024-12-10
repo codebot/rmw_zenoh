@@ -26,7 +26,7 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-rmw_ret_t zenoh_router_check(z_session_t session)
+rmw_ret_t zenoh_router_check(const z_loaned_session_t * session)
 {
   // Initialize context for callback
   int context = 0;
@@ -42,8 +42,9 @@ rmw_ret_t zenoh_router_check(z_session_t session)
       (*(static_cast<int *>(ctx)))++;
     };
 
-  z_owned_closure_zid_t router_callback = z_closure(callback, nullptr /* drop */, &context);
-  if (z_info_routers_zid(session, z_move(router_callback))) {
+  z_owned_closure_zid_t router_callback;
+  z_closure(&router_callback, callback, NULL, &context);
+  if (z_info_routers_zid(session, z_move(router_callback)) != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Failed to evaluate if Zenoh routers are connected to the session.");

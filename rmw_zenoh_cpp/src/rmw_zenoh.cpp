@@ -605,7 +605,7 @@ rmw_publish(
 
   return pub_data->publish(
     ros_message,
-    context_impl->shm_manager());
+    context_impl->shm_provider());
 }
 
 //==============================================================================
@@ -712,7 +712,7 @@ rmw_publish_serialized_message(
 
   return publisher_data->publish_serialized_message(
     serialized_message,
-    context_impl->shm_manager());
+    context_impl->shm_provider());
 }
 
 //==============================================================================

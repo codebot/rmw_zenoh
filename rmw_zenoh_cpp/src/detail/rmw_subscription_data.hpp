@@ -32,6 +32,7 @@
 #include "graph_cache.hpp"
 #include "liveliness_utils.hpp"
 #include "message_type_support.hpp"
+#include "attachment_helpers.hpp"
 #include "type_support_common.hpp"
 
 #include "rcutils/allocator.h"
@@ -48,24 +49,20 @@ public:
   struct Message
   {
     explicit Message(
-      zc_owned_payload_t p,
+      z_owned_slice_t p,
       uint64_t recv_ts,
-      const uint8_t pub_gid[RMW_GID_STORAGE_SIZE],
-      int64_t seqnum,
-      int64_t source_ts);
+      AttachmentData && attachment);
 
     ~Message();
 
-    zc_owned_payload_t payload;
+    z_owned_slice_t payload;
     uint64_t recv_timestamp;
-    uint8_t publisher_gid[RMW_GID_STORAGE_SIZE];
-    int64_t sequence_number;
-    int64_t source_timestamp;
+    AttachmentData attachment;
   };
 
   // Make a shared_ptr of SubscriptionData.
   static std::shared_ptr<SubscriptionData> make(
-    z_session_t session,
+    const z_loaned_session_t * session,
     std::shared_ptr<GraphCache> graph_cache,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,
@@ -78,7 +75,7 @@ public:
   // Publish a ROS message.
   rmw_ret_t publish(
     const void * ros_message,
-    std::optional<zc_owned_shm_manager_t> & shm_manager);
+    std::optional<z_owned_shm_provider_t> & shm_provider);
 
   // Get a copy of the keyexpr_hash of this SubscriptionData's liveliness::Entity.
   std::size_t keyexpr_hash() const;
@@ -145,7 +142,7 @@ private:
   // An owned subscriber or querying_subscriber depending on the QoS settings.
   std::variant<z_owned_subscriber_t, ze_owned_querying_subscriber_t> sub_;
   // Liveliness token for the subscription.
-  zc_owned_liveliness_token_t token_;
+  z_owned_liveliness_token_t token_;
   // Type support fields
   const void * type_support_impl_;
   std::unique_ptr<MessageTypeSupport> type_support_;

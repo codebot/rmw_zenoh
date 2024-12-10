@@ -612,9 +612,10 @@ void GraphCache::parse_del(
 
   if (entity->type() == EntityType::Node) {
     // Node
-    // The liveliness tokens to remove pub/subs should be received before the one to remove a node
-    // given the reliability QoS for liveliness subs. However, if we find any pubs/subs present in
-    // the node below, we should update the count in graph_topics_.
+    // When destroying a node, Zenoh does not guarantee that liveliness tokens to remove pub/subs
+    // arrive before the one to remove the node from the graph despite un-registering those entities
+    // earlier. In such scenarios, if we find any pub/subs present in the node, we reduce their
+    // counts in graph_topics_.
     const GraphNodePtr graph_node = node_it->second;
     if (!graph_node->pubs_.empty() ||
       !graph_node->subs_.empty() ||

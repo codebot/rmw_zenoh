@@ -15,7 +15,7 @@ find_package(ament_cmake_vendor_package REQUIRED)
 # Note: We separate the two args needed for cargo with "$<SEMICOLON>" and not ";" as the
 # latter is a list separater in cmake and hence the string will be split into two
 # when expanded.
-set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=zenoh/shared-memory zenoh/transport_compression zenoh/transport_tcp zenoh/transport_tls")
+set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memory zenoh/transport_compression zenoh/transport_tcp zenoh/transport_tls")
 
 # Set VCS_VERSION to include latest changes from zenoh-c to benefit from :
 # - https://github.com/eclipse-zenoh/zenoh-c/pull/340 (fix build issue)
@@ -26,9 +26,10 @@ set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=zenoh/shared
 # - https://github.com/eclipse-zenoh/zenoh-c/pull/620 (fix ze_querying_subscriber_get API to query newly discovered publishers)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION 134dbfa06ca212def5fb51dd8e816734dfd8dff6
+  VCS_VERSION 42e717ff7b633649f11ebb7800b71d4939cd21c7
   CMAKE_ARGS
     "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
+    "-DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE"
     "-DZENOHC_CUSTOM_TARGET=${ZENOHC_CUSTOM_TARGET}"
 )
 

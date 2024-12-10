@@ -48,7 +48,7 @@ static std::mutex data_to_data_shared_ptr_map_mutex;
 static std::unordered_map<rmw_context_impl_s::Data *,
   std::shared_ptr<rmw_context_impl_s::Data>> data_to_data_shared_ptr_map;
 
-static void graph_sub_data_handler(const z_sample_t * sample, void * data);
+static void graph_sub_data_handler(z_loaned_sample_t * sample, void * data);
 
 // Bundle all class members into a data struct which can be passed as a
 // weak ptr to various threads for thread-safe access without capturing
@@ -78,20 +78,21 @@ public:
     }
 
     // Check if shm is enabled.
-    z_owned_str_t shm_enabled = zc_config_get(z_loan(config), "transport/shared_memory/enabled");
+    z_owned_string_t shm_enabled;
+    zc_config_get_from_str(z_loan(config), Z_CONFIG_SHARED_MEMORY_KEY, &shm_enabled);
     auto always_free_shm_enabled = rcpputils::make_scope_exit(
       [&shm_enabled]() {
         z_drop(z_move(shm_enabled));
       });
 
     // Initialize the zenoh session.
-    session_ = z_open(z_move(config));
-    if (!z_session_check(&session_)) {
+    if (z_open(&session_, z_move(config), NULL) != Z_OK) {
+      RMW_SET_ERROR_MSG("Error setting up zenoh session.");
       throw std::runtime_error("Error setting up zenoh session.");
     }
     auto close_session = rcpputils::make_scope_exit(
       [this]() {
-        z_close(z_move(session_));
+        z_close(z_loan_mut(session_), NULL);
       });
 
     // Verify if the zenoh router is running if configured.
@@ -123,7 +124,7 @@ public:
 
     // Query router/liveliness participants to get graph information before the session was started.
     // We create a blocking channel that is unbounded, ie. `bound` = 0, to receive
-    // replies for the zc_liveliness_get() call. This is necessary as if the `bound`
+    // replies for the z_liveliness_get() call. This is necessary as if the `bound`
     // is too low, the channel may starve the zenoh executor of its threads which
     // would lead to deadlocks when trying to receive replies and block the
     // execution here.
@@ -136,60 +137,56 @@ public:
     // the code will be simpler, and if we're just going to spin over the non-blocking
     // reads until we obtain responses, we'll just be hogging CPU time by convincing
     // the OS that we're doing actual work when it could instead park the thread.
-    z_owned_reply_channel_t channel = zc_reply_fifo_new(0);
-    zc_liveliness_get(
-      z_loan(session_), z_keyexpr(liveliness_str.c_str()),
-      z_move(channel.send), NULL);
-    z_owned_reply_t reply = z_reply_null();
-    for (bool call_success = z_call(channel.recv, &reply); !call_success || z_check(reply);
-      call_success = z_call(channel.recv, &reply))
-    {
-      if (!call_success) {
-        continue;
-      }
-      if (z_reply_is_ok(&reply)) {
-        z_sample_t sample = z_reply_ok(&reply);
-        z_owned_str_t keystr = z_keyexpr_to_string(sample.keyexpr);
+    z_owned_fifo_handler_reply_t handler;
+    z_owned_closure_reply_t closure;
+    z_fifo_channel_reply_new(&closure, &handler, SIZE_MAX - 1);
+
+    z_view_keyexpr_t keyexpr;
+    z_view_keyexpr_from_str(&keyexpr, liveliness_str.c_str());
+    z_liveliness_get(
+      z_loan(session_), z_loan(keyexpr),
+      z_move(closure), NULL);
+    z_owned_reply_t reply;
+    while (z_recv(z_loan(handler), &reply) == Z_OK) {
+      if (z_reply_is_ok(z_loan(reply))) {
+        const z_loaned_sample_t * sample = z_reply_ok(z_loan(reply));
+        z_view_string_t keystr;
+        z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
+        std::string liveliness_str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
         // Ignore tokens from the same session to avoid race conditions from this
         // query and the liveliness subscription.
-        graph_cache_->parse_put(z_loan(keystr), true);
-        z_drop(z_move(keystr));
+        graph_cache_->parse_put(std::move(liveliness_str), true);
       } else {
         RMW_ZENOH_LOG_DEBUG_NAMED(
           "rmw_zenoh_cpp", "[rmw_context_impl_s] z_call received an invalid reply.\n");
       }
+      z_drop(z_move(reply));
     }
-    z_drop(z_move(reply));
-    z_drop(z_move(channel));
+    z_drop(z_move(handler));
 
     // Initialize the shm manager if shared_memory is enabled in the config.
-    shm_manager_ = std::nullopt;
-    if (shm_enabled._cstr != nullptr &&
-      strcmp(shm_enabled._cstr, "true") == 0)
+    shm_provider_ = std::nullopt;
+    if (strncmp(
+        z_string_data(z_loan(shm_enabled)),
+        "true",
+        z_string_len(z_loan(shm_enabled))) == 0)
     {
-      char idstr[sizeof(zid.id) * 2 + 1];  // 2 bytes for each byte of the id, plus the trailing \0
-      static constexpr size_t max_size_of_each = 3;  // 2 for each byte, plus the trailing \0
-      for (size_t i = 0; i < sizeof(zid.id); ++i) {
-        snprintf(idstr + 2 * i, max_size_of_each, "%02x", zid.id[i]);
+      // TODO(yuyuan): determine the default alignment of SHM
+      z_alloc_alignment_t alignment = {5};
+      z_owned_memory_layout_t layout;
+      z_memory_layout_new(&layout, SHM_BUFFER_SIZE_MB * 1024 * 1024, alignment);
+
+      z_owned_shm_provider_t provider;
+      if (z_posix_shm_provider_new(&provider, z_loan(layout)) != Z_OK) {
+        RMW_ZENOH_LOG_ERROR_NAMED("rmw_zenoh_cpp", "Unable to create an SHM provider.");
+        throw std::runtime_error("Unable to create an SHM provider.");
       }
-      idstr[sizeof(zid.id) * 2] = '\0';
-      // TODO(yadunund): Can we get the size of the shm from the config even though it's not
-      // a standard parameter?
-      shm_manager_ =
-        zc_shm_manager_new(
-        z_loan(session_),
-        idstr,
-        SHM_BUFFER_SIZE_MB * 1024 * 1024);
-      if (!shm_manager_.has_value() ||
-        !zc_shm_manager_check(&shm_manager_.value()))
-      {
-        throw std::runtime_error("Unable to create shm manager.");
-      }
+      shm_provider_ = provider;
     }
-    auto free_shm_manager = rcpputils::make_scope_exit(
+    auto free_shm_provider = rcpputils::make_scope_exit(
       [this]() {
-        if (shm_manager_.has_value()) {
-          z_drop(z_move(shm_manager_.value()));
+        if (shm_provider_.has_value()) {
+          z_drop(z_move(shm_provider_.value()));
         }
       });
 
@@ -199,26 +196,27 @@ public:
 
     // Setup the liveliness subscriber to receives updates from the ROS graph
     // and update the graph cache.
-    auto sub_options = zc_liveliness_subscriber_options_null();
-    z_owned_closure_sample_t callback = z_closure(
-      graph_sub_data_handler, nullptr, this);
-    graph_subscriber_ = zc_liveliness_declare_subscriber(
-      z_loan(session_),
-      z_keyexpr(liveliness_str.c_str()),
-      z_move(callback),
-      &sub_options);
-    zc_liveliness_subscriber_options_drop(z_move(sub_options));
+    z_liveliness_subscriber_options_t sub_options;
+    z_liveliness_subscriber_options_default(&sub_options);
+    z_owned_closure_sample_t callback;
+    z_closure(&callback, graph_sub_data_handler, nullptr, this);
+    z_view_keyexpr_t liveliness_ke;
+    z_view_keyexpr_from_str(&liveliness_ke, liveliness_str.c_str());
+    if (z_liveliness_declare_subscriber(
+        z_loan(session_),
+        &graph_subscriber_, z_loan(liveliness_ke),
+        z_move(callback), &sub_options) != Z_OK)
+    {
+      RMW_SET_ERROR_MSG("unable to create zenoh subscription");
+      throw std::runtime_error("Unable to subscribe to ROS graph updates.");
+    }
     auto undeclare_z_sub = rcpputils::make_scope_exit(
       [this]() {
         z_undeclare_subscriber(z_move(this->graph_subscriber_));
       });
-    if (!z_check(graph_subscriber_)) {
-      RMW_SET_ERROR_MSG("unable to create zenoh subscription");
-      throw std::runtime_error("Unable to subscribe to ROS graph updates.");
-    }
 
     close_session.cancel();
-    free_shm_manager.cancel();
+    free_shm_provider.cancel();
     undeclare_z_sub.cancel();
   }
 
@@ -233,8 +231,8 @@ public:
       }
 
       z_undeclare_subscriber(z_move(graph_subscriber_));
-      if (shm_manager_.has_value()) {
-        z_drop(z_move(shm_manager_.value()));
+      if (shm_provider_.has_value()) {
+        z_drop(z_move(shm_provider_.value()));
       }
       is_shutdown_ = true;
 
@@ -243,10 +241,11 @@ public:
     }
 
     // Close the zenoh session
-    if (z_close(z_move(session_)) < 0) {
+    if (z_close(z_loan_mut(session_), NULL) != Z_OK) {
       RMW_SET_ERROR_MSG("Error while closing zenoh session");
       return RMW_RET_ERROR;
     }
+
     return RMW_RET_OK;
   }
 
@@ -256,16 +255,16 @@ public:
     return enclave_;
   }
 
-  z_session_t session() const
+  const z_loaned_session_t * session() const
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     return z_loan(session_);
   }
 
-  std::optional<zc_owned_shm_manager_t> & shm_manager()
+  std::optional<z_owned_shm_provider_t> & shm_provider()
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return shm_manager_;
+    return shm_provider_;
   }
 
   rmw_guard_condition_t * graph_guard_condition()
@@ -289,7 +288,7 @@ public:
   bool session_is_valid() const
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return z_check(session_);
+    return !z_session_is_closed(z_loan(session_));
   }
 
   std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache()
@@ -310,7 +309,7 @@ public:
     }
 
     // Check that the Zenoh session is still valid.
-    if (!z_check(session_)) {
+    if (z_session_is_closed(z_loan(session_))) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to create NodeData as Zenoh session is invalid.");
@@ -400,7 +399,7 @@ private:
   z_owned_session_t session_;
   // An optional SHM manager that is initialized of SHM is enabled in the
   // zenoh session config.
-  std::optional<zc_owned_shm_manager_t> shm_manager_;
+  std::optional<z_owned_shm_provider_t> shm_provider_;
   // Graph cache.
   std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache_;
   // ROS graph liveliness subscriber.
@@ -419,13 +418,10 @@ private:
 };
 
 ///=============================================================================
-static void graph_sub_data_handler(const z_sample_t * sample, void * data)
+static void graph_sub_data_handler(z_loaned_sample_t * sample, void * data)
 {
-  z_owned_str_t keystr = z_keyexpr_to_string(sample->keyexpr);
-  auto free_keystr = rcpputils::make_scope_exit(
-    [&keystr]() {
-      z_drop(z_move(keystr));
-    });
+  z_view_string_t keystr;
+  z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
 
   auto data_ptr = static_cast<rmw_context_impl_s::Data *>(data);
   if (data_ptr == nullptr) {
@@ -448,7 +444,8 @@ static void graph_sub_data_handler(const z_sample_t * sample, void * data)
   }
 
   // Update the graph cache.
-  data_shared_ptr->update_graph_cache(sample->kind, keystr._cstr);
+  std::string liveliness_str(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
+  data_shared_ptr->update_graph_cache(z_sample_kind(sample), std::move(liveliness_str));
 }
 
 ///=============================================================================
@@ -475,15 +472,15 @@ std::string rmw_context_impl_s::enclave() const
 }
 
 ///=============================================================================
-z_session_t rmw_context_impl_s::session() const
+const z_loaned_session_t * rmw_context_impl_s::session() const
 {
   return data_->session();
 }
 
 ///=============================================================================
-std::optional<zc_owned_shm_manager_t> & rmw_context_impl_s::shm_manager()
+std::optional<z_owned_shm_provider_t> & rmw_context_impl_s::shm_provider()
 {
-  return data_->shm_manager();
+  return data_->shm_provider();
 }
 
 ///=============================================================================

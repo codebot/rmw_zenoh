@@ -26,23 +26,21 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-// A function to safely copy an entity's GID as a z_bytes_t into a
-// z_owned_bytes_map_t for a given key.
-using GIDCopier = std::function<void (z_owned_bytes_map_t *, const char *)>;
-///=============================================================================
-z_owned_bytes_map_t
-create_map_and_set_sequence_num(int64_t sequence_number, GIDCopier gid_copier);
+void
+create_map_and_set_sequence_num(
+  z_owned_bytes_t * out_bytes, int64_t sequence_number,
+  uint8_t gid[RMW_GID_STORAGE_SIZE]);
 
 ///=============================================================================
 // A class to store the replies to service requests.
 class ZenohReply final
 {
 public:
-  ZenohReply(const z_owned_reply_t * reply, std::chrono::nanoseconds::rep received_timestamp);
+  ZenohReply(const z_loaned_reply_t * reply, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohReply();
 
-  std::optional<z_sample_t> get_sample() const;
+  std::optional<const z_loaned_sample_t *> get_sample() const;
 
   std::chrono::nanoseconds::rep get_received_timestamp() const;
 
@@ -56,11 +54,11 @@ private:
 class ZenohQuery final
 {
 public:
-  ZenohQuery(const z_query_t * query, std::chrono::nanoseconds::rep received_timestamp);
+  ZenohQuery(const z_loaned_query_t * query, std::chrono::nanoseconds::rep received_timestamp);
 
   ~ZenohQuery();
 
-  const z_query_t get_query() const;
+  const z_loaned_query_t * get_query() const;
 
   std::chrono::nanoseconds::rep get_received_timestamp() const;
 
