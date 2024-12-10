@@ -269,6 +269,7 @@ bool ClientData::init(std::shared_ptr<ZenohSession> session)
       z_drop(z_move(this->token_));
     });
 
+  sess_ = session;
   initialized_ = true;
 
   free_ros_keyexpr.cancel();
@@ -409,7 +410,6 @@ rmw_ret_t ClientData::send_request(
   if (context_impl == nullptr) {
     return RMW_RET_INVALID_ARGUMENT;
   }
-  sess_ = context_impl->session();
 
   size_t max_data_length = (
     request_type_support_->get_estimated_serialized_size(
