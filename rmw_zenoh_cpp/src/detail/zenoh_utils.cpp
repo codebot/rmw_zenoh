@@ -40,7 +40,7 @@ ZenohSession::~ZenohSession()
 
 ///=============================================================================
 void create_map_and_set_sequence_num(
-  z_owned_bytes_t * out_bytes, int64_t sequence_number, uint8_t gid[RMW_GID_STORAGE_SIZE])
+  z_owned_bytes_t * out_bytes, const int64_t sequence_number, const uint8_t gid[16])
 {
   auto now = std::chrono::system_clock::now().time_since_epoch();
   auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);

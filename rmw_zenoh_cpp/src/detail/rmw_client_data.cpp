@@ -124,9 +124,9 @@ std::shared_ptr<ClientData> ClientData::make(
     return nullptr;
   }
 
-  rcutils_allocator_t * allocator = &node->context->options.allocator;
+  // rcutils_allocator_t * allocator = &node->context->options.allocator;
 
-  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
+  // const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto service_members = static_cast<const service_type_support_callbacks_t *>(type_support->data);
   auto request_members = static_cast<const message_type_support_callbacks_t *>(
     service_members->request_members_->data);
@@ -151,19 +151,20 @@ std::shared_ptr<ClientData> ClientData::make(
   }
 
   // Convert the type hash to a string so that it can be included in the keyexpr.
-  char * type_hash_c_str = nullptr;
-  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
-    type_hash,
-    *allocator,
-    &type_hash_c_str);
-  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
-    RMW_SET_ERROR_MSG("Failed to allocate type_hash_c_str.");
-    return nullptr;
-  }
-  auto free_type_hash_c_str = rcpputils::make_scope_exit(
-    [&allocator, &type_hash_c_str]() {
-      allocator->deallocate(type_hash_c_str, allocator->state);
-    });
+  const char * type_hash_c_str = "TypeHashNotSupported";
+  // char * type_hash_c_str = nullptr;
+  // rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
+  //   type_hash,
+  //   *allocator,
+  //   &type_hash_c_str);
+  // if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
+  //   RMW_SET_ERROR_MSG("Failed to allocate type_hash_c_str.");
+  //   return nullptr;
+  // }
+  // auto free_type_hash_c_str = rcpputils::make_scope_exit(
+  //   [&allocator, &type_hash_c_str]() {
+  //     allocator->deallocate(type_hash_c_str, allocator->state);
+  //   });
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -296,7 +297,7 @@ bool ClientData::liveliness_is_valid() const
 }
 
 ///=============================================================================
-void ClientData::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
+void ClientData::copy_gid(uint8_t out_gid[16]) const
 {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   entity_->copy_gid(out_gid);
@@ -386,7 +387,13 @@ rmw_ret_t ClientData::take_response(
     RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
     return RMW_RET_ERROR;
   }
-  attachment.copy_gid(request_header->request_id.writer_guid);
+
+  // attachment.copy_gid(request_header->request_id.writer_guid);
+  uint8_t tmp_writer_guid[16];
+  attachment.copy_gid(tmp_writer_guid);
+  for (size_t i = 0; i < 16; ++i) {
+      request_header->request_id.writer_guid[i] = static_cast<int8_t>(tmp_writer_guid[i]);
+  }
   request_header->received_timestamp = latest_reply->get_received_timestamp();
 
   z_drop(z_move(payload));
@@ -446,7 +453,7 @@ rmw_ret_t ClientData::send_request(
   z_get_options_t opts;
   z_get_options_default(&opts);
   z_owned_bytes_t attachment;
-  uint8_t local_gid[RMW_GID_STORAGE_SIZE];
+  uint8_t local_gid[16];
   entity_->copy_gid(local_gid);
   create_map_and_set_sequence_num(
     &attachment, *sequence_id,

@@ -85,7 +85,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
 
   rcutils_allocator_t * allocator = &node->context->options.allocator;
 
-  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
+  // const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto service_members = static_cast<const service_type_support_callbacks_t *>(type_support->data);
   auto request_members = static_cast<const message_type_support_callbacks_t *>(
     service_members->request_members_->data);
@@ -110,19 +110,20 @@ std::shared_ptr<ServiceData> ServiceData::make(
   }
 
   // Convert the type hash to a string so that it can be included in the keyexpr.
-  char * type_hash_c_str = nullptr;
-  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
-    type_hash,
-    *allocator,
-    &type_hash_c_str);
-  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
-    RMW_SET_ERROR_MSG("Failed to allocate type_hash_c_str.");
-    return nullptr;
-  }
-  auto free_type_hash_c_str = rcpputils::make_scope_exit(
-    [&allocator, &type_hash_c_str]() {
-      allocator->deallocate(type_hash_c_str, allocator->state);
-    });
+  const char * type_hash_c_str = "TypeHashNotSupported";
+  // char * type_hash_c_str = nullptr;
+  // rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
+  //   type_hash,
+  //   *allocator,
+  //   &type_hash_c_str);
+  // if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
+  //   RMW_SET_ERROR_MSG("Failed to allocate type_hash_c_str.");
+  //   return nullptr;
+  // }
+  // auto free_type_hash_c_str = rcpputils::make_scope_exit(
+  //   [&allocator, &type_hash_c_str]() {
+  //     allocator->deallocate(type_hash_c_str, allocator->state);
+  //   });
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -351,7 +352,13 @@ rmw_ret_t ServiceData::take_request(
     return RMW_RET_ERROR;
   }
 
-  attachment.copy_gid(request_header->request_id.writer_guid);
+
+  // attachment.copy_gid(request_header->request_id.writer_guid);
+  uint8_t tmp_writer_guid[16];
+  attachment.copy_gid(tmp_writer_guid);
+  for (size_t i = 0; i < 16; ++i) {
+      request_header->request_id.writer_guid[i] = static_cast<int8_t>(tmp_writer_guid[i]);
+  }
 
   request_header->source_timestamp = attachment.source_timestamp();
   if (request_header->source_timestamp < 0) {
@@ -361,7 +368,8 @@ rmw_ret_t ServiceData::take_request(
   request_header->received_timestamp = query->get_received_timestamp();
 
   // Add this query to the map, so that rmw_send_response can quickly look it up later.
-  const size_t hash = rmw_zenoh_cpp::hash_gid(request_header->request_id.writer_guid);
+  // const size_t hash = rmw_zenoh_cpp::hash_gid(request_header->request_id.writer_guid);
+  const size_t hash = rmw_zenoh_cpp::hash_gid(tmp_writer_guid);
   std::unordered_map<size_t, SequenceToQuery>::iterator it = sequence_to_query_map_.find(hash);
   if (it == sequence_to_query_map_.end()) {
     SequenceToQuery stq;
@@ -397,7 +405,11 @@ rmw_ret_t ServiceData::send_response(
     return RMW_RET_OK;
   }
   // Create the queryable payload
-  const size_t hash = hash_gid(request_id->writer_guid);
+  uint8_t tmp_writer_guid[16];
+  for (size_t i = 0; i < 16; ++i) {
+      tmp_writer_guid[i] = static_cast<uint8_t>(request_id->writer_guid[i]);
+  }
+  const size_t hash = hash_gid(tmp_writer_guid);
   std::unordered_map<size_t, SequenceToQuery>::iterator it = sequence_to_query_map_.find(hash);
   if (it == sequence_to_query_map_.end()) {
     // If there is no data associated with this request, the higher layers of
@@ -457,7 +469,7 @@ rmw_ret_t ServiceData::send_response(
   z_owned_bytes_t attachment;
   rmw_zenoh_cpp::create_map_and_set_sequence_num(
     &attachment, request_id->sequence_number,
-    request_id->writer_guid);
+    tmp_writer_guid);
   options.attachment = z_move(attachment);
 
   z_owned_bytes_t payload;

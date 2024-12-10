@@ -64,7 +64,7 @@ public:
   bool liveliness_is_valid() const;
 
   // Copy the GID of this ClientData into an rmw_gid_t.
-  void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
+  void copy_gid(uint8_t out_gid[16]) const;
 
   // Add a new ZenohReply to the queue.
   void add_new_reply(std::unique_ptr<rmw_zenoh_cpp::ZenohReply> reply);

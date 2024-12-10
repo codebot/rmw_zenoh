@@ -113,24 +113,25 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
 
   rcutils_allocator_t * allocator = &node->context->options.allocator;
 
-  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
+  // const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto callbacks = static_cast<const message_type_support_callbacks_t *>(type_support->data);
   auto message_type_support = std::make_unique<MessageTypeSupport>(callbacks);
 
   // Convert the type hash to a string so that it can be included in the keyexpr.
-  char * type_hash_c_str = nullptr;
-  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
-    type_hash,
-    *allocator,
-    &type_hash_c_str);
-  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
-    RMW_SET_ERROR_MSG("Failed to allocate type_hash_c_str.");
-    return nullptr;
-  }
-  auto free_type_hash_c_str = rcpputils::make_scope_exit(
-    [&allocator, &type_hash_c_str]() {
-      allocator->deallocate(type_hash_c_str, allocator->state);
-    });
+  const char * type_hash_c_str = "TypeHashNotSupported";
+  // char * type_hash_c_str = nullptr;
+  // rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
+  //   type_hash,
+  //   *allocator,
+  //   &type_hash_c_str);
+  // if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
+  //   RMW_SET_ERROR_MSG("Failed to allocate type_hash_c_str.");
+  //   return nullptr;
+  // }
+  // auto free_type_hash_c_str = rcpputils::make_scope_exit(
+  //   [&allocator, &type_hash_c_str]() {
+  //     allocator->deallocate(type_hash_c_str, allocator->state);
+  //   });
 
   // Everything above succeeded and is setup properly. Now declare a subscriber
   // with Zenoh; after this, callbacks may come in at any time.

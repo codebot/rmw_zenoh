@@ -43,8 +43,8 @@ private:
 ///=============================================================================
 void
 create_map_and_set_sequence_num(
-  z_owned_bytes_t * out_bytes, int64_t sequence_number,
-  uint8_t gid[RMW_GID_STORAGE_SIZE]);
+  z_owned_bytes_t * out_bytes, const int64_t sequence_number,
+  const uint8_t gid[16]);
 
 ///=============================================================================
 // A class to store the replies to service requests.

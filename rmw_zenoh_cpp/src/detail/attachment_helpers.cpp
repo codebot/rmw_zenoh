@@ -31,11 +31,11 @@ namespace rmw_zenoh_cpp
 AttachmentData::AttachmentData(
   const int64_t sequence_number,
   const int64_t source_timestamp,
-  const uint8_t source_gid[RMW_GID_STORAGE_SIZE])
+  const uint8_t source_gid[16])
 : sequence_number_(sequence_number),
   source_timestamp_(source_timestamp)
 {
-  memcpy(source_gid_, source_gid, RMW_GID_STORAGE_SIZE);
+  memcpy(source_gid_, source_gid, 16);
   gid_hash_ = hash_gid(source_gid_);
 }
 
@@ -45,7 +45,7 @@ AttachmentData::AttachmentData(AttachmentData && data)
   source_timestamp_(std::move(data.source_timestamp_)),
   gid_hash_(std::move(data.gid_hash_))
 {
-  memcpy(source_gid_, data.source_gid_, RMW_GID_STORAGE_SIZE);
+  memcpy(source_gid_, data.source_gid_, 16);
 }
 
 ///=============================================================================
@@ -90,7 +90,7 @@ AttachmentData::AttachmentData(const z_loaned_bytes_t * attachment)
   if (ze_deserializer_deserialize_slice(&deserializer, &slice)) {
     throw std::runtime_error("Failed to deserialize the source_gid.");
   }
-  if (z_slice_len(z_loan(slice)) != RMW_GID_STORAGE_SIZE) {
+  if (z_slice_len(z_loan(slice)) != 16) {
     throw std::runtime_error("The length of source_gid mismatched.");
   }
   memcpy(this->source_gid_, z_slice_data(z_loan(slice)), z_slice_len(z_loan(slice)));
@@ -111,9 +111,9 @@ int64_t AttachmentData::source_timestamp() const
 }
 
 ///=============================================================================
-void AttachmentData::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
+void AttachmentData::copy_gid(uint8_t out_gid[16]) const
 {
-  memcpy(out_gid, source_gid_, RMW_GID_STORAGE_SIZE);
+  memcpy(out_gid, source_gid_, 16);
 }
 
 ///=============================================================================
@@ -132,7 +132,7 @@ void AttachmentData::serialize_to_zbytes(z_owned_bytes_t * attachment)
   ze_serializer_serialize_str(z_loan_mut(serializer), "source_timestamp");
   ze_serializer_serialize_int64(z_loan_mut(serializer), this->source_timestamp_);
   ze_serializer_serialize_str(z_loan_mut(serializer), "source_gid");
-  ze_serializer_serialize_buf(z_loan_mut(serializer), this->source_gid_, RMW_GID_STORAGE_SIZE);
+  ze_serializer_serialize_buf(z_loan_mut(serializer), this->source_gid_, 16);
   ze_serializer_finish(z_move(serializer), attachment);
 }
 }  // namespace rmw_zenoh_cpp

@@ -60,25 +60,26 @@ std::shared_ptr<PublisherData> PublisherData::make(
 
   rcutils_allocator_t * allocator = &node->context->options.allocator;
 
-  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
+  // const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto callbacks = static_cast<const message_type_support_callbacks_t *>(type_support->data);
   auto message_type_support = std::make_unique<MessageTypeSupport>(callbacks);
 
   // Convert the type hash to a string so that it can be included in
   // the keyexpr.
-  char * type_hash_c_str = nullptr;
-  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
-    type_hash,
-    *allocator,
-    &type_hash_c_str);
-  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
-    RMW_SET_ERROR_MSG("Failed to allocate type_hash_c_str.");
-    return nullptr;
-  }
-  auto always_free_type_hash_c_str = rcpputils::make_scope_exit(
-    [&allocator, &type_hash_c_str]() {
-      allocator->deallocate(type_hash_c_str, allocator->state);
-    });
+  const char * type_hash_c_str = "TypeHashNotSupported";
+  // char * type_hash_c_str = nullptr;
+  // rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
+  //   type_hash,
+  //   *allocator,
+  //   &type_hash_c_str);
+  // if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
+  //   RMW_SET_ERROR_MSG("Failed to allocate type_hash_c_str.");
+  //   return nullptr;
+  // }
+  // auto always_free_type_hash_c_str = rcpputils::make_scope_exit(
+  //   [&allocator, &type_hash_c_str]() {
+  //     allocator->deallocate(type_hash_c_str, allocator->state);
+  //   });
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -309,7 +310,7 @@ rmw_ret_t PublisherData::publish(
   z_publisher_put_options_t options;
   z_publisher_put_options_default(&options);
   z_owned_bytes_t attachment;
-  uint8_t local_gid[RMW_GID_STORAGE_SIZE];
+  uint8_t local_gid[16];
   entity_->copy_gid(local_gid);
   create_map_and_set_sequence_num(&attachment, sequence_number_++, local_gid);
   options.attachment = z_move(attachment);
@@ -357,7 +358,7 @@ rmw_ret_t PublisherData::publish_serialized_message(
   // will be encoded with CDR so it does not really matter.
   z_publisher_put_options_t options;
   z_publisher_put_options_default(&options);
-  uint8_t local_gid[RMW_GID_STORAGE_SIZE];
+  uint8_t local_gid[16];
   entity_->copy_gid(local_gid);
   z_owned_bytes_t attachment;
   create_map_and_set_sequence_num(&attachment, sequence_number_++, local_gid);
@@ -395,7 +396,7 @@ liveliness::TopicInfo PublisherData::topic_info() const
 }
 
 ///=============================================================================
-void PublisherData::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
+void PublisherData::copy_gid(uint8_t out_gid[16]) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   entity_->copy_gid(out_gid);

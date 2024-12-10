@@ -28,13 +28,13 @@ public:
   AttachmentData(
     const int64_t sequence_number,
     const int64_t source_timestamp,
-    const uint8_t source_gid[RMW_GID_STORAGE_SIZE]);
+    const uint8_t source_gid[16]);
   explicit AttachmentData(const z_loaned_bytes_t *);
   explicit AttachmentData(AttachmentData && data);
 
   int64_t sequence_number() const;
   int64_t source_timestamp() const;
-  void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
+  void copy_gid(uint8_t out_gid[16]) const;
   size_t gid_hash() const;
 
   void serialize_to_zbytes(z_owned_bytes_t *);
@@ -42,7 +42,7 @@ public:
 private:
   int64_t sequence_number_;
   int64_t source_timestamp_;
-  uint8_t source_gid_[RMW_GID_STORAGE_SIZE];
+  uint8_t source_gid_[16];
   size_t gid_hash_;
 };
 }  // namespace rmw_zenoh_cpp

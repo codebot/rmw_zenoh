@@ -177,8 +177,8 @@ static const std::unordered_map<std::string, rmw_qos_liveliness_policy_e> str_to
   {std::to_string(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC),
     RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC},
   {std::to_string(RMW_QOS_POLICY_LIVELINESS_UNKNOWN), RMW_QOS_POLICY_LIVELINESS_UNKNOWN},
-  {std::to_string(RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE),
-    RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE}
+  // {std::to_string(RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE),
+  //   RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE}
 };
 
 std::vector<std::string> split_keyexpr(
@@ -638,9 +638,9 @@ std::string Entity::liveliness_keyexpr() const
 }
 
 ///=============================================================================
-void Entity::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
+void Entity::copy_gid(uint8_t out_gid[16]) const
 {
-  memcpy(out_gid, gid_, RMW_GID_STORAGE_SIZE);
+  memcpy(out_gid, gid_, 16);
 }
 
 ///=============================================================================
@@ -679,12 +679,13 @@ std::string demangle_name(const std::string & input)
 }  // namespace liveliness
 
 ///=============================================================================
-size_t hash_gid(const uint8_t gid[RMW_GID_STORAGE_SIZE])
+size_t hash_gid(const uint8_t gid[16])
+// size_t hash_gid(const int8_t gid[16])
 {
   std::stringstream hash_str;
   hash_str << std::hex;
   size_t i = 0;
-  for (; i < (RMW_GID_STORAGE_SIZE - 1); i++) {
+  for (; i < (16 - 1); i++) {
     hash_str << static_cast<int>(gid[i]);
   }
   return std::hash<std::string>{}(hash_str.str());
