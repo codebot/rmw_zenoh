@@ -36,6 +36,7 @@
 
 #include "rcpputils/scope_exit.hpp"
 #include "rmw/error_handling.h"
+#include "zenoh_utils.hpp"
 
 // Megabytes of SHM to reserve.
 // TODO(clalancette): Make this configurable, or get it from the configuration
@@ -86,13 +87,18 @@ public:
       });
 
     // Initialize the zenoh session.
-    if (z_open(&session_, z_move(config), NULL) != Z_OK) {
+    z_owned_session_t raw_session;
+    if (z_open(&raw_session, z_move(config), NULL) != Z_OK) {
       RMW_SET_ERROR_MSG("Error setting up zenoh session.");
       throw std::runtime_error("Error setting up zenoh session.");
     }
+    if (session_ != nullptr) {
+      session_.reset();
+    }
+    session_ = std::make_shared<rmw_zenoh_cpp::ZenohSession>(raw_session);
     auto close_session = rcpputils::make_scope_exit(
-      [this]() {
-        z_close(z_loan_mut(session_), NULL);
+      [&raw_session]() {
+        z_close(z_loan_mut(raw_session), NULL);
       });
 
     // Verify if the zenoh router is running if configured.
@@ -102,7 +108,7 @@ public:
       uint64_t connection_attempts = 0;
       constexpr std::chrono::milliseconds sleep_time(1000);
       constexpr int64_t ticks_between_print(std::chrono::milliseconds(1000) / sleep_time);
-      while ((ret = rmw_zenoh_cpp::zenoh_router_check(z_loan(session_))) != RMW_RET_OK) {
+      while ((ret = rmw_zenoh_cpp::zenoh_router_check(session_->loan())) != RMW_RET_OK) {
         if ((connection_attempts % ticks_between_print) == 0) {
           RMW_ZENOH_LOG_WARN_NAMED(
             "rmw_zenoh_cpp",
@@ -117,7 +123,7 @@ public:
     }
 
     // Initialize the graph cache.
-    const z_id_t zid = z_info_zid(z_loan(session_));
+    const z_id_t zid = z_info_zid(session_->loan());
     graph_cache_ = std::make_shared<rmw_zenoh_cpp::GraphCache>(zid);
     // Setup liveliness subscriptions for discovery.
     std::string liveliness_str = rmw_zenoh_cpp::liveliness::subscription_token(domain_id);
@@ -144,7 +150,7 @@ public:
     z_view_keyexpr_t keyexpr;
     z_view_keyexpr_from_str(&keyexpr, liveliness_str.c_str());
     z_liveliness_get(
-      z_loan(session_), z_loan(keyexpr),
+      session_->loan(), z_loan(keyexpr),
       z_move(closure), NULL);
     z_owned_reply_t reply;
     while (z_recv(z_loan(handler), &reply) == Z_OK) {
@@ -203,7 +209,7 @@ public:
     z_view_keyexpr_t liveliness_ke;
     z_view_keyexpr_from_str(&liveliness_ke, liveliness_str.c_str());
     if (z_liveliness_declare_subscriber(
-        z_loan(session_),
+        session_->loan(),
         &graph_subscriber_, z_loan(liveliness_ke),
         z_move(callback), &sub_options) != Z_OK)
     {
@@ -240,11 +246,8 @@ public:
       // to avoid an AB/BA deadlock if shutdown is racing with graph_sub_data_handler().
     }
 
-    // Close the zenoh session
-    if (z_close(z_loan_mut(session_), NULL) != Z_OK) {
-      RMW_SET_ERROR_MSG("Error while closing zenoh session");
-      return RMW_RET_ERROR;
-    }
+    // Drop the shared session.
+    session_.reset();
 
     return RMW_RET_OK;
   }
@@ -255,10 +258,10 @@ public:
     return enclave_;
   }
 
-  const z_loaned_session_t * session() const
+  std::shared_ptr<rmw_zenoh_cpp::ZenohSession> session() const
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return z_loan(session_);
+    return session_;
   }
 
   std::optional<z_owned_shm_provider_t> & shm_provider()
@@ -288,7 +291,7 @@ public:
   bool session_is_valid() const
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return !z_session_is_closed(z_loan(session_));
+    return !z_session_is_closed(session_->loan());
   }
 
   std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache()
@@ -309,7 +312,7 @@ public:
     }
 
     // Check that the Zenoh session is still valid.
-    if (z_session_is_closed(z_loan(session_))) {
+    if (z_session_is_closed(session_->loan())) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to create NodeData as Zenoh session is invalid.");
@@ -319,7 +322,7 @@ public:
     auto node_data = rmw_zenoh_cpp::NodeData::make(
       node,
       this->get_next_entity_id(),
-      z_loan(session_),
+      session_->loan(),
       domain_id_,
       ns,
       node_name,
@@ -395,8 +398,8 @@ private:
   std::size_t domain_id_;
   // Enclave, name used to find security artifacts in a sros2 keystore.
   std::string enclave_;
-  // An owned session.
-  z_owned_session_t session_;
+  // A shared session.
+  std::shared_ptr<rmw_zenoh_cpp::ZenohSession> session_{nullptr};
   // An optional SHM manager that is initialized of SHM is enabled in the
   // zenoh session config.
   std::optional<z_owned_shm_provider_t> shm_provider_;
@@ -472,7 +475,7 @@ std::string rmw_context_impl_s::enclave() const
 }
 
 ///=============================================================================
-const z_loaned_session_t * rmw_context_impl_s::session() const
+std::shared_ptr<rmw_zenoh_cpp::ZenohSession> rmw_context_impl_s::session() const
 {
   return data_->session();
 }

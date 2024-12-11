@@ -47,7 +47,7 @@ class ClientData final : public std::enable_shared_from_this<ClientData>
 public:
   // Make a shared_ptr of ClientData.
   static std::shared_ptr<ClientData> make(
-    const z_loaned_session_t * session,
+    std::shared_ptr<ZenohSession> session,
     const rmw_node_t * const node,
     const rmw_client_t * client,
     liveliness::NodeInfo node_info,
@@ -95,12 +95,6 @@ public:
   // Shutdown this ClientData.
   rmw_ret_t shutdown();
 
-  // Shutdown this ClientData, and return whether there are any requests currently in flight.
-  bool shutdown_and_query_in_flight();
-
-  // Decrement the in flight requests, and if that drops to 0 remove the client from the node.
-  void decrement_in_flight_and_conditionally_remove();
-
   // Check if this ClientData is shutdown.
   bool is_shutdown() const;
 
@@ -113,16 +107,14 @@ private:
     const rmw_node_t * rmw_node,
     const rmw_client_t * client,
     std::shared_ptr<liveliness::Entity> entity,
+    std::shared_ptr<ZenohSession> sess,
     const void * request_type_support_impl,
     const void * response_type_support_impl,
     std::shared_ptr<RequestTypeSupport> request_type_support,
     std::shared_ptr<ResponseTypeSupport> response_type_support);
 
   // Initialize the Zenoh objects for this entity.
-  bool init(const z_loaned_session_t * session);
-
-  // Shutdown this client (the mutex is expected to be held by the caller).
-  void _shutdown();
+  bool init(std::shared_ptr<ZenohSession> session);
 
   // Internal mutex.
   mutable std::recursive_mutex mutex_;
@@ -131,6 +123,8 @@ private:
   const rmw_client_t * rmw_client_;
   // The Entity generated for the service.
   std::shared_ptr<liveliness::Entity> entity_;
+  // A shared session.
+  std::shared_ptr<ZenohSession> sess_;
   // An owned keyexpression.
   z_owned_keyexpr_t keyexpr_;
   // Liveliness token for the service.
@@ -152,7 +146,6 @@ private:
   bool is_shutdown_;
   // Whether the object has ever successfully been initialized.
   bool initialized_;
-  size_t num_in_flight_;
 };
 using ClientDataPtr = std::shared_ptr<ClientData>;
 using ClientDataConstPtr = std::shared_ptr<const ClientData>;

@@ -65,7 +65,7 @@ void service_data_handler(z_loaned_query_t * query, void * data)
 
 ///=============================================================================
 std::shared_ptr<ServiceData> ServiceData::make(
-  const z_loaned_session_t * session,
+  std::shared_ptr<ZenohSession> session,
   const rmw_node_t * const node,
   liveliness::NodeInfo node_info,
   std::size_t node_id,
@@ -126,7 +126,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
-    z_info_zid(session),
+    z_info_zid(session->loan()),
     std::to_string(node_id),
     std::to_string(service_id),
     liveliness::EntityType::Service,
@@ -150,6 +150,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
     new ServiceData{
       node,
       std::move(entity),
+      session,
       request_members,
       response_members,
       std::move(request_type_support),
@@ -180,7 +181,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
   z_queryable_options_default(&qable_options);
   qable_options.complete = true;
   if (z_declare_queryable(
-      session, &service_data->qable_, z_loan(service_data->keyexpr_),
+      session->loan(), &service_data->qable_, z_loan(service_data->keyexpr_),
       z_move(callback), &qable_options) != Z_OK)
   {
     RMW_SET_ERROR_MSG("unable to create zenoh queryable");
@@ -206,7 +207,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
       }
     });
   if (z_liveliness_declare_token(
-      session, &service_data->token_, z_loan(liveliness_ke),
+      session->loan(), &service_data->token_, z_loan(liveliness_ke),
       NULL) != Z_OK)
   {
     RMW_ZENOH_LOG_ERROR_NAMED(
@@ -228,12 +229,14 @@ std::shared_ptr<ServiceData> ServiceData::make(
 ServiceData::ServiceData(
   const rmw_node_t * rmw_node,
   std::shared_ptr<liveliness::Entity> entity,
+  std::shared_ptr<ZenohSession> sess,
   const void * request_type_support_impl,
   const void * response_type_support_impl,
   std::unique_ptr<RequestTypeSupport> request_type_support,
   std::unique_ptr<ResponseTypeSupport> response_type_support)
 : rmw_node_(rmw_node),
   entity_(std::move(entity)),
+  sess_(std::move(sess)),
   request_type_support_impl_(request_type_support_impl),
   response_type_support_impl_(response_type_support_impl),
   request_type_support_(std::move(request_type_support)),
@@ -526,6 +529,7 @@ rmw_ret_t ServiceData::shutdown()
     z_undeclare_queryable(z_move(qable_));
   }
 
+  sess_.reset();
   is_shutdown_ = true;
   return RMW_RET_OK;
 }
