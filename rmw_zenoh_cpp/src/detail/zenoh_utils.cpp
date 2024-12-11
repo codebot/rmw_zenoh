@@ -49,7 +49,7 @@ zenoh::Bytes create_map_and_set_sequence_num(
   int64_t source_timestamp = now_ns.count();
 
   rmw_zenoh_cpp::AttachmentData data(sequence_number, source_timestamp, gid);
-  return std::move(data.serialize_to_zbytes());
+  return data.serialize_to_zbytes();
 }
 
 ///=============================================================================

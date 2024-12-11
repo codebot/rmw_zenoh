@@ -233,14 +233,12 @@ void ClientData::add_new_reply(std::unique_ptr<ZenohReply> reply)
     reply_queue_.size() >= adapted_qos_profile.depth)
   {
     // Log warning if message is discarded due to hitting the queue depth
-    std::string keystr = std::string(keyexpr_.value().as_string_view());
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Query queue depth of %ld reached, discarding oldest Query "
-      "for client for %.*s",
+      "for client for %s",
       adapted_qos_profile.depth,
-      keystr.size(),
-      keystr.c_str());
+      keyexpr_.value().as_string_view());
     reply_queue_.pop_front();
   }
   reply_queue_.emplace_back(std::move(reply));
@@ -407,10 +405,11 @@ rmw_ret_t ClientData::send_request(
     parameters,
     [client_data](const zenoh::Reply & reply) {
       if (!reply.is_ok()) {
+        auto reply_err_str = reply.get_err().get_payload().as_string();
         RMW_ZENOH_LOG_ERROR_NAMED(
           "rmw_zenoh_cpp",
           "z_reply_is_ok returned False Reason: %s",
-          reply.get_err().get_payload().as_string())
+          reply_err_str.c_str())
         return;
       }
       const zenoh::Sample & sample = reply.get_ok();
@@ -420,7 +419,7 @@ rmw_ret_t ClientData::send_request(
         RMW_ZENOH_LOG_ERROR_NAMED(
           "rmw_zenoh_cpp",
           "Unable to obtain ClientData from data for %s.",
-          std::string(sample.get_keyexpr().as_string_view()));
+          sample.get_keyexpr().as_string_view());
         return;
       }
 

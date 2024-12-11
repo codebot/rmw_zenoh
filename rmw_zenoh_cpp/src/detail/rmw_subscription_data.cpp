@@ -212,7 +212,7 @@ bool SubscriptionData::init()
           RMW_ZENOH_LOG_ERROR_NAMED(
             "rmw_zenoh_cpp",
             "Unable to obtain SubscriptionData from data for %s.",
-            std::string(sample.get_keyexpr().as_string_view()));
+            sample.get_keyexpr().as_string_view());
           return;
         }
 
