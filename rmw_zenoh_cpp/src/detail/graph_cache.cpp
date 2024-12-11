@@ -13,7 +13,9 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <array>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -209,29 +211,32 @@ void GraphCache::handle_matched_events_for_put(
   EntityEventMap local_entities_with_events = {};
   // The entity added may be local with callbacks registered but there
   // may be other local entities in the graph that are matched.
-  std::size_t match_count_for_entity = 0;
+  int32_t match_count_for_entity = 0;
   for (const auto & [_, topic_data_ptr] : topic_qos_map) {
     if (is_pub) {
       // Count the number of matching subs for each set of qos settings.
-      match_count_for_entity += topic_data_ptr->subs_.size();
+      std::size_t sub_size = topic_data_ptr->subs_.size();
+      if (sub_size > std::numeric_limits<int32_t>::max()) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "Too many subscriptions on publisher; assuming 0. Report this bug.");
+        sub_size = 0;
+      }
+      match_count_for_entity += static_cast<int32_t>(sub_size);
       // Also iterate through the subs to check if any are local and if update event counters.
       for (liveliness::ConstEntityPtr sub_entity : topic_data_ptr->subs_) {
         // Update counters only if key expressions match.
         if (entity->topic_info()->topic_keyexpr_ ==
           sub_entity->topic_info().value().topic_keyexpr_)
         {
-          update_event_counters(
-            topic_info.name_,
-            ZENOH_EVENT_SUBSCRIPTION_MATCHED,
-            static_cast<int32_t>(1));
+          update_event_counters(topic_info.name_, ZENOH_EVENT_SUBSCRIPTION_MATCHED, 1);
           if (is_entity_local(*sub_entity)) {
             local_entities_with_events[sub_entity].insert(ZENOH_EVENT_SUBSCRIPTION_MATCHED);
           }
         }
       }
       // Update event counters for the new entity->
-      update_event_counters(
-        topic_info.name_,
+      update_event_counters(topic_info.name_,
         ZENOH_EVENT_PUBLICATION_MATCHED,
         match_count_for_entity);
       if (is_entity_local(*entity) && match_count_for_entity > 0) {
@@ -240,17 +245,21 @@ void GraphCache::handle_matched_events_for_put(
     } else {
       // Entity is a sub.
       // Count the number of matching pubs for each set of qos settings.
-      match_count_for_entity += topic_data_ptr->pubs_.size();
+      std::size_t pub_size = topic_data_ptr->pubs_.size();
+      if (pub_size > std::numeric_limits<int32_t>::max()) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "Too many publishers on subscription; assuming 0. Report this bug.");
+        pub_size = 0;
+      }
+      match_count_for_entity += static_cast<int32_t>(pub_size);
       // Also iterate through the pubs to check if any are local and if update event counters.
       for (liveliness::ConstEntityPtr pub_entity : topic_data_ptr->pubs_) {
         // Update counters only if key expressions match.
         if (entity->topic_info()->topic_keyexpr_ ==
           pub_entity->topic_info().value().topic_keyexpr_)
         {
-          update_event_counters(
-            topic_info.name_,
-            ZENOH_EVENT_PUBLICATION_MATCHED,
-            static_cast<int32_t>(1));
+          update_event_counters(topic_info.name_, ZENOH_EVENT_PUBLICATION_MATCHED, 1);
           if (is_entity_local(*pub_entity)) {
             local_entities_with_events[pub_entity].insert(ZENOH_EVENT_PUBLICATION_MATCHED);
           }

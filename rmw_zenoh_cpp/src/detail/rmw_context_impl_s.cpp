@@ -76,6 +76,7 @@ public:
 
     zenoh::ZResult result;
 
+#ifndef _MSC_VER
     // Check if shm is enabled.
     std::string shm_enabled = config.value().get(Z_CONFIG_SHARED_MEMORY_KEY, &result);
     if (result != Z_OK) {
@@ -84,6 +85,7 @@ public:
         "Not able to get %s from the config file",
         Z_CONFIG_SHARED_MEMORY_KEY);
     }
+#endif
 
     // Initialize the zenoh session.
     session_ = std::make_shared<zenoh::Session>(
@@ -180,6 +182,7 @@ public:
 
     // Initialize the shm manager if shared_memory is enabled in the config.
     shm_provider_ = std::nullopt;
+#ifndef _MSC_VER
     if (shm_enabled == "true") {
       auto layout = zenoh::MemoryLayout(
         SHM_BUFFER_SIZE_MB * 1024 * 1024,
@@ -190,7 +193,7 @@ public:
       }
       shm_provider_ = std::move(provider);
     }
-
+#endif
     graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
     graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
     graph_guard_condition_->data = &guard_condition_data_;

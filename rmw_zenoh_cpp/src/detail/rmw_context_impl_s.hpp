@@ -29,7 +29,7 @@
 #include "rmw/types.h"
 
 ///=============================================================================
-class rmw_context_impl_s final
+struct rmw_context_impl_s final
 {
 public:
   // Constructor that internally initializes the Zenoh session and other artifacts.
@@ -95,6 +95,5 @@ public:
 private:
   std::shared_ptr<Data> data_{nullptr};
 };
-
 
 #endif  // DETAIL__RMW_CONTEXT_IMPL_S_HPP_
