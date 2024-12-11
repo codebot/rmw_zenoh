@@ -42,11 +42,11 @@
 
 namespace
 {
-
+///=============================================================================
 struct ClientDataWrapper
 {
   explicit ClientDataWrapper(std::shared_ptr<rmw_zenoh_cpp::ClientData> data)
-  : client_data(data)
+  : client_data(std::move(data))
   {
   }
 
