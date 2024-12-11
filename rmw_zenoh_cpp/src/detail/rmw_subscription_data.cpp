@@ -444,6 +444,7 @@ rmw_ret_t SubscriptionData::shutdown()
     }
   }
 
+  sess_.reset();
   is_shutdown_ = true;
   initialized_ = false;
   return ret;

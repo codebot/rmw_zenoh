@@ -380,13 +380,7 @@ ClientDataPtr NodeData::get_client_data(const rmw_client_t * const client)
 void NodeData::delete_client_data(const rmw_client_t * const client)
 {
   std::lock_guard<std::recursive_mutex> lock_guard(mutex_);
-  auto client_it = clients_.find(client);
-  if (client_it == clients_.end()) {
-    return;
-  }
-  if (!client_it->second->shutdown_and_query_in_flight()) {
-    clients_.erase(client);
-  }
+  clients_.erase(client);
 }
 
 ///=============================================================================

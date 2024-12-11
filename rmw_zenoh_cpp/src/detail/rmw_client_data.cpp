@@ -134,6 +134,7 @@ std::shared_ptr<ClientData> ClientData::make(
       node,
       client,
       entity,
+      session,
       request_members,
       response_members,
       request_type_support,
@@ -153,6 +154,7 @@ ClientData::ClientData(
   const rmw_node_t * rmw_node,
   const rmw_client_t * rmw_client,
   std::shared_ptr<liveliness::Entity> entity,
+  std::shared_ptr<zenoh::Session> sess,
   const void * request_type_support_impl,
   const void * response_type_support_impl,
   std::shared_ptr<RequestTypeSupport> request_type_support,
@@ -160,6 +162,7 @@ ClientData::ClientData(
 : rmw_node_(rmw_node),
   rmw_client_(rmw_client),
   entity_(std::move(entity)),
+  sess_(std::move(sess)),
   request_type_support_impl_(request_type_support_impl),
   response_type_support_impl_(response_type_support_impl),
   request_type_support_(request_type_support),
@@ -167,8 +170,7 @@ ClientData::ClientData(
   wait_set_data_(nullptr),
   sequence_number_(1),
   is_shutdown_(false),
-  initialized_(false),
-  num_in_flight_(0)
+  initialized_(false)
 {
   // Do nothing.
 }
@@ -401,10 +403,6 @@ rmw_ret_t ClientData::send_request(
     reinterpret_cast<const uint8_t *>(request_bytes) + data_length);
   opts.payload = zenoh::Bytes(raw_bytes);
 
-  // TODO(Yadunund): Once we switch to zenoh-cpp with lambda closures,
-  // capture shared_from_this() instead of this.
-  num_in_flight_++;
-
   std::weak_ptr<rmw_zenoh_cpp::ClientData> client_data = shared_from_this();
   zenoh::ZResult err;
   std::string parameters;
@@ -448,7 +446,6 @@ rmw_ret_t ClientData::send_request(
           "Unable to obtain ClientData");
         return;
       }
-      sub_data->decrement_in_flight_and_conditionally_remove();
     },
     std::move(opts),
     &err);
@@ -500,61 +497,29 @@ bool ClientData::detach_condition_and_queue_is_empty()
 }
 
 ///=============================================================================
-void ClientData::_shutdown()
+rmw_ret_t ClientData::shutdown()
 {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   if (is_shutdown_) {
-    return;
+    return RMW_RET_OK;
   }
 
   // Unregister this node from the ROS graph.
-  zenoh::ZResult err;
-  std::move(token_).value().undeclare(&err);
-  if (err != Z_OK) {
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp",
-      "Unable to undeclare liveliness token");
-    return;
+  if (initialized_) {
+    zenoh::ZResult err;
+    std::move(token_).value().undeclare(&err);
+    if (err != Z_OK) {
+      RMW_ZENOH_LOG_ERROR_NAMED(
+        "rmw_zenoh_cpp",
+        "Unable to undeclare liveliness token");
+      return RMW_RET_ERROR;
+    }
   }
 
   sess_.reset();
   is_shutdown_ = true;
-}
 
-///=============================================================================
-rmw_ret_t ClientData::shutdown()
-{
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  _shutdown();
   return RMW_RET_OK;
-}
-
-///=============================================================================
-bool ClientData::shutdown_and_query_in_flight()
-{
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  _shutdown();
-  return num_in_flight_ > 0;
-}
-
-///=============================================================================
-void ClientData::decrement_in_flight_and_conditionally_remove()
-{
-  std::unique_lock<std::recursive_mutex> lock(mutex_);
-  --num_in_flight_;
-
-  if (is_shutdown_ && num_in_flight_ == 0) {
-    rmw_context_impl_s * context_impl = static_cast<rmw_context_impl_s *>(rmw_node_->data);
-    if (context_impl == nullptr) {
-      return;
-    }
-    std::shared_ptr<rmw_zenoh_cpp::NodeData> node_data = context_impl->get_node_data(rmw_node_);
-    if (node_data == nullptr) {
-      return;
-    }
-    // We have to unlock here since we are about to delete ourself, and thus the unlock would be UB.
-    lock.unlock();
-    node_data->delete_client_data(rmw_client_);
-  }
 }
 
 ///=============================================================================

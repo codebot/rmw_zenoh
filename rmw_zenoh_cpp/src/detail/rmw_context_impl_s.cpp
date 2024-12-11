@@ -37,6 +37,7 @@
 
 #include "rcpputils/scope_exit.hpp"
 #include "rmw/error_handling.h"
+#include "zenoh_utils.hpp"
 
 // Megabytes of SHM to reserve.
 // TODO(clalancette): Make this configurable, or get it from the configuration
@@ -262,12 +263,15 @@ public:
         return RMW_RET_ERROR;
       }
 
-      session_.reset();
       is_shutdown_ = true;
 
       // We specifically do *not* hold the mutex_ while tearing down the session; this allows us
       // to avoid an AB/BA deadlock if shutdown is racing with graph_sub_data_handler().
     }
+
+    // Drop the shared session.
+    session_.reset();
+
     return RMW_RET_OK;
   }
 
