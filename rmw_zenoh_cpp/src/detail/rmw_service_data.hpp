@@ -47,7 +47,7 @@ class ServiceData final
 public:
   // Make a shared_ptr of ServiceData.
   static std::shared_ptr<ServiceData> make(
-    const z_loaned_session_t * session,
+    std::shared_ptr<ZenohSession> session,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,
     std::size_t node_id,
@@ -99,6 +99,7 @@ private:
   ServiceData(
     const rmw_node_t * rmw_node,
     std::shared_ptr<liveliness::Entity> entity,
+    std::shared_ptr<ZenohSession> sess,
     const void * request_type_support_impl,
     const void * response_type_support_impl,
     std::unique_ptr<RequestTypeSupport> request_type_support,
@@ -112,6 +113,8 @@ private:
   std::shared_ptr<liveliness::Entity> entity_;
   // An owned keyexpression.
   z_owned_keyexpr_t keyexpr_;
+  // A shared session.
+  std::shared_ptr<ZenohSession> sess_;
   // An owned queryable.
   z_owned_queryable_t qable_;
   // Liveliness token for the service.

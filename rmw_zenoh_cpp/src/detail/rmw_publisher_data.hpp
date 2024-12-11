@@ -28,6 +28,7 @@
 #include "liveliness_utils.hpp"
 #include "message_type_support.hpp"
 #include "type_support_common.hpp"
+#include "zenoh_utils.hpp"
 
 #include "rcutils/allocator.h"
 
@@ -42,7 +43,7 @@ class PublisherData final
 public:
   // Make a shared_ptr of PublisherData.
   static std::shared_ptr<PublisherData> make(
-    const z_loaned_session_t * session,
+    std::shared_ptr<ZenohSession> session,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,
     std::size_t node_id,
@@ -90,6 +91,7 @@ private:
   PublisherData(
     const rmw_node_t * rmw_node,
     std::shared_ptr<liveliness::Entity> entity,
+    std::shared_ptr<ZenohSession> sess,
     z_owned_publisher_t pub,
     std::optional<ze_owned_publication_cache_t> pub_cache,
     z_owned_liveliness_token_t token,
@@ -102,6 +104,8 @@ private:
   const rmw_node_t * rmw_node_;
   // The Entity generated for the publisher.
   std::shared_ptr<liveliness::Entity> entity_;
+  // A shared session.
+  std::shared_ptr<ZenohSession> sess_;
   // An owned publisher.
   z_owned_publisher_t pub_;
   // Optional publication cache when durability is transient_local.

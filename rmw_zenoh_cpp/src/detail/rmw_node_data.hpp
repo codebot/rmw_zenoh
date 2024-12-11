@@ -55,7 +55,7 @@ public:
   // Create a new PublisherData for a given rmw_publisher_t.
   bool create_pub_data(
     const rmw_publisher_t * const publisher,
-    const z_loaned_session_t * session,
+    std::shared_ptr<ZenohSession> sess,
     std::size_t id,
     const std::string & topic_name,
     const rosidl_message_type_support_t * type_support,
@@ -70,7 +70,7 @@ public:
   // Create a new SubscriptionData for a given rmw_subscription_t.
   bool create_sub_data(
     const rmw_subscription_t * const subscription,
-    const z_loaned_session_t * session,
+    std::shared_ptr<ZenohSession> sess,
     std::shared_ptr<GraphCache> graph_cache,
     std::size_t id,
     const std::string & topic_name,
@@ -86,7 +86,7 @@ public:
   // Create a new ServiceData for a given rmw_service_t.
   bool create_service_data(
     const rmw_service_t * const service,
-    const z_loaned_session_t * session,
+    std::shared_ptr<ZenohSession> session,
     std::size_t id,
     const std::string & service_name,
     const rosidl_service_type_support_t * type_support,
@@ -101,7 +101,7 @@ public:
   // Create a new ClientData for a given rmw_client_t.
   bool create_client_data(
     const rmw_client_t * const client,
-    const z_loaned_session_t * session,
+    std::shared_ptr<ZenohSession> session,
     std::size_t id,
     const std::string & service_name,
     const rosidl_service_type_support_t * type_support,

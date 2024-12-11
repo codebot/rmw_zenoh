@@ -34,6 +34,7 @@
 #include "message_type_support.hpp"
 #include "attachment_helpers.hpp"
 #include "type_support_common.hpp"
+#include "zenoh_utils.hpp"
 
 #include "rcutils/allocator.h"
 
@@ -62,7 +63,7 @@ public:
 
   // Make a shared_ptr of SubscriptionData.
   static std::shared_ptr<SubscriptionData> make(
-    const z_loaned_session_t * session,
+    std::shared_ptr<ZenohSession> session,
     std::shared_ptr<GraphCache> graph_cache,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,
@@ -126,6 +127,7 @@ private:
     const rmw_node_t * rmw_node,
     std::shared_ptr<GraphCache> graph_cache,
     std::shared_ptr<liveliness::Entity> entity,
+    std::shared_ptr<ZenohSession> sess,
     const void * type_support_impl,
     std::unique_ptr<MessageTypeSupport> type_support);
 
@@ -139,6 +141,8 @@ private:
   std::shared_ptr<GraphCache> graph_cache_;
   // The Entity generated for the subscription.
   std::shared_ptr<liveliness::Entity> entity_;
+  // A shared session
+  std::shared_ptr<ZenohSession> sess_;
   // An owned subscriber or querying_subscriber depending on the QoS settings.
   std::variant<z_owned_subscriber_t, ze_owned_querying_subscriber_t> sub_;
   // Liveliness token for the subscription.
