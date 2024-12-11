@@ -28,7 +28,7 @@ jobs:
     runs-on:
       - self-hosted
       - X64
-      - ubuntu-ros
+      - ubuntu-latest
     container:
       image: ${{ matrix.BUILD_TYPE == 'binary' && format('ros:{0}-ros-base', matrix.ROS_DISTRO) || 'ubuntu:noble' }}
     steps:
