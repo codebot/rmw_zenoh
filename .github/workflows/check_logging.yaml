@@ -7,7 +7,7 @@ jobs:
     runs-on:
       - self-hosted
       - X64
-      - ubuntu-ros
+      - ubuntu-latest
     steps:
     - name: Check logging macros
       uses: JJ/github-pr-contains-action@releases/v14.1
