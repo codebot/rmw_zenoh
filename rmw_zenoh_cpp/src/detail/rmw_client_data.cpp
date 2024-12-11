@@ -182,12 +182,12 @@ bool ClientData::init(const std::shared_ptr<zenoh::Session> session)
   keyexpr_ = zenoh::KeyExpr(topic_keyexpr);
   // TODO(ahcorde) check KeyExpr
   std::string liveliness_keyexpr = this->entity_->liveliness_keyexpr();
-  zenoh::ZResult err;
+  zenoh::ZResult result;
   this->token_ = session->liveliness_declare_token(
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
-    &err);
-  if (err != Z_OK) {
+    &result);
+  if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the client.");
@@ -280,14 +280,10 @@ rmw_ret_t ClientData::take_response(
   const zenoh::Sample & sample = reply.get_ok();
 
   // Object that manages the raw buffer
-  auto & payload = sample.get_payload();
-  auto slice = payload.slice_iter().next();
-  if (slice.has_value()) {
-    const uint8_t * payload = slice.value().data;
-    const size_t payload_len = slice.value().len;
-
+  auto payload = sample.get_payload().as_vector();
+  if (payload.size() > 0) {
     eprosima::fastcdr::FastBuffer fastbuffer(
-      reinterpret_cast<char *>(const_cast<uint8_t *>(payload)), payload_len);
+      reinterpret_cast<char *>(const_cast<uint8_t *>(payload.data())), payload.size());
 
     // Object that serializes the data
     rmw_zenoh_cpp::Cdr deser(fastbuffer);
@@ -401,10 +397,10 @@ rmw_ret_t ClientData::send_request(
   std::vector<uint8_t> raw_bytes(
     reinterpret_cast<const uint8_t *>(request_bytes),
     reinterpret_cast<const uint8_t *>(request_bytes) + data_length);
-  opts.payload = zenoh::Bytes(raw_bytes);
+  opts.payload = zenoh::Bytes(std::move(raw_bytes));
 
   std::weak_ptr<rmw_zenoh_cpp::ClientData> client_data = shared_from_this();
-  zenoh::ZResult err;
+  zenoh::ZResult result;
   std::string parameters;
   context_impl->session()->get(
     keyexpr_.value(),
@@ -448,7 +444,13 @@ rmw_ret_t ClientData::send_request(
       }
     },
     std::move(opts),
-    &err);
+    &result);
+  if (result != Z_OK) {
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp",
+      "ClientData unable to call get");
+    return RMW_RET_ERROR;
+  }
   return RMW_RET_OK;
 }
 
@@ -506,9 +508,9 @@ rmw_ret_t ClientData::shutdown()
 
   // Unregister this node from the ROS graph.
   if (initialized_) {
-    zenoh::ZResult err;
-    std::move(token_).value().undeclare(&err);
-    if (err != Z_OK) {
+    zenoh::ZResult result;
+    std::move(token_).value().undeclare(&result);
+    if (result != Z_OK) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare liveliness token");

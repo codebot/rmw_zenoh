@@ -751,7 +751,7 @@ rmw_publisher_assert_liveliness(const rmw_publisher_t * publisher)
   auto pub_data = node_data->get_pub_data(publisher);
   RMW_CHECK_ARGUMENT_FOR_NULL(pub_data, RMW_RET_INVALID_ARGUMENT);
 
-  if (pub_data->is_shutdown()) {
+  if (!pub_data->liveliness_is_valid()) {
     return RMW_RET_ERROR;
   }
 

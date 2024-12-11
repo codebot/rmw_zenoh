@@ -135,10 +135,10 @@ std::shared_ptr<ServiceData> ServiceData::make(
       std::move(response_type_support)
     });
 
-  zenoh::ZResult err;
+  zenoh::ZResult result;
   service_data->keyexpr_ = service_data->entity_->topic_info()->topic_keyexpr_;
-  zenoh::KeyExpr service_ke(service_data->keyexpr_, true, &err);
-  if (err != Z_OK) {
+  zenoh::KeyExpr service_ke(service_data->keyexpr_, true, &result);
+  if (result != Z_OK) {
     RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
     return nullptr;
   }
@@ -167,8 +167,8 @@ std::shared_ptr<ServiceData> ServiceData::make(
     },
     zenoh::closures::none,
     std::move(qable_options),
-    &err);
-  if (err != Z_OK) {
+    &result);
+  if (result != Z_OK) {
     RMW_SET_ERROR_MSG("unable to create zenoh queryable");
     return nullptr;
   }
@@ -177,8 +177,8 @@ std::shared_ptr<ServiceData> ServiceData::make(
   service_data->token_ = session->liveliness_declare_token(
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
-    &err);
-  if (err != Z_OK) {
+    &result);
+  if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the service.");
@@ -290,15 +290,12 @@ rmw_ret_t ServiceData::take_request(
     return RMW_RET_ERROR;
   }
 
-  auto slice = payload.value().get().slice_iter().next();
+  auto payload_data = payload.value().get().as_vector();
 
-  if (slice.has_value()) {
-    const uint8_t * payload = slice.value().data;
-    const size_t payload_len = slice.value().len;
-
-    // Object that manages the raw buffer
+  if (payload_data.size() > 0) {
+   // Object that manages the raw buffer
     eprosima::fastcdr::FastBuffer fastbuffer(
-      reinterpret_cast<char *>(const_cast<uint8_t *>(payload)), payload_len);
+      reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())), payload_data.size());
 
     // Object that serializes the data
     Cdr deser(fastbuffer);
@@ -448,17 +445,17 @@ rmw_ret_t ServiceData::send_response(
   std::vector<uint8_t> raw_bytes(
     reinterpret_cast<const uint8_t *>(response_bytes),
     reinterpret_cast<const uint8_t *>(response_bytes) + data_length);
-  zenoh::Bytes payload(raw_bytes);
+  zenoh::Bytes payload(std::move(raw_bytes));
 
-  zenoh::ZResult err;
-  zenoh::KeyExpr service_ke(keyexpr_.c_str(), true, &err);
-  if (err != Z_OK) {
+  zenoh::ZResult result;
+  zenoh::KeyExpr service_ke(keyexpr_.c_str(), true, &result);
+  if (result != Z_OK) {
     RMW_SET_ERROR_MSG("unable to create KeyExpr");
     return RMW_RET_ERROR;
   }
 
-  loaned_query.reply(service_ke, std::move(payload), std::move(options), &err);
-  if (err != Z_OK) {
+  loaned_query.reply(service_ke, std::move(payload), std::move(options), &result);
+  if (result != Z_OK) {
     RMW_SET_ERROR_MSG("unable to reply");
     return RMW_RET_ERROR;
   }
@@ -521,17 +518,17 @@ rmw_ret_t ServiceData::shutdown()
 
   // Unregister this node from the ROS graph.
   if (initialized_) {
-    zenoh::ZResult err;
-    std::move(token_).value().undeclare(&err);
-    if (err != Z_OK) {
+    zenoh::ZResult result;
+    std::move(token_).value().undeclare(&result);
+    if (result != Z_OK) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare liveliness token");
       return RMW_RET_ERROR;
     }
 
-    std::move(qable_).value().undeclare(&err);
-    if (err != Z_OK) {
+    std::move(qable_).value().undeclare(&result);
+    if (result != Z_OK) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare queryable");

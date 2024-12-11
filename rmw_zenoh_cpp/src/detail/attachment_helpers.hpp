@@ -24,13 +24,14 @@
 
 namespace rmw_zenoh_cpp
 {
+///=============================================================================
 class AttachmentData final
 {
 public:
-  explicit AttachmentData(
-    const int64_t _sequence_number,
-    const int64_t _source_timestamp,
-    const std::vector<uint8_t> _source_gid);
+  AttachmentData(
+    const int64_t sequence_number,
+    const int64_t source_timestamp,
+    const std::vector<uint8_t> source_gid);
 
   explicit AttachmentData(const zenoh::Bytes & bytes);
   explicit AttachmentData(AttachmentData && data);

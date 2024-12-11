@@ -56,8 +56,8 @@ zenoh::Bytes create_map_and_set_sequence_num(
 ZenohQuery::ZenohQuery(
   const zenoh::Query & query,
   std::chrono::nanoseconds::rep received_timestamp)
+: query_(query.clone())
 {
-  query_ = query.clone();
   received_timestamp_ = received_timestamp;
 }
 
@@ -71,7 +71,7 @@ std::chrono::nanoseconds::rep ZenohQuery::get_received_timestamp() const
 ZenohQuery::~ZenohQuery() {}
 
 ///=============================================================================
-const zenoh::Query & ZenohQuery::get_query() const {return query_.value();}
+const zenoh::Query & ZenohQuery::get_query() const {return query_;}
 
 ///=============================================================================
 ZenohReply::ZenohReply(

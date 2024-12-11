@@ -69,8 +69,8 @@ TopicData::TopicData(ConstEntityPtr entity)
 }
 
 ///=============================================================================
-GraphCache::GraphCache(const std::string & zid)
-: zid_str_(zid)
+GraphCache::GraphCache(const zenoh::Id & zid)
+: zid_str_(zid.to_string())
 {
   // Do nothing.
 }

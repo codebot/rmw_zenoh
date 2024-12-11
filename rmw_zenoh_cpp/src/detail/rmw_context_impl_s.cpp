@@ -111,9 +111,9 @@ public:
             "Unable to connect to a Zenoh router. "
             "Have you started a router with `ros2 run rmw_zenoh_cpp rmw_zenohd`?");
         }
-        zenoh::ZResult err;
-        this->session_->get_routers_z_id(&err);
-        if (err != Z_OK) {
+        zenoh::ZResult result;
+        this->session_->get_routers_z_id(&result);
+        if (result != Z_OK) {
           ++connection_attempts;
         } else {
           ret = RMW_RET_OK;
@@ -127,7 +127,7 @@ public:
 
     // Initialize the graph cache.
     graph_cache_ =
-      std::make_shared<rmw_zenoh_cpp::GraphCache>(this->session_->get_zid().to_string());
+      std::make_shared<rmw_zenoh_cpp::GraphCache>(this->session_->get_zid());
     // Setup liveliness subscriptions for discovery.
     std::string liveliness_str = rmw_zenoh_cpp::liveliness::subscription_token(domain_id);
 
@@ -155,14 +155,13 @@ public:
     options.target = zenoh::QueryTarget::Z_QUERY_TARGET_ALL;
     options.payload = "";
 
-    zenoh::ZResult err;
     auto replies = session_->liveliness_get(
       keyexpr,
       zenoh::channels::FifoChannel(SIZE_MAX - 1),
       zenoh::Session::LivelinessGetOptions::create_default(),
-      &err);
+      &result);
 
-    if (err != Z_OK) {
+    if (result != Z_OK) {
       throw std::runtime_error("Error getting liveliness. ");
     }
 
@@ -223,9 +222,9 @@ public:
       },
       zenoh::closures::none,
       std::move(sub_options),
-      &err);
+      &result);
 
-    if (err != Z_OK) {
+    if (result != Z_OK) {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
       throw std::runtime_error("Unable to subscribe to ROS graph updates.");
     }
@@ -241,22 +240,9 @@ public:
         return ret;
       }
 
-      // TODO(ahcorde): review this
-      // // Shutdown all the nodes in this context.
-      // for (auto node_it = nodes_.begin(); node_it != nodes_.end(); ++node_it) {
-      //   ret = node_it->second->shutdown();
-      //   if (ret != RMW_RET_OK) {
-      //     RMW_ZENOH_LOG_ERROR_NAMED(
-      //       "rmw_zenoh_cpp",
-      //       "Unable to shutdown node with id %zu. rmw_ret_t code: %zu.",
-      //       node_it->second->id(),
-      //       ret
-      //     );
-      //   }
-
-      zenoh::ZResult err;
-      std::move(graph_subscriber_cpp_).value().undeclare(&err);
-      if (err != Z_OK) {
+      zenoh::ZResult result;
+      std::move(graph_subscriber_cpp_).value().undeclare(&result);
+      if (result != Z_OK) {
         RMW_ZENOH_LOG_ERROR_NAMED(
           "rmw_zenoh_cpp",
           "Unable to undeclare liveliness token");

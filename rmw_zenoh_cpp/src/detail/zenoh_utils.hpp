@@ -77,7 +77,7 @@ public:
   std::chrono::nanoseconds::rep get_received_timestamp() const;
 
 private:
-  std::optional<zenoh::Query> query_;
+  zenoh::Query query_;
   std::chrono::nanoseconds::rep received_timestamp_;
 };
 }  // namespace rmw_zenoh_cpp

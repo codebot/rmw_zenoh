@@ -169,9 +169,9 @@ bool SubscriptionData::init()
       "`reliability` no longer supported on subscriber. Ignoring...");
   }
 
-  zenoh::ZResult err;
-  zenoh::KeyExpr sub_ke(entity_->topic_info()->topic_keyexpr_, true, &err);
-  if (err != Z_OK) {
+  zenoh::ZResult result;
+  zenoh::KeyExpr sub_ke(entity_->topic_info()->topic_keyexpr_, true, &result);
+  if (result != Z_OK) {
     RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
     return false;
   }
@@ -236,8 +236,8 @@ bool SubscriptionData::init()
       },
       zenoh::closures::none,
       std::move(sub_options),
-      &err);
-    if (err != Z_OK) {
+      &result);
+    if (result != Z_OK) {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
       return false;
     }
@@ -273,13 +273,13 @@ bool SubscriptionData::init()
         opts.consolidation = zenoh::ConsolidationMode::Z_CONSOLIDATION_MODE_NONE;
         opts.accept_replies = ZC_REPLY_KEYEXPR_ANY;
 
-        zenoh::ZResult err;
+        zenoh::ZResult result;
         std::get<zenoh::ext::QueryingSubscriber<void>>(sub_data->sub_.value()).get(
           zenoh::KeyExpr(selector),
           std::move(opts),
-          &err);
+          &result);
 
-        if (err != Z_OK) {
+        if (result != Z_OK) {
           RMW_SET_ERROR_MSG("unable to get querying subscriber.");
           return;
         }
@@ -322,8 +322,8 @@ bool SubscriptionData::init()
       },
       zenoh::closures::none,
       std::move(sub_options),
-      &err);
-    if (err != Z_OK) {
+      &result);
+    if (result != Z_OK) {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
       return false;
     }
@@ -335,8 +335,8 @@ bool SubscriptionData::init()
   token_ = context_impl->session()->liveliness_declare_token(
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
-    &err);
-  if (err != Z_OK) {
+    &result);
+  if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the subscription.");
@@ -410,9 +410,9 @@ rmw_ret_t SubscriptionData::shutdown()
   graph_cache_->remove_qos_event_callbacks(entity_->keyexpr_hash());
 
   // Unregister this subscription from the ROS graph.
-  zenoh::ZResult err;
-  std::move(token_).value().undeclare(&err);
-  if (err != Z_OK) {
+  zenoh::ZResult result;
+  std::move(token_).value().undeclare(&result);
+  if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to undeclare liveliness token");
@@ -422,8 +422,8 @@ rmw_ret_t SubscriptionData::shutdown()
   if (sub_.has_value()) {
     zenoh::Subscriber<void> * sub = std::get_if<zenoh::Subscriber<void>>(&sub_.value());
     if (sub != nullptr) {
-      std::move(*sub).undeclare(&err);
-      if (err != Z_OK) {
+      std::move(*sub).undeclare(&result);
+      if (result != Z_OK) {
         RMW_ZENOH_LOG_ERROR_NAMED(
           "rmw_zenoh_cpp",
           "failed to undeclare sub.");
@@ -433,8 +433,8 @@ rmw_ret_t SubscriptionData::shutdown()
       zenoh::ext::QueryingSubscriber<void> * sub =
         std::get_if<zenoh::ext::QueryingSubscriber<void>>(&sub_.value());
       if (sub != nullptr) {
-        std::move(*sub).undeclare(&err);
-        if (err != Z_OK) {
+        std::move(*sub).undeclare(&result);
+        if (result != Z_OK) {
           RMW_ZENOH_LOG_ERROR_NAMED(
             "rmw_zenoh_cpp",
             "failed to undeclare querying sub.");
@@ -496,16 +496,13 @@ rmw_ret_t SubscriptionData::take_one_message(
   std::unique_ptr<Message> msg_data = std::move(message_queue_.front());
   message_queue_.pop_front();
 
-  auto slice = msg_data->payload.slice_iter().next();
+  auto payload_data = msg_data->payload.as_vector();
 
-  if (slice.has_value()) {
-    const uint8_t * payload = slice.value().data;
-    const size_t payload_len = slice.value().len;
-
+  if (payload_data.size() > 0) {
     // Object that manages the raw buffer
     eprosima::fastcdr::FastBuffer fastbuffer(
-      reinterpret_cast<char *>(const_cast<uint8_t *>(payload)),
-      payload_len);
+      reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())),
+      payload_data.size());
 
     // Object that serializes the data
     rmw_zenoh_cpp::Cdr deser(fastbuffer);
@@ -558,20 +555,21 @@ rmw_ret_t SubscriptionData::take_serialized_message(
   std::unique_ptr<Message> msg_data = std::move(message_queue_.front());
   message_queue_.pop_front();
 
-  auto slice = msg_data->payload.slice_iter().next();
+  auto payload_data = msg_data->payload.as_vector();
 
-  if (slice.has_value()) {
-    const uint8_t * payload = slice.value().data;
-    const size_t payload_len = slice.value().len;
-    if (serialized_message->buffer_capacity < payload_len) {
+  if (payload_data.size() > 0) {
+    if (serialized_message->buffer_capacity < payload_data.size()) {
       rmw_ret_t ret =
-        rmw_serialized_message_resize(serialized_message, payload_len);
+        rmw_serialized_message_resize(serialized_message, payload_data.size());
       if (ret != RMW_RET_OK) {
         return ret;  // Error message already set
       }
     }
-    serialized_message->buffer_length = payload_len;
-    memcpy(serialized_message->buffer, payload, payload_len);
+    serialized_message->buffer_length = payload_data.size();
+    memcpy(
+      serialized_message->buffer,
+      reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())),
+      payload_data.size());
 
     *taken = true;
 

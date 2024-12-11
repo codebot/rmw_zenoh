@@ -58,12 +58,12 @@ std::shared_ptr<NodeData> NodeData::make(
 
   // Create the liveliness token.
   std::string liveliness_keyexpr = entity->liveliness_keyexpr();
-  zenoh::ZResult err;
+  zenoh::ZResult result;
   auto token = session->liveliness_declare_token(
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
-    &err);
-  if (err != Z_OK) {
+    &result);
+  if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the node.");
@@ -393,9 +393,9 @@ rmw_ret_t NodeData::shutdown()
   }
 
   // Unregister this node from the ROS graph.
-  zenoh::ZResult err;
-  std::move(token_).value().undeclare(&err);
-  if (err != Z_OK) {
+  zenoh::ZResult result;
+  std::move(token_).value().undeclare(&result);
+  if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to undeclare liveliness token");

@@ -31,14 +31,14 @@ namespace rmw_zenoh_cpp
 {
 
 AttachmentData::AttachmentData(
-  const int64_t _sequence_number,
-  const int64_t _source_timestamp,
-  const std::vector<uint8_t> _source_gid)
+  const int64_t sequence_number,
+  const int64_t source_timestamp,
+  const std::vector<uint8_t> source_gid)
+: sequence_number_(sequence_number),
+  source_timestamp_(source_timestamp),
+  source_gid_(source_gid),
+  gid_hash_(hash_gid(source_gid))
 {
-  sequence_number_ = _sequence_number;
-  source_timestamp_ = _source_timestamp;
-  source_gid_ = _source_gid;
-  gid_hash_ = hash_gid(source_gid_);
 }
 
 AttachmentData::AttachmentData(AttachmentData && data)
@@ -85,9 +85,9 @@ zenoh::Bytes AttachmentData::serialize_to_zbytes()
   return std::move(serializer).finish();
 }
 
-AttachmentData::AttachmentData(const zenoh::Bytes & attachment)
+AttachmentData::AttachmentData(const zenoh::Bytes & bytes)
 {
-  zenoh::ext::Deserializer deserializer(std::move(attachment));
+  zenoh::ext::Deserializer deserializer(std::move(bytes));
   const auto sequence_number_str = deserializer.deserialize<std::string>();
   if (sequence_number_str != "sequence_number") {
     throw std::runtime_error("sequence_number is not found in the attachment.");

@@ -61,9 +61,9 @@ std::optional<zenoh::Config> _get_z_config(
   // if the environment variable is not set use internal configuration
   configured_uri = envar_uri[0] != '\0' ? envar_uri : default_uri;
   // Try to read the configuration
-  zenoh::ZResult err;
-  zenoh::Config config = zenoh::Config::from_file(configured_uri, &err);
-  if (err != Z_OK) {
+  zenoh::ZResult result;
+  zenoh::Config config = zenoh::Config::from_file(configured_uri, &result);
+  if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Invalid configuration file %s", configured_uri);
