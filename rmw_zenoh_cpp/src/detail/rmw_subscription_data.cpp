@@ -163,12 +163,6 @@ SubscriptionData::SubscriptionData(
 // enable_shared_from_this, which is not available in constructors.
 bool SubscriptionData::init()
 {
-  if (entity_->topic_info()->qos_.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
-    RMW_ZENOH_LOG_WARN_NAMED(
-      "rmw_zenoh_cpp",
-      "`reliability` no longer supported on subscriber. Ignoring...");
-  }
-
   zenoh::ZResult result;
   zenoh::KeyExpr sub_ke(entity_->topic_info()->topic_keyexpr_, true, &result);
   if (result != Z_OK) {
