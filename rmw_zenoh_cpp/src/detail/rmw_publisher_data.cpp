@@ -209,47 +209,16 @@ rmw_ret_t PublisherData::publish(
 
   // To store serialized message byte array.
   char * msg_bytes = nullptr;
-  std::optional<z_owned_shm_mut_t> shmbuf = std::nullopt;
-  auto always_free_shmbuf = rcpputils::make_scope_exit(
-    [&shmbuf]() {
-      if (shmbuf.has_value()) {
-        z_drop(z_move(shmbuf.value()));
-      }
-    });
 
   rcutils_allocator_t * allocator = &rmw_node_->context->options.allocator;
 
   auto always_free_msg_bytes = rcpputils::make_scope_exit(
-    [&msg_bytes, allocator, &shmbuf]() {
-      if (msg_bytes && !shmbuf.has_value()) {
+    [&msg_bytes, allocator]() {
+      if (msg_bytes) {
         allocator->deallocate(msg_bytes, allocator->state);
       }
     });
 
-  // TODO(anyone): Move this zenoh_cpp API
-  // Get memory from SHM buffer if available.
-  // if (shm_provider.has_value()) {
-  //   RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled.");
-
-  //   auto provider = shm_provider.value()._0;
-  //   z_buf_layout_alloc_result_t alloc;
-  //   // TODO(yuyuan): SHM, configure this
-  //   z_alloc_alignment_t alignment = {5};
-  //   z_shm_provider_alloc_gc_defrag_blocking(
-  //     &alloc,
-  //     z_loan(provider),
-  //     SHM_BUF_OK_SIZE,
-  //     alignment);
-
-  //   if (alloc.status == ZC_BUF_LAYOUT_ALLOC_STATUS_OK) {
-  //     shmbuf = std::make_optional(alloc.buf);
-  //     msg_bytes = reinterpret_cast<char *>(z_shm_mut_data_mut(z_loan_mut(alloc.buf)));
-  //   } else {
-  //     // TODO(Yadunund): Should we revert to regular allocation and not return an error?
-  //     RMW_SET_ERROR_MSG("Failed to allocate a SHM buffer, even after GCing.");
-  //     return RMW_RET_ERROR;
-  //   }
-  // } else {
   // Get memory from the allocator.
   msg_bytes = static_cast<char *>(allocator->allocate(max_data_length, allocator->state));
   RMW_CHECK_FOR_NULL_WITH_MSG(

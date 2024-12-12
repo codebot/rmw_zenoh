@@ -236,7 +236,7 @@ void ClientData::add_new_reply(std::unique_ptr<ZenohReply> reply)
       "Query queue depth of %ld reached, discarding oldest Query "
       "for client for %s",
       adapted_qos_profile.depth,
-      keyexpr_.value().as_string_view());
+      std::string(keyexpr_.value().as_string_view()).c_str());
     reply_queue_.pop_front();
   }
   reply_queue_.emplace_back(std::move(reply));
@@ -417,7 +417,7 @@ rmw_ret_t ClientData::send_request(
         RMW_ZENOH_LOG_ERROR_NAMED(
           "rmw_zenoh_cpp",
           "Unable to obtain ClientData from data for %s.",
-          sample.get_keyexpr().as_string_view());
+          std::string(sample.get_keyexpr().as_string_view()).c_str());
         return;
       }
 
