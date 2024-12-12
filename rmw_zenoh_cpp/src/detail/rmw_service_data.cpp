@@ -326,9 +326,10 @@ rmw_ret_t ServiceData::take_request(
       return RMW_RET_ERROR;
     }
 
+    auto writter_gid_v = attachment.copy_gid();
     memcpy(
       request_header->request_id.writer_guid,
-      attachment.copy_gid().data(),
+      writter_gid_v.data(),
       RMW_GID_STORAGE_SIZE);
 
     request_header->source_timestamp = attachment.source_timestamp();
@@ -339,7 +340,7 @@ rmw_ret_t ServiceData::take_request(
     request_header->received_timestamp = query->get_received_timestamp();
 
     // Add this query to the map, so that rmw_send_response can quickly look it up later.
-    const size_t hash = rmw_zenoh_cpp::hash_gid_p(request_header->request_id.writer_guid);
+    const size_t hash = rmw_zenoh_cpp::hash_gid(writter_gid_v);
     std::unordered_map<size_t, SequenceToQuery>::iterator it = sequence_to_query_map_.find(hash);
     if (it == sequence_to_query_map_.end()) {
       SequenceToQuery stq;
@@ -378,8 +379,13 @@ rmw_ret_t ServiceData::send_response(
     );
     return RMW_RET_OK;
   }
+
+  std::vector<uint8_t> writer_guid;
+  writer_guid.resize(RMW_GID_STORAGE_SIZE);
+  memcpy(writer_guid.data(), request_id->writer_guid, RMW_GID_STORAGE_SIZE);
+
   // Create the queryable payload
-  const size_t hash = hash_gid_p(request_id->writer_guid);
+  const size_t hash = hash_gid(writer_guid);
   std::unordered_map<size_t, SequenceToQuery>::iterator it = sequence_to_query_map_.find(hash);
   if (it == sequence_to_query_map_.end()) {
     // If there is no data associated with this request, the higher layers of

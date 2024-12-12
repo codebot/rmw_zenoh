@@ -204,7 +204,7 @@ public:
     zenoh::Session::LivelinessSubscriberOptions sub_options =
       zenoh::Session::LivelinessSubscriberOptions::create_default();
     sub_options.history = true;
-    graph_subscriber_cpp_ = session_->liveliness_declare_subscriber(
+    graph_subscriber_ = session_->liveliness_declare_subscriber(
       keyexpr_cpp,
       [&](const zenoh::Sample & sample) {
         // Look up the data shared_ptr in the global map. If it is in there, use it.
@@ -244,7 +244,7 @@ public:
       }
 
       zenoh::ZResult result;
-      std::move(graph_subscriber_cpp_).value().undeclare(&result);
+      std::move(graph_subscriber_).value().undeclare(&result);
       if (result != Z_OK) {
         RMW_ZENOH_LOG_ERROR_NAMED(
           "rmw_zenoh_cpp",
@@ -418,7 +418,16 @@ private:
   // Graph cache.
   std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache_;
   // ROS graph liveliness subscriber.
-  std::optional<zenoh::Subscriber<void>> graph_subscriber_cpp_;
+  // The graph_subscriber *must* exist in order for anything in this Data class,
+  // and hence rmw_zenoh_cpp, to work.
+  // However, zenoh::Subscriber does not have an empty constructor,
+  // so just declaring this as a zenoh::Subscriber fails to compile.
+  // We work around that by wrapping it in a std::optional,
+  // so the std::optional gets constructed at Data constructor time,
+  // and then we initialize graph_subscriber_ later. Note that the zenoh-cpp API
+  // liveliness_declare_subscriber() throws an exception if it fails,
+  // so this should all be safe to do.
+  std::optional<zenoh::Subscriber<void>> graph_subscriber_;
   // Equivalent to rmw_dds_common::Context's guard condition.
   // Guard condition that should be triggered when the graph changes.
   std::unique_ptr<rmw_guard_condition_t> graph_guard_condition_;

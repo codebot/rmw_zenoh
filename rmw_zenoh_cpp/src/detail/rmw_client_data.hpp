@@ -115,7 +115,7 @@ private:
     std::shared_ptr<ResponseTypeSupport> response_type_support);
 
   // Initialize the Zenoh objects for this entity.
-  bool init(const std::shared_ptr<zenoh::Session> session);
+  bool init();
 
   // Internal mutex.
   mutable std::recursive_mutex mutex_;

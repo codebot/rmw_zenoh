@@ -141,7 +141,7 @@ std::shared_ptr<ClientData> ClientData::make(
       response_type_support
     });
 
-  if (!client_data->init(session)) {
+  if (!client_data->init()) {
     // init() already set the error.
     return nullptr;
   }
@@ -176,14 +176,13 @@ ClientData::ClientData(
 }
 
 ///=============================================================================
-bool ClientData::init(const std::shared_ptr<zenoh::Session> session)
+bool ClientData::init()
 {
   std::string topic_keyexpr = this->entity_->topic_info().value().topic_keyexpr_;
   keyexpr_ = zenoh::KeyExpr(topic_keyexpr);
-  // TODO(ahcorde) check KeyExpr
   std::string liveliness_keyexpr = this->entity_->liveliness_keyexpr();
   zenoh::ZResult result;
-  this->token_ = session->liveliness_declare_token(
+  this->token_ = sess_->liveliness_declare_token(
     zenoh::KeyExpr(liveliness_keyexpr),
     zenoh::Session::LivelinessDeclarationOptions::create_default(),
     &result);
@@ -194,7 +193,6 @@ bool ClientData::init(const std::shared_ptr<zenoh::Session> session)
     return false;
   }
 
-  sess_ = session;
   initialized_ = true;
 
   return true;

@@ -117,8 +117,24 @@ private:
   // The keyexpr string.
   std::string keyexpr_;
   // An owned queryable.
+  // The Queryable *must* exist in order for anything in this ServiceData class,
+  // and hence rmw_zenoh_cpp, to work.
+  // However, zenoh::Queryable does not have an empty constructor,
+  // so just declaring this as a zenoh::Queryable fails to compile.
+  // We work around that by wrapping it in a std::optional, so the std::optional
+  // gets constructed at ServiceData constructor time,
+  // and then we initialize qable_ later. Note that the zenoh-cpp API declare_queryable() throws an
+  // exception if it fails, so this should all be safe to do.
   std::optional<zenoh::Queryable<void>> qable_;
   // Liveliness token for the service.
+  // The token_ *must* exist in order for anything in this ServiceData class,
+  // and hence rmw_zenoh_cpp, to work.
+  // However, zenoh::LivelinessToken does not have an empty constructor,
+  // so just declaring this as a zenoh::LivelinessToken fails to compile.
+  // We work around that by wrapping it in a std::optional, so the std::optional
+  // gets constructed at ServiceData constructor time,
+  // and then we initialize token_ later. Note that the zenoh-cpp API
+  // liveliness_declare_token() throws an exception if it fails, so this should all be safe to do.
   std::optional<zenoh::LivelinessToken> token_;
   // Type support fields.
   const void * request_type_support_impl_;

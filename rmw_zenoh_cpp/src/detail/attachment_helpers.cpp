@@ -87,7 +87,7 @@ zenoh::Bytes AttachmentData::serialize_to_zbytes()
 
 AttachmentData::AttachmentData(const zenoh::Bytes & bytes)
 {
-  zenoh::ext::Deserializer deserializer(std::move(bytes));
+  zenoh::ext::Deserializer deserializer(bytes);
   const auto sequence_number_str = deserializer.deserialize<std::string>();
   if (sequence_number_str != "sequence_number") {
     throw std::runtime_error("sequence_number is not found in the attachment.");

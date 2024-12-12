@@ -226,6 +226,7 @@ rmw_ret_t PublisherData::publish(
       }
     });
 
+  // TODO(anyone): Move this zenoh_cpp API
   // Get memory from SHM buffer if available.
   // if (shm_provider.has_value()) {
   //   RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled.");
@@ -280,10 +281,10 @@ rmw_ret_t PublisherData::publish(
     entity_->copy_gid());
 
   // TODO(ahcorde): shmbuf
-  std::vector<uint8_t> raw_image(
+  std::vector<uint8_t> raw_data(
     reinterpret_cast<const uint8_t *>(msg_bytes),
     reinterpret_cast<const uint8_t *>(msg_bytes) + data_length);
-  zenoh::Bytes payload(raw_image);
+  zenoh::Bytes payload(std::move(raw_data));
 
   pub_.put(std::move(payload), std::move(options), &result);
   if (result != Z_OK) {
@@ -323,10 +324,10 @@ rmw_ret_t PublisherData::publish_serialized_message(
   auto options = zenoh::Publisher::PutOptions::create_default();
   options.attachment = create_map_and_set_sequence_num(sequence_number_++, entity_->copy_gid());
 
-  std::vector<uint8_t> raw_image(
+  std::vector<uint8_t> raw_data(
     serialized_message->buffer,
     serialized_message->buffer + data_length);
-  zenoh::Bytes payload(raw_image);
+  zenoh::Bytes payload(std::move(raw_data));
 
   pub_.put(std::move(payload), std::move(options), &result);
   if (result != Z_OK) {
