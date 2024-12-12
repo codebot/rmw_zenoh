@@ -105,7 +105,7 @@ std::optional<uint64_t> zenoh_router_check_attempts()
   }
   // If the environment variable contains a value, handle it accordingly.
   if (envar_value[0] != '\0') {
-    const auto read_value = std::strtol(envar_value, nullptr, 10);
+    const int64_t read_value = std::strtoll(envar_value, nullptr, 10);
     if (read_value > 0) {
       return read_value;
     } else if (read_value < 0) {

@@ -78,6 +78,7 @@ public:
       throw std::runtime_error("Error configuring Zenoh session.");
     }
 
+#ifndef _MSC_VER
     // Check if shm is enabled.
     z_owned_string_t shm_enabled;
     zc_config_get_from_str(z_loan(config), Z_CONFIG_SHARED_MEMORY_KEY, &shm_enabled);
@@ -85,6 +86,7 @@ public:
       [&shm_enabled]() {
         z_drop(z_move(shm_enabled));
       });
+#endif
 
     // Initialize the zenoh session.
     z_owned_session_t raw_session;
@@ -172,6 +174,7 @@ public:
 
     // Initialize the shm manager if shared_memory is enabled in the config.
     shm_provider_ = std::nullopt;
+#ifndef _MSC_VER
     if (strncmp(
         z_string_data(z_loan(shm_enabled)),
         "true",
@@ -195,7 +198,7 @@ public:
           z_drop(z_move(shm_provider_.value()));
         }
       });
-
+#endif
     graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
     graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
     graph_guard_condition_->data = &guard_condition_data_;
@@ -222,7 +225,9 @@ public:
       });
 
     close_session.cancel();
+#ifndef _MSC_VER
     free_shm_provider.cancel();
+#endif
     undeclare_z_sub.cancel();
   }
 

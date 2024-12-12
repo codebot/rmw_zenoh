@@ -33,6 +33,7 @@
 #include "rmw/error_handling.h"
 
 #include "rcpputils/scope_exit.hpp"
+#include "rcutils/env.h"
 
 static bool running = true;
 static std::mutex run_mutex;
@@ -60,10 +61,7 @@ int main(int argc, char ** argv)
   (void)argc;
   (void)argv;
 
-  // If not already defined, set the logging environment variable for Zenoh router
-  // to info level by default.
-  // TODO(Yadunund): Switch to rcutils_get_env once it supports not overwriting values.
-  if (setenv(ZENOH_LOG_ENV_VAR_STR, ZENOH_LOG_INFO_LEVEL_STR, 0) != 0) {
+  if (!rcutils_set_env_overwrite(ZENOH_LOG_ENV_VAR_STR, ZENOH_LOG_INFO_LEVEL_STR, 0)) {
     RMW_SET_ERROR_MSG("Error configuring Zenoh logging.");
     return 1;
   }
