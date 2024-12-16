@@ -25,6 +25,7 @@
 #include <string>
 #include <unordered_map>
 #include <variant>
+#include <vector>
 
 #include <zenoh.hxx>
 
@@ -50,7 +51,7 @@ public:
   struct Message
   {
     explicit Message(
-      std::vector<uint8_t>&& p,
+      std::vector<uint8_t> && p,
       uint64_t recv_ts,
       AttachmentData && attachment);
 

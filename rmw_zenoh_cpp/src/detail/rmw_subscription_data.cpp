@@ -24,6 +24,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "attachment_helpers.hpp"
 #include "cdr.hpp"
@@ -43,7 +44,7 @@ namespace rmw_zenoh_cpp
 {
 ///=============================================================================
 SubscriptionData::Message::Message(
-  std::vector<uint8_t>&& p,
+  std::vector<uint8_t> && p,
   uint64_t recv_ts,
   AttachmentData && attachment_)
 : payload(std::move(p)), recv_timestamp(recv_ts), attachment(std::move(attachment_))
@@ -287,7 +288,6 @@ bool SubscriptionData::init()
     zenoh::Subscriber<void> sub = context_impl->session()->declare_subscriber(
       sub_ke,
       [data_wp](const zenoh::Sample & sample) {
-
         auto sub_data = data_wp.lock();
         if (sub_data == nullptr) {
           RMW_ZENOH_LOG_ERROR_NAMED(
