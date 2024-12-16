@@ -36,6 +36,7 @@
 #include "attachment_helpers.hpp"
 #include "type_support_common.hpp"
 #include "zenoh_utils.hpp"
+#include "payload.hpp"
 
 #include "rcutils/allocator.h"
 
@@ -51,13 +52,13 @@ public:
   struct Message
   {
     explicit Message(
-      std::vector<uint8_t> && p,
+      const zenoh::Bytes & bytes,
       uint64_t recv_ts,
       AttachmentData && attachment);
 
     ~Message();
 
-    std::vector<uint8_t> payload;
+    Payload payload;
     uint64_t recv_timestamp;
     AttachmentData attachment;
   };
