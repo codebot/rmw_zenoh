@@ -631,11 +631,6 @@ std::string Entity::liveliness_keyexpr() const
   return this->liveliness_keyexpr_;
 }
 
-void Entity::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
-{
-  memcpy(out_gid, gid_.data(), RMW_GID_STORAGE_SIZE);
-}
-
 ///=============================================================================
 std::vector<uint8_t> Entity::copy_gid() const
 {
@@ -684,18 +679,6 @@ size_t hash_gid(const std::vector<uint8_t> gid)
   hash_str << std::hex;
   for (const auto & g : gid) {
     hash_str << static_cast<int>(g);
-  }
-  return std::hash<std::string>{}(hash_str.str());
-}
-
-///=============================================================================
-size_t hash_gid_p(const uint8_t gid[RMW_GID_STORAGE_SIZE])
-{
-  std::stringstream hash_str;
-  hash_str << std::hex;
-  size_t i = 0;
-  for (; i < (RMW_GID_STORAGE_SIZE - 1); i++) {
-    hash_str << static_cast<int>(gid[i]);
   }
   return std::hash<std::string>{}(hash_str.str());
 }

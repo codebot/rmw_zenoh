@@ -326,13 +326,6 @@ liveliness::TopicInfo PublisherData::topic_info() const
   return entity_->topic_info().value();
 }
 
-///=============================================================================
-void PublisherData::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
-{
-  std::lock_guard<std::mutex> lock(mutex_);
-  entity_->copy_gid(out_gid);
-}
-
 std::vector<uint8_t> PublisherData::copy_gid() const
 {
   std::lock_guard<std::mutex> lock(mutex_);

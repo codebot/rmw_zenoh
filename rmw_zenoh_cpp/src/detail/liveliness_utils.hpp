@@ -172,8 +172,6 @@ public:
   // Two entities are equal if their keyexpr_hash are equal.
   bool operator==(const Entity & other) const;
 
-  void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
-
   std::vector<uint8_t> copy_gid() const;
 
 private:
@@ -236,9 +234,6 @@ std::optional<rmw_qos_profile_t> keyexpr_to_qos(const std::string & keyexpr);
 }  // namespace liveliness
 
 ///=============================================================================
-/// Generate a hash for a given GID.
-size_t hash_gid_p(const uint8_t gid[RMW_GID_STORAGE_SIZE]);
-
 size_t hash_gid(const std::vector<uint8_t> gid);
 }  // namespace rmw_zenoh_cpp
 

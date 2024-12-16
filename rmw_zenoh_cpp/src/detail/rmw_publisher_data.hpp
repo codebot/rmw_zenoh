@@ -69,9 +69,6 @@ public:
   // Get a copy of the TopicInfo of this PublisherData.
   liveliness::TopicInfo topic_info() const;
 
-  // Copy the GID of this PublisherData into an rmw_gid_t.
-  void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
-
   // Return a copy of the GID of this publisher.
   std::vector<uint8_t> copy_gid() const;
 

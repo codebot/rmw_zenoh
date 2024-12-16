@@ -431,15 +431,7 @@ rmw_ret_t ClientData::send_request(
       sub_data->add_new_reply(
         std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
     },
-    [client_data]() {
-      auto sub_data = client_data.lock();
-      if (sub_data == nullptr) {
-        RMW_ZENOH_LOG_ERROR_NAMED(
-          "rmw_zenoh_cpp",
-          "Unable to obtain ClientData");
-        return;
-      }
-    },
+    zenoh::closures::none,
     std::move(opts),
     &result);
   if (result != Z_OK) {

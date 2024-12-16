@@ -1202,7 +1202,7 @@ rmw_ret_t GraphCache::service_server_is_available(
       service_it->second.find(client_topic_info.type_);
     if (type_it != service_it->second.end()) {
       for (const auto & [_, topic_data] : type_it->second) {
-        if (topic_data->subs_.size() > 0) {
+        if (!topic_data->subs_.empty()) {
           *is_available = true;
           return RMW_RET_OK;
         }

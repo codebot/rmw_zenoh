@@ -292,76 +292,75 @@ rmw_ret_t ServiceData::take_request(
 
   auto payload_data = payload.value().get().as_vector();
 
-  if (payload_data.size() > 0) {
-   // Object that manages the raw buffer
-    eprosima::fastcdr::FastBuffer fastbuffer(
-      reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())), payload_data.size());
-
-    // Object that serializes the data
-    Cdr deser(fastbuffer);
-    if (!request_type_support_->deserialize_ros_message(
-        deser.get_cdr(),
-        ros_request,
-        request_type_support_impl_))
-    {
-      RMW_SET_ERROR_MSG("could not deserialize ROS message");
-      return RMW_RET_ERROR;
-    }
-
-    // Fill in the request header.
-    // Get the sequence_number out of the attachment
-    if (!loaned_query.get_attachment().has_value()) {
-      RMW_ZENOH_LOG_DEBUG_NAMED(
-        "rmw_zenoh_cpp",
-        "ServiceData take_request attachment is empty");
-      return RMW_RET_ERROR;
-    }
-
-    rmw_zenoh_cpp::AttachmentData attachment(std::move(
-        loaned_query.get_attachment().value().get()));
-
-    request_header->request_id.sequence_number = attachment.sequence_number();
-    if (request_header->request_id.sequence_number < 0) {
-      RMW_SET_ERROR_MSG("Failed to get sequence_number from client call attachment");
-      return RMW_RET_ERROR;
-    }
-
-    auto writter_gid_v = attachment.copy_gid();
-    memcpy(
-      request_header->request_id.writer_guid,
-      writter_gid_v.data(),
-      RMW_GID_STORAGE_SIZE);
-
-    request_header->source_timestamp = attachment.source_timestamp();
-    if (request_header->source_timestamp < 0) {
-      RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
-      return RMW_RET_ERROR;
-    }
-    request_header->received_timestamp = query->get_received_timestamp();
-
-    // Add this query to the map, so that rmw_send_response can quickly look it up later.
-    const size_t hash = rmw_zenoh_cpp::hash_gid(writter_gid_v);
-    std::unordered_map<size_t, SequenceToQuery>::iterator it = sequence_to_query_map_.find(hash);
-    if (it == sequence_to_query_map_.end()) {
-      SequenceToQuery stq;
-      sequence_to_query_map_.insert(std::make_pair(hash, std::move(stq)));
-      it = sequence_to_query_map_.find(hash);
-    } else {
-      // Client already in the map
-      if (it->second.find(request_header->request_id.sequence_number) != it->second.end()) {
-        RMW_SET_ERROR_MSG("duplicate sequence number in the map");
-        return RMW_RET_ERROR;
-      }
-    }
-
-    it->second.insert(std::make_pair(request_header->request_id.sequence_number, std::move(query)));
-    *taken = true;
-  } else {
+  if (payload_data.empty()) {
     RMW_ZENOH_LOG_DEBUG_NAMED(
       "rmw_zenoh_cpp",
       "ServiceData not able to get slice data");
     return RMW_RET_ERROR;
   }
+  // Object that manages the raw buffer
+  eprosima::fastcdr::FastBuffer fastbuffer(
+    reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())), payload_data.size());
+
+  // Object that serializes the data
+  Cdr deser(fastbuffer);
+  if (!request_type_support_->deserialize_ros_message(
+      deser.get_cdr(),
+      ros_request,
+      request_type_support_impl_))
+  {
+    RMW_SET_ERROR_MSG("could not deserialize ROS message");
+    return RMW_RET_ERROR;
+  }
+
+  // Fill in the request header.
+  // Get the sequence_number out of the attachment
+  if (!loaned_query.get_attachment().has_value()) {
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp",
+      "ServiceData take_request attachment is empty");
+    return RMW_RET_ERROR;
+  }
+
+  rmw_zenoh_cpp::AttachmentData attachment(std::move(
+      loaned_query.get_attachment().value().get()));
+
+  request_header->request_id.sequence_number = attachment.sequence_number();
+  if (request_header->request_id.sequence_number < 0) {
+    RMW_SET_ERROR_MSG("Failed to get sequence_number from client call attachment");
+    return RMW_RET_ERROR;
+  }
+
+  auto writter_gid_v = attachment.copy_gid();
+  memcpy(
+    request_header->request_id.writer_guid,
+    writter_gid_v.data(),
+    RMW_GID_STORAGE_SIZE);
+
+  request_header->source_timestamp = attachment.source_timestamp();
+  if (request_header->source_timestamp < 0) {
+    RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
+    return RMW_RET_ERROR;
+  }
+  request_header->received_timestamp = query->get_received_timestamp();
+
+  // Add this query to the map, so that rmw_send_response can quickly look it up later.
+  const size_t hash = rmw_zenoh_cpp::hash_gid(writter_gid_v);
+  std::unordered_map<size_t, SequenceToQuery>::iterator it = sequence_to_query_map_.find(hash);
+  if (it == sequence_to_query_map_.end()) {
+    SequenceToQuery stq;
+    sequence_to_query_map_.insert(std::make_pair(hash, std::move(stq)));
+    it = sequence_to_query_map_.find(hash);
+  } else {
+    // Client already in the map
+    if (it->second.find(request_header->request_id.sequence_number) != it->second.end()) {
+      RMW_SET_ERROR_MSG("duplicate sequence number in the map");
+      return RMW_RET_ERROR;
+    }
+  }
+
+  it->second.insert(std::make_pair(request_header->request_id.sequence_number, std::move(query)));
+  *taken = true;
 
   return RMW_RET_OK;
 }

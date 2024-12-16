@@ -493,43 +493,42 @@ rmw_ret_t SubscriptionData::take_one_message(
 
   auto payload_data = msg_data->payload.as_vector();
 
-  if (payload_data.size() > 0) {
-    // Object that manages the raw buffer
-    eprosima::fastcdr::FastBuffer fastbuffer(
-      reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())),
-      payload_data.size());
-
-    // Object that serializes the data
-    rmw_zenoh_cpp::Cdr deser(fastbuffer);
-    if (!type_support_->deserialize_ros_message(
-        deser.get_cdr(),
-        ros_message,
-        type_support_impl_))
-    {
-      RMW_SET_ERROR_MSG("could not deserialize ROS message");
-      return RMW_RET_ERROR;
-    }
-
-    if (message_info != nullptr) {
-      message_info->source_timestamp = msg_data->attachment.source_timestamp();
-      message_info->received_timestamp = msg_data->recv_timestamp;
-      message_info->publication_sequence_number = msg_data->attachment.sequence_number();
-      // TODO(clalancette): fill in reception_sequence_number
-      message_info->reception_sequence_number = 0;
-      message_info->publisher_gid.implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-      memcpy(
-        message_info->publisher_gid.data,
-        msg_data->attachment.copy_gid().data(),
-        RMW_GID_STORAGE_SIZE);
-      message_info->from_intra_process = false;
-    }
-    *taken = true;
-  } else {
+  if (payload_data.empty()) {
     RMW_ZENOH_LOG_DEBUG_NAMED(
       "rmw_zenoh_cpp",
       "SubscriptionData not able to get slice data");
     return RMW_RET_ERROR;
   }
+  // Object that manages the raw buffer
+  eprosima::fastcdr::FastBuffer fastbuffer(
+    reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())),
+    payload_data.size());
+
+  // Object that serializes the data
+  rmw_zenoh_cpp::Cdr deser(fastbuffer);
+  if (!type_support_->deserialize_ros_message(
+      deser.get_cdr(),
+      ros_message,
+      type_support_impl_))
+  {
+    RMW_SET_ERROR_MSG("could not deserialize ROS message");
+    return RMW_RET_ERROR;
+  }
+
+  if (message_info != nullptr) {
+    message_info->source_timestamp = msg_data->attachment.source_timestamp();
+    message_info->received_timestamp = msg_data->recv_timestamp;
+    message_info->publication_sequence_number = msg_data->attachment.sequence_number();
+    // TODO(clalancette): fill in reception_sequence_number
+    message_info->reception_sequence_number = 0;
+    message_info->publisher_gid.implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
+    memcpy(
+      message_info->publisher_gid.data,
+      msg_data->attachment.copy_gid().data(),
+      RMW_GID_STORAGE_SIZE);
+    message_info->from_intra_process = false;
+  }
+  *taken = true;
 
   return RMW_RET_OK;
 }
@@ -552,40 +551,39 @@ rmw_ret_t SubscriptionData::take_serialized_message(
 
   auto payload_data = msg_data->payload.as_vector();
 
-  if (payload_data.size() > 0) {
-    if (serialized_message->buffer_capacity < payload_data.size()) {
-      rmw_ret_t ret =
-        rmw_serialized_message_resize(serialized_message, payload_data.size());
-      if (ret != RMW_RET_OK) {
-        return ret;  // Error message already set
-      }
-    }
-    serialized_message->buffer_length = payload_data.size();
-    memcpy(
-      serialized_message->buffer,
-      reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())),
-      payload_data.size());
-
-    *taken = true;
-
-    if (message_info != nullptr) {
-      message_info->source_timestamp = msg_data->attachment.source_timestamp();
-      message_info->received_timestamp = msg_data->recv_timestamp;
-      message_info->publication_sequence_number = msg_data->attachment.sequence_number();
-      // TODO(clalancette): fill in reception_sequence_number
-      message_info->reception_sequence_number = 0;
-      message_info->publisher_gid.implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-      memcpy(
-        message_info->publisher_gid.data,
-        msg_data->attachment.copy_gid().data(),
-        RMW_GID_STORAGE_SIZE);
-      message_info->from_intra_process = false;
-    }
-  } else {
+  if (payload_data.empty()) {
     RMW_ZENOH_LOG_DEBUG_NAMED(
       "rmw_zenoh_cpp",
       "SubscriptionData not able to get slice data");
     return RMW_RET_ERROR;
+  }
+  if (serialized_message->buffer_capacity < payload_data.size()) {
+    rmw_ret_t ret =
+      rmw_serialized_message_resize(serialized_message, payload_data.size());
+    if (ret != RMW_RET_OK) {
+      return ret;  // Error message already set
+    }
+  }
+  serialized_message->buffer_length = payload_data.size();
+  memcpy(
+    serialized_message->buffer,
+    reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())),
+    payload_data.size());
+
+  *taken = true;
+
+  if (message_info != nullptr) {
+    message_info->source_timestamp = msg_data->attachment.source_timestamp();
+    message_info->received_timestamp = msg_data->recv_timestamp;
+    message_info->publication_sequence_number = msg_data->attachment.sequence_number();
+    // TODO(clalancette): fill in reception_sequence_number
+    message_info->reception_sequence_number = 0;
+    message_info->publisher_gid.implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
+    memcpy(
+      message_info->publisher_gid.data,
+      msg_data->attachment.copy_gid().data(),
+      RMW_GID_STORAGE_SIZE);
+    message_info->from_intra_process = false;
   }
 
   return RMW_RET_OK;
