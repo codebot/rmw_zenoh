@@ -50,13 +50,13 @@ public:
   struct Message
   {
     explicit Message(
-      zenoh::Bytes p,
+      std::vector<uint8_t>&& p,
       uint64_t recv_ts,
       AttachmentData && attachment);
 
     ~Message();
 
-    zenoh::Bytes payload;
+    std::vector<uint8_t> payload;
     uint64_t recv_timestamp;
     AttachmentData attachment;
   };

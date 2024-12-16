@@ -43,7 +43,7 @@ namespace rmw_zenoh_cpp
 {
 ///=============================================================================
 SubscriptionData::Message::Message(
-  zenoh::Bytes p,
+  std::vector<uint8_t>&& p,
   uint64_t recv_ts,
   AttachmentData && attachment_)
 : payload(std::move(p)), recv_timestamp(recv_ts), attachment(std::move(attachment_))
@@ -224,7 +224,7 @@ bool SubscriptionData::init()
 
         sub_data->add_new_message(
           std::make_unique<SubscriptionData::Message>(
-            sample.get_payload().clone(),
+            sample.get_payload().as_vector(),
             std::chrono::system_clock::now().time_since_epoch().count(),
             std::move(attachment_data)),
           std::string(sample.get_keyexpr().as_string_view()));
@@ -310,7 +310,7 @@ bool SubscriptionData::init()
         AttachmentData attachment_data(attachment_value);
         sub_data->add_new_message(
           std::make_unique<SubscriptionData::Message>(
-            sample.get_payload().clone(),
+            payload.as_vector(),
             std::chrono::system_clock::now().time_since_epoch().count(),
             std::move(attachment_data)),
           std::string(keystr.as_string_view()));
@@ -491,7 +491,7 @@ rmw_ret_t SubscriptionData::take_one_message(
   std::unique_ptr<Message> msg_data = std::move(message_queue_.front());
   message_queue_.pop_front();
 
-  auto payload_data = msg_data->payload.as_vector();
+  auto & payload_data = msg_data->payload;
 
   if (payload_data.size() > 0) {
     // Object that manages the raw buffer
@@ -550,7 +550,7 @@ rmw_ret_t SubscriptionData::take_serialized_message(
   std::unique_ptr<Message> msg_data = std::move(message_queue_.front());
   message_queue_.pop_front();
 
-  auto payload_data = msg_data->payload.as_vector();
+  auto & payload_data = msg_data->payload;
 
   if (payload_data.size() > 0) {
     if (serialized_message->buffer_capacity < payload_data.size()) {
