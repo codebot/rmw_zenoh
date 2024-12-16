@@ -71,7 +71,7 @@ void sub_data_handler(z_loaned_sample_t * sample, void * data)
   sub_data->add_new_message(
     std::make_unique<SubscriptionData::Message>(
       slice,
-      z_timestamp_ntp64_time(z_sample_timestamp(sample)),
+      std::chrono::system_clock::now().time_since_epoch().count(),
       std::move(attachment)),
     topic_name);
 }
