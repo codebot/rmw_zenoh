@@ -26,6 +26,10 @@
 
 namespace rmw_zenoh_cpp
 {
+// Initialize the static variable in ZenohSession
+std::once_flag ZenohSession::initFlag;
+std::atomic<bool> ZenohSession::is_exiting(false);
+
 /// Loan the zenoh session.
 ///=============================================================================
 const z_loaned_session_t * ZenohSession::loan()
@@ -37,7 +41,10 @@ const z_loaned_session_t * ZenohSession::loan()
 ///=============================================================================
 ZenohSession::~ZenohSession()
 {
-  z_close(z_loan_mut(inner_), NULL);
+  // Don't close Zenoh session while the process is terminating
+  if (!is_exiting.load()) {
+    z_close(z_loan_mut(inner_), NULL);
+  }
 }
 
 ///=============================================================================

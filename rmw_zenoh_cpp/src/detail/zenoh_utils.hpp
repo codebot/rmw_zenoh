@@ -18,8 +18,10 @@
 #include <zenoh.hxx>
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <functional>
+#include <mutex>
 #include <optional>
 
 #include "rmw/types.h"
@@ -33,12 +35,27 @@ class ZenohSession final
 {
 public:
   ZenohSession(z_owned_session_t sess)
-  : inner_(sess) {}
+  : inner_(sess) {
+    std::call_once(initFlag, [] {
+      // This atexit function should be triggered before ZenohSession destruction
+      // Refer to https://en.cppreference.com/w/cpp/utility/program/exit
+      atexit([] {
+        ZenohSession::is_exiting.store(true);
+      });
+    });
+  }
   const z_loaned_session_t * loan();
   ~ZenohSession();
 
 private:
   z_owned_session_t inner_;
+  // Used to ensure atexit function is only registered once.
+  static std::once_flag initFlag;
+  // The variable is used to identify whether the process is trying to exit or not.
+  // The atexit function we registered will set the flag and prevent us from closing
+  // Zenoh Session. Zenoh API can't be used in atexit function, because Tokio context
+  // is already destroyed. It will cause panic if we do so.
+  static std::atomic<bool> is_exiting;
 };
 
 ///=============================================================================
