@@ -287,7 +287,6 @@ bool SubscriptionData::init()
     zenoh::Subscriber<void> sub = context_impl->session()->declare_subscriber(
       sub_ke,
       [data_wp](const zenoh::Sample & sample) {
-        zenoh::KeyExpr keystr(std::string(sample.get_keyexpr().as_string_view()));
 
         auto sub_data = data_wp.lock();
         if (sub_data == nullptr) {
@@ -313,7 +312,7 @@ bool SubscriptionData::init()
             payload.as_vector(),
             std::chrono::system_clock::now().time_since_epoch().count(),
             std::move(attachment_data)),
-          std::string(keystr.as_string_view()));
+          std::string(sample.get_keyexpr().as_string_view()));
       },
       zenoh::closures::none,
       std::move(sub_options),
