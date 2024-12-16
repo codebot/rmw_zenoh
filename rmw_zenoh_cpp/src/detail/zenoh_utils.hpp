@@ -35,13 +35,14 @@ class ZenohSession final
 {
 public:
   ZenohSession(z_owned_session_t sess)
-  : inner_(sess) {
+  : inner_(sess)
+  {
     std::call_once(initFlag, [] {
-      // This atexit function should be triggered before ZenohSession destruction
-      // Refer to https://en.cppreference.com/w/cpp/utility/program/exit
-      atexit([] {
-        ZenohSession::is_exiting.store(true);
-      });
+        // This atexit function should be triggered before ZenohSession destruction
+        // Refer to https://en.cppreference.com/w/cpp/utility/program/exit
+        atexit([] {
+          ZenohSession::is_exiting.store(true);
+        });
     });
   }
   const z_loaned_session_t * loan();
