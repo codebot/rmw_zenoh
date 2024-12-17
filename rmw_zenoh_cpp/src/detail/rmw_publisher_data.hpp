@@ -15,13 +15,13 @@
 #ifndef DETAIL__RMW_PUBLISHER_DATA_HPP_
 #define DETAIL__RMW_PUBLISHER_DATA_HPP_
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
-#include <vector>
 
 #include <zenoh.hxx>
 
@@ -70,7 +70,7 @@ public:
   liveliness::TopicInfo topic_info() const;
 
   // Return a copy of the GID of this publisher.
-  std::vector<uint8_t> copy_gid() const;
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> copy_gid() const;
 
   // Returns true if liveliness token is still valid.
   bool liveliness_is_valid() const;

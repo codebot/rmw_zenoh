@@ -16,6 +16,7 @@
 
 #include <fastcdr/FastBuffer.h>
 
+#include <array>
 #include <cinttypes>
 #include <memory>
 #include <mutex>
@@ -331,11 +332,8 @@ rmw_ret_t ServiceData::take_request(
     return RMW_RET_ERROR;
   }
 
-  auto writter_gid_v = attachment.copy_gid();
-  memcpy(
-    request_header->request_id.writer_guid,
-    writter_gid_v.data(),
-    RMW_GID_STORAGE_SIZE);
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> writer_guid = attachment.copy_gid();
+  memcpy(request_header->request_id.writer_guid, writer_guid.data(), RMW_GID_STORAGE_SIZE);
 
   request_header->source_timestamp = attachment.source_timestamp();
   if (request_header->source_timestamp < 0) {
@@ -345,7 +343,7 @@ rmw_ret_t ServiceData::take_request(
   request_header->received_timestamp = query->get_received_timestamp();
 
   // Add this query to the map, so that rmw_send_response can quickly look it up later.
-  const size_t hash = rmw_zenoh_cpp::hash_gid(writter_gid_v);
+  const size_t hash = rmw_zenoh_cpp::hash_gid(writer_guid);
   std::unordered_map<size_t, SequenceToQuery>::iterator it = sequence_to_query_map_.find(hash);
   if (it == sequence_to_query_map_.end()) {
     SequenceToQuery stq;
@@ -379,8 +377,7 @@ rmw_ret_t ServiceData::send_response(
     return RMW_RET_OK;
   }
 
-  std::vector<uint8_t> writer_guid;
-  writer_guid.resize(RMW_GID_STORAGE_SIZE);
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> writer_guid;
   memcpy(writer_guid.data(), request_id->writer_guid, RMW_GID_STORAGE_SIZE);
 
   // Create the queryable payload
@@ -439,10 +436,8 @@ rmw_ret_t ServiceData::send_response(
 
   const zenoh::Query & loaned_query = query->get_query();
   zenoh::Query::ReplyOptions options = zenoh::Query::ReplyOptions::create_default();
-  std::vector<uint8_t> writer_gid;
-  for (size_t i = 0; i < RMW_GID_STORAGE_SIZE; ++i) {
-    writer_gid.push_back(request_id->writer_guid[RMW_GID_STORAGE_SIZE - 1 - i]);
-  }
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> writer_gid;
+  memcpy(writer_gid.data(), request_id->writer_guid, RMW_GID_STORAGE_SIZE);
   options.attachment = create_map_and_set_sequence_num(
     request_id->sequence_number,
     writer_gid);

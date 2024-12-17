@@ -437,7 +437,6 @@ Entity::Entity(
   // returned to the RMW layer as necessary.
   simplified_XXH128_hash_t keyexpr_gid =
     simplified_XXH3_128bits(this->liveliness_keyexpr_.c_str(), this->liveliness_keyexpr_.length());
-  this->gid_.resize(RMW_GID_STORAGE_SIZE);
   memcpy(this->gid_.data(), &keyexpr_gid.low64, sizeof(keyexpr_gid.low64));
   memcpy(this->gid_.data() + sizeof(keyexpr_gid.low64), &keyexpr_gid.high64,
         sizeof(keyexpr_gid.high64));
@@ -632,7 +631,7 @@ std::string Entity::liveliness_keyexpr() const
 }
 
 ///=============================================================================
-std::vector<uint8_t> Entity::copy_gid() const
+std::array<uint8_t, RMW_GID_STORAGE_SIZE> Entity::copy_gid() const
 {
   return gid_;
 }
@@ -673,7 +672,7 @@ std::string demangle_name(const std::string & input)
 }  // namespace liveliness
 
 ///=============================================================================
-size_t hash_gid(const std::vector<uint8_t> gid)
+size_t hash_gid(const std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid)
 {
   std::stringstream hash_str;
   hash_str << std::hex;

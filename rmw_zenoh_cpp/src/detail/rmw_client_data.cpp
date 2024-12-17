@@ -16,6 +16,7 @@
 
 #include <fastcdr/FastBuffer.h>
 
+#include <array>
 #include <chrono>
 #include <cinttypes>
 #include <limits>
@@ -216,7 +217,7 @@ bool ClientData::liveliness_is_valid() const
 }
 
 ///=============================================================================
-std::vector<uint8_t> ClientData::copy_gid() const
+std::array<uint8_t, RMW_GID_STORAGE_SIZE> ClientData::copy_gid() const
 {
   return entity_->copy_gid();
 }
@@ -376,8 +377,7 @@ rmw_ret_t ClientData::send_request(
 
   // Send request
   zenoh::Session::GetOptions opts = zenoh::Session::GetOptions::create_default();
-  std::vector<uint8_t> local_gid;
-  local_gid = entity_->copy_gid();
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> local_gid = entity_->copy_gid();
   opts.attachment = rmw_zenoh_cpp::create_map_and_set_sequence_num(*sequence_id, local_gid);
   opts.target = Z_QUERY_TARGET_ALL_COMPLETE;
   // The default timeout for a z_get query is 10 seconds and if a response is not received within

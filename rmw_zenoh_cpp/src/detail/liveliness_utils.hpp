@@ -15,6 +15,7 @@
 #ifndef DETAIL__LIVELINESS_UTILS_HPP_
 #define DETAIL__LIVELINESS_UTILS_HPP_
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -172,7 +173,7 @@ public:
   // Two entities are equal if their keyexpr_hash are equal.
   bool operator==(const Entity & other) const;
 
-  std::vector<uint8_t> copy_gid() const;
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> copy_gid() const;
 
 private:
   Entity(
@@ -191,7 +192,7 @@ private:
   NodeInfo node_info_;
   std::optional<TopicInfo> topic_info_;
   std::string liveliness_keyexpr_;
-  std::vector<uint8_t> gid_;
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid_{};
 };
 
 ///=============================================================================
@@ -234,7 +235,7 @@ std::optional<rmw_qos_profile_t> keyexpr_to_qos(const std::string & keyexpr);
 }  // namespace liveliness
 
 ///=============================================================================
-size_t hash_gid(const std::vector<uint8_t> gid);
+size_t hash_gid(const std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid);
 }  // namespace rmw_zenoh_cpp
 
 ///=============================================================================
