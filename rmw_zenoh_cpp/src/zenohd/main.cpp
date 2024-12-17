@@ -17,15 +17,14 @@
 #include <mutex>
 #include <stdexcept>
 
+#include <zenoh.hxx>
+#include <zenoh/api/session.hxx>
+
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <signal.h>
 #endif
-
-
-#include <zenoh.hxx>
-#include <zenoh/api/session.hxx>
 
 #include "../detail/zenoh_config.hpp"
 

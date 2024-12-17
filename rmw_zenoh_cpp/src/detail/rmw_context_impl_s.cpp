@@ -96,7 +96,7 @@ public:
       throw std::runtime_error("Error setting up zenoh session. ");
     }
 
-    rmw_ret_t ret;
+    rmw_ret_t ret = RMW_RET_ERROR;
 
     // Verify if the zenoh router is running if configured.
     const std::optional<uint64_t> configured_connection_attempts =
