@@ -17,10 +17,10 @@
 
 #include <zenoh.hxx>
 
+#include <array>
 #include <chrono>
 #include <functional>
 #include <optional>
-#include <vector>
 
 #include "rmw/types.h"
 
@@ -43,7 +43,7 @@ private:
 
 ///=============================================================================
 zenoh::Bytes create_map_and_set_sequence_num(
-  int64_t sequence_number, std::vector<uint8_t> gid);
+  int64_t sequence_number, std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid);
 
 ///=============================================================================
 // A class to store the replies to service requests.

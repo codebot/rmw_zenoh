@@ -14,10 +14,10 @@
 
 #include "zenoh_utils.hpp"
 
+#include <array>
 #include <chrono>
 #include <cinttypes>
 #include <utility>
-#include <vector>
 
 #include "attachment_helpers.hpp"
 #include "rcpputils/scope_exit.hpp"
@@ -42,7 +42,7 @@ ZenohSession::~ZenohSession()
 
 ///=============================================================================
 zenoh::Bytes create_map_and_set_sequence_num(
-  int64_t sequence_number, std::vector<uint8_t> gid)
+  int64_t sequence_number, std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid)
 {
   auto now = std::chrono::system_clock::now().time_since_epoch();
   auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now);

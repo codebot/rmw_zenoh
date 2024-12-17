@@ -15,8 +15,8 @@
 #ifndef DETAIL__ATTACHMENT_HELPERS_HPP_
 #define DETAIL__ATTACHMENT_HELPERS_HPP_
 
+#include <array>
 #include <cstdint>
-#include <vector>
 
 #include <zenoh.hxx>
 
@@ -31,14 +31,14 @@ public:
   AttachmentData(
     const int64_t sequence_number,
     const int64_t source_timestamp,
-    const std::vector<uint8_t> source_gid);
+    const std::array<uint8_t, RMW_GID_STORAGE_SIZE> source_gid);
 
   explicit AttachmentData(const zenoh::Bytes & bytes);
   explicit AttachmentData(AttachmentData && data);
 
   int64_t sequence_number() const;
   int64_t source_timestamp() const;
-  std::vector<uint8_t> copy_gid() const;
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> copy_gid() const;
   size_t gid_hash() const;
 
   zenoh::Bytes serialize_to_zbytes();
@@ -46,7 +46,7 @@ public:
 private:
   int64_t sequence_number_;
   int64_t source_timestamp_;
-  std::vector<uint8_t> source_gid_;
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> source_gid_;
   size_t gid_hash_;
 };
 }  // namespace rmw_zenoh_cpp

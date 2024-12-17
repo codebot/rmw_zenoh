@@ -16,6 +16,7 @@
 
 #include <fastcdr/FastBuffer.h>
 
+#include <array>
 #include <cinttypes>
 #include <memory>
 #include <mutex>
@@ -326,7 +327,7 @@ liveliness::TopicInfo PublisherData::topic_info() const
   return entity_->topic_info().value();
 }
 
-std::vector<uint8_t> PublisherData::copy_gid() const
+std::array<uint8_t, RMW_GID_STORAGE_SIZE> PublisherData::copy_gid() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   return entity_->copy_gid();
