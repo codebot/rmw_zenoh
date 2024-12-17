@@ -114,9 +114,6 @@ private:
     std::shared_ptr<RequestTypeSupport> request_type_support,
     std::shared_ptr<ResponseTypeSupport> response_type_support);
 
-  // Initialize the Zenoh objects for this entity.
-  bool init();
-
   // Internal mutex.
   mutable std::recursive_mutex mutex_;
   // The parent node.

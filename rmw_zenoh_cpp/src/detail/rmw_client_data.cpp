@@ -142,11 +142,6 @@ std::shared_ptr<ClientData> ClientData::make(
       response_type_support
     });
 
-  if (!client_data->init()) {
-    // init() already set the error.
-    return nullptr;
-  }
-
   return client_data;
 }
 
@@ -173,12 +168,6 @@ ClientData::ClientData(
   is_shutdown_(false),
   initialized_(false)
 {
-  // Do nothing.
-}
-
-///=============================================================================
-bool ClientData::init()
-{
   std::string topic_keyexpr = this->entity_->topic_info().value().topic_keyexpr_;
   keyexpr_ = zenoh::KeyExpr(topic_keyexpr);
   std::string liveliness_keyexpr = this->entity_->liveliness_keyexpr();
@@ -191,12 +180,10 @@ bool ClientData::init()
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the client.");
-    return false;
+    throw std::runtime_error("Unable to create liveliness token for the client.");
   }
 
   initialized_ = true;
-
-  return true;
 }
 
 ///=============================================================================
