@@ -96,8 +96,6 @@ public:
       throw std::runtime_error("Error setting up zenoh session. ");
     }
 
-    rmw_ret_t ret = RMW_RET_ERROR;
-
     // Verify if the zenoh router is running if configured.
     const std::optional<uint64_t> configured_connection_attempts =
       rmw_zenoh_cpp::zenoh_router_check_attempts();
@@ -106,25 +104,23 @@ public:
       // Retry until the connection is successful.
       constexpr std::chrono::milliseconds sleep_time(1000);
       constexpr int64_t ticks_between_print(std::chrono::milliseconds(1000) / sleep_time);
-      while (ret != RMW_RET_OK && connection_attempts < configured_connection_attempts.value()) {
+      do {
+        zenoh::ZResult result;
+        this->session_->get_routers_z_id(&result);
+        if (result == Z_OK) {
+          break;
+        }
         if ((connection_attempts % ticks_between_print) == 0) {
           RMW_ZENOH_LOG_WARN_NAMED(
             "rmw_zenoh_cpp",
             "Unable to connect to a Zenoh router. "
             "Have you started a router with `ros2 run rmw_zenoh_cpp rmw_zenohd`?");
         }
-        zenoh::ZResult result;
-        this->session_->get_routers_z_id(&result);
-        if (result != Z_OK) {
-          ++connection_attempts;
-        } else {
-          ret = RMW_RET_OK;
-        }
         if (++connection_attempts >= configured_connection_attempts.value()) {
           break;
         }
         std::this_thread::sleep_for(sleep_time);
-      }
+      } while(connection_attempts < configured_connection_attempts.value());
     }
 
     // Initialize the graph cache.
