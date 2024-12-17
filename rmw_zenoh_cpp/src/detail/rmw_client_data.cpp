@@ -264,53 +264,54 @@ rmw_ret_t ClientData::take_response(
   const zenoh::Sample & sample = reply.get_ok();
 
   // Object that manages the raw buffer
-  auto payload = sample.get_payload().as_vector();
-  if (payload.size() > 0) {
-    eprosima::fastcdr::FastBuffer fastbuffer(
-      reinterpret_cast<char *>(const_cast<uint8_t *>(payload.data())), payload.size());
-
-    // Object that serializes the data
-    rmw_zenoh_cpp::Cdr deser(fastbuffer);
-    if (!response_type_support_->deserialize_ros_message(
-        deser.get_cdr(),
-        ros_response,
-        response_type_support_impl_))
-    {
-      RMW_SET_ERROR_MSG("could not deserialize ROS response");
-      return RMW_RET_ERROR;
-    }
-
-    // Fill in the request_header
-    if (!sample.get_attachment().has_value()) {
-      RMW_ZENOH_LOG_DEBUG_NAMED(
-        "rmw_zenoh_cpp",
-        "ClientData take_request attachment is empty");
-      return RMW_RET_ERROR;
-    }
-    rmw_zenoh_cpp::AttachmentData attachment(std::move(sample.get_attachment().value().get()));
-    request_header->request_id.sequence_number = attachment.sequence_number();
-    if (request_header->request_id.sequence_number < 0) {
-      RMW_SET_ERROR_MSG("Failed to get sequence_number from client call attachment");
-      return RMW_RET_ERROR;
-    }
-    request_header->source_timestamp = attachment.source_timestamp();
-    if (request_header->source_timestamp < 0) {
-      RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
-      return RMW_RET_ERROR;
-    }
-    memcpy(
-      request_header->request_id.writer_guid,
-      attachment.copy_gid().data(),
-      RMW_GID_STORAGE_SIZE);
-    request_header->received_timestamp = latest_reply->get_received_timestamp();
-
-    *taken = true;
-  } else {
+  std::vector<uint8_t> payload = sample.get_payload().as_vector();
+  if (payload.size() == 0) {
     RMW_ZENOH_LOG_DEBUG_NAMED(
       "rmw_zenoh_cpp",
       "ClientData not able to get slice data");
     return RMW_RET_ERROR;
   }
+
+  // Fill in the request_header
+  if (!sample.get_attachment().has_value()) {
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp",
+      "ClientData take_request attachment is empty");
+    return RMW_RET_ERROR;
+  }
+
+  eprosima::fastcdr::FastBuffer fastbuffer(
+    reinterpret_cast<char *>(const_cast<uint8_t *>(payload.data())), payload.size());
+
+  // Object that serializes the data
+  rmw_zenoh_cpp::Cdr deser(fastbuffer);
+  if (!response_type_support_->deserialize_ros_message(
+      deser.get_cdr(),
+      ros_response,
+      response_type_support_impl_))
+  {
+    RMW_SET_ERROR_MSG("could not deserialize ROS response");
+    return RMW_RET_ERROR;
+  }
+
+  rmw_zenoh_cpp::AttachmentData attachment(std::move(sample.get_attachment().value().get()));
+  request_header->request_id.sequence_number = attachment.sequence_number();
+  if (request_header->request_id.sequence_number < 0) {
+    RMW_SET_ERROR_MSG("Failed to get sequence_number from client call attachment");
+    return RMW_RET_ERROR;
+  }
+  request_header->source_timestamp = attachment.source_timestamp();
+  if (request_header->source_timestamp < 0) {
+    RMW_SET_ERROR_MSG("Failed to get source_timestamp from client call attachment");
+    return RMW_RET_ERROR;
+  }
+  memcpy(
+    request_header->request_id.writer_guid,
+    attachment.copy_gid().data(),
+    RMW_GID_STORAGE_SIZE);
+  request_header->received_timestamp = latest_reply->get_received_timestamp();
+
+  *taken = true;
 
   return RMW_RET_OK;
 }
@@ -412,11 +413,10 @@ rmw_ret_t ClientData::send_request(
         return;
       }
 
-      std::chrono::nanoseconds::rep received_timestamp =
-      std::chrono::system_clock::now().time_since_epoch().count();
+      std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 
       sub_data->add_new_reply(
-        std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, received_timestamp));
+        std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, now.time_since_epoch().count()));
     },
     zenoh::closures::none,
     std::move(opts),
