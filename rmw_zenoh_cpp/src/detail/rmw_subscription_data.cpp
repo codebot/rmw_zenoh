@@ -24,7 +24,6 @@
 #include <string>
 #include <utility>
 #include <variant>
-#include <vector>
 
 #include "attachment_helpers.hpp"
 #include "cdr.hpp"
