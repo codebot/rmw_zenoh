@@ -1003,6 +1003,7 @@ rmw_create_subscription(
   // rmw does not require GIDs for subscriptions, and GIDs in rmw_zenoh are not based on any ID of
   // the underlying zenoh objects, so there is no need to collect a GID here
   rmw_gid_t gid{};
+  static_cast<void>(gid);
   TRACETOOLS_TRACEPOINT(
     rmw_subscription_init, static_cast<const void *>(rmw_subscription), gid.data);
   return rmw_subscription;
@@ -1492,7 +1493,8 @@ rmw_create_client(
   // TODO(Yadunund): We cannot store the rmw_node_t * here since this type erased
   // Client handle will be returned in the rmw_clients_t in rmw_wait
   // from which we cannot obtain ClientData.
-  rmw_client->data = static_cast<void *>(node_data->get_client_data(rmw_client).get());
+  rmw_zenoh_cpp::ClientDataPtr client_data = node_data->get_client_data(rmw_client);
+  rmw_client->data = static_cast<void *>(client_data.get());
   rmw_client->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
   rmw_client->service_name = rcutils_strdup(service_name, *allocator);
   RMW_CHECK_FOR_NULL_WITH_MSG(
@@ -1507,11 +1509,10 @@ rmw_create_client(
   free_rmw_client.cancel();
   free_service_name.cancel();
 
-  if (TRACETOOLS_TRACEPOINT_ENABLED(rmw_client_init)) {
-    auto client_data = static_cast<rmw_zenoh_cpp::ClientData *>(rmw_client->data);
-    auto gid = client_data->copy_gid();
-    TRACETOOLS_DO_TRACEPOINT(rmw_client_init, static_cast<const void *>(rmw_client), gid.data());
-  }
+  TRACETOOLS_TRACEPOINT(
+    rmw_client_init,
+    static_cast<const void *>(rmw_client),
+    client_data->copy_gid().data());
   return rmw_client;
 }
 
@@ -1605,14 +1606,15 @@ rmw_take_response(
   RMW_CHECK_FOR_NULL_WITH_MSG(
     client->data, "Unable to retrieve client_data from client.", RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(ros_response, RMW_RET_INVALID_ARGUMENT);
+  RMW_CHECK_ARGUMENT_FOR_NULL(request_header, RMW_RET_INVALID_ARGUMENT);
 
   rmw_ret_t ret = client_data->take_response(request_header, ros_response, taken);
   TRACETOOLS_TRACEPOINT(
     rmw_take_response,
     static_cast<const void *>(client),
     static_cast<const void *>(ros_response),
-    (nullptr != request_header ? request_header->request_id.sequence_number : 0LL),
-    (nullptr != request_header ? request_header->source_timestamp : 0LL),
+    request_header->request_id.sequence_number,
+    request_header->source_timestamp,
     *taken);
   return ret;
 }
