@@ -444,11 +444,9 @@ rmw_ret_t ServiceData::send_response(
   zenoh::Query::ReplyOptions options = zenoh::Query::ReplyOptions::create_default();
   std::array<uint8_t, RMW_GID_STORAGE_SIZE> writer_gid;
   memcpy(writer_gid.data(), request_id->writer_guid, RMW_GID_STORAGE_SIZE);
-  int64_t source_timestamp = 0;
-  options.attachment = create_map_and_set_sequence_num(
-    request_id->sequence_number,
-    writer_gid,
-    &source_timestamp);
+  int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
+  options.attachment = rmw_zenoh_cpp::AttachmentData(
+    request_id->sequence_number, source_timestamp, writer_gid).serialize_to_zbytes();
 
   std::vector<uint8_t> raw_bytes(
     reinterpret_cast<const uint8_t *>(response_bytes),

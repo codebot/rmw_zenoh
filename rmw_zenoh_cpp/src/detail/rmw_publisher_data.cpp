@@ -252,10 +252,10 @@ rmw_ret_t PublisherData::publish(
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
   zenoh::ZResult result;
-  int64_t source_timestamp = 0;
+  int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
   auto options = zenoh::Publisher::PutOptions::create_default();
-  options.attachment = create_map_and_set_sequence_num(
-    sequence_number_++, entity_->copy_gid(), &source_timestamp);
+  options.attachment = rmw_zenoh_cpp::AttachmentData(
+    sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
 
   // TODO(ahcorde): shmbuf
   std::vector<uint8_t> raw_data(
@@ -300,10 +300,10 @@ rmw_ret_t PublisherData::publish_serialized_message(
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
   zenoh::ZResult result;
-  int64_t source_timestamp = 0;
+  int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
   auto options = zenoh::Publisher::PutOptions::create_default();
-  options.attachment = create_map_and_set_sequence_num(
-    sequence_number_++, entity_->copy_gid(), &source_timestamp);
+  options.attachment = rmw_zenoh_cpp::AttachmentData(
+    sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
 
   std::vector<uint8_t> raw_data(
     serialized_message->buffer,
