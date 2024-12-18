@@ -45,7 +45,7 @@ source install/setup.bash
 ros2 run rmw_zenoh_cpp rmw_zenohd
 ```
 
-> Note: Without the Zenoh router, nodes will not be able to discover each other since multicast discovery is disabled by default in the node's session config. Instead, nodes will receive discovery information about other peers via the Zenoh router's gossip functionality. See more information on the session configs [below](#config).
+> Note: Without the Zenoh router, nodes will not be able to discover each other since multicast discovery is disabled by default in the node's session config. Instead, nodes will receive discovery information about other peers via the Zenoh router's gossip functionality. See more information on the session configs [below](#configuration).
 
 ### Terminate ROS 2 daemon started with another RMW
 ```bash
