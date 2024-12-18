@@ -15,7 +15,7 @@
 #ifndef DETAIL__PAYLOAD_HPP_
 #define DETAIL__PAYLOAD_HPP_
 
-#include <zenoh.h>
+#include <zenoh.hxx>
 
 #include <utility>
 #include <variant>
