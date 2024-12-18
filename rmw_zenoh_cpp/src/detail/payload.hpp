@@ -17,8 +17,8 @@
 
 #include <zenoh.h>
 
-#include <variant>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace rmw_zenoh_cpp
