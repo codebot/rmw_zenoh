@@ -109,8 +109,8 @@ std::shared_ptr<PublisherData> PublisherData::make(
   zenoh::KeyExpr pub_ke(entity->topic_info()->topic_keyexpr_);
   // Create a Publication Cache if durability is transient_local.
   if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
-    zenoh::Session::PublicationCacheOptions pub_cache_opts =
-      zenoh::Session::PublicationCacheOptions::create_default();
+    zenoh::ext::SessionExt::PublicationCacheOptions pub_cache_opts =
+      zenoh::ext::SessionExt::PublicationCacheOptions::create_default();
 
     pub_cache_opts.history = adapted_qos_profile.depth;
     pub_cache_opts.queryable_complete = true;
@@ -118,7 +118,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
     std::string queryable_prefix = entity->zid();
     pub_cache_opts.queryable_prefix = zenoh::KeyExpr(queryable_prefix);
 
-    pub_cache = session->declare_publication_cache(pub_ke, std::move(pub_cache_opts), &result);
+    pub_cache = session->ext().declare_publication_cache(pub_ke, std::move(pub_cache_opts), &result);
 
     if (result != Z_OK) {
       RMW_SET_ERROR_MSG("unable to create zenoh publisher cache");

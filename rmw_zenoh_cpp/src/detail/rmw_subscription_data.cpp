@@ -181,8 +181,8 @@ bool SubscriptionData::init()
   // TODO(Yadunund): Rely on a separate function to return the sub
   // as we start supporting more qos settings.
   if (entity_->topic_info()->qos_.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
-    zenoh::Session::QueryingSubscriberOptions sub_options =
-      zenoh::Session::QueryingSubscriberOptions::create_default();
+    zenoh::ext::SessionExt::QueryingSubscriberOptions sub_options =
+      zenoh::ext::SessionExt::QueryingSubscriberOptions::create_default();
     const std::string selector = "*/" + entity_->topic_info()->topic_keyexpr_;
     zenoh::KeyExpr selector_ke(selector);
     sub_options.query_keyexpr = std::move(selector_ke);
@@ -200,7 +200,7 @@ bool SubscriptionData::init()
       zenoh::QueryConsolidation(zenoh::ConsolidationMode::Z_CONSOLIDATION_MODE_NONE);
 
     std::weak_ptr<SubscriptionData> data_wp = shared_from_this();
-    auto sub = context_impl->session()->declare_querying_subscriber(
+    auto sub = context_impl->session()->ext().declare_querying_subscriber(
       sub_ke,
       [data_wp](const zenoh::Sample & sample) {
         auto sub_data = data_wp.lock();
