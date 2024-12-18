@@ -29,8 +29,8 @@ class Payload
 public:
   explicit Payload(const zenoh::Bytes & bytes)
   {
-    auto slices = bytes.slice_iter();
-    auto slice = slices.next();
+    zenoh::Bytes::SliceIterator slices = bytes.slice_iter();
+    std::optional<zenoh::Slice> slice = slices.next();
     if (!slice.has_value()) {
       bytes_ = nullptr;
     } else {
