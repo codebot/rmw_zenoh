@@ -118,7 +118,8 @@ std::shared_ptr<PublisherData> PublisherData::make(
     std::string queryable_prefix = entity->zid();
     pub_cache_opts.queryable_prefix = zenoh::KeyExpr(queryable_prefix);
 
-    pub_cache = session->ext().declare_publication_cache(pub_ke, std::move(pub_cache_opts), &result);
+    pub_cache = session->ext().declare_publication_cache(
+      pub_ke, std::move(pub_cache_opts), &result);
 
     if (result != Z_OK) {
       RMW_SET_ERROR_MSG("unable to create zenoh publisher cache");
