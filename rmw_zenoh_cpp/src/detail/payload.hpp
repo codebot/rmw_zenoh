@@ -17,6 +17,8 @@
 
 #include <zenoh.hxx>
 
+#include <cstdint>
+#include <optional>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -29,14 +31,6 @@ class Payload
 public:
   explicit Payload(const zenoh::Bytes & bytes)
   {
-    // NOTE(fuzzypixelz): `zenoh::Bytes` is an list of reference-couted buffers. When the list of
-    // buffers contains exactly one element, it is not necessary to concatenate the list of buffers.
-    // In this case, we store a clone of the bytes object to maintain a non-zero reference-count on
-    // the buffer. This ensures that the slice into said buffer stays valid until we drop our copy
-    // of the bytes object (at the very least). This case corresponds to the `Contiguous`
-    // alternative of the `bytes_` variant and aims to optimize away a memcpy during "session-local"
-    // communication.
-
     zenoh::Bytes::SliceIterator slices = bytes.slice_iter();
     std::optional<zenoh::Slice> slice = slices.next();
     if (!slice.has_value()) {
