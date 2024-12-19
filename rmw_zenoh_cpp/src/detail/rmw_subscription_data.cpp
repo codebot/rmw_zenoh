@@ -88,7 +88,7 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
     *allocator,
     &type_hash_c_str);
   if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
-    RMW_SET_ERROR_MSG("Failed to allocate type_hash_c_str.");
+    // rosidl_stringify_type_hash already set the error
     return nullptr;
   }
   auto free_type_hash_c_str = rcpputils::make_scope_exit(
