@@ -15,12 +15,13 @@
 #ifndef DETAIL__ZENOH_UTILS_HPP_
 #define DETAIL__ZENOH_UTILS_HPP_
 
-#include <zenoh.hxx>
+#include <functional>
 
 #include <array>
 #include <chrono>
-#include <functional>
 #include <optional>
+
+#include <zenoh.hxx>
 
 #include "rmw/types.h"
 
