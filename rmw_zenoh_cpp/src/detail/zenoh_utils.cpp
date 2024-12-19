@@ -26,20 +26,6 @@
 
 namespace rmw_zenoh_cpp
 {
-/// Loan the zenoh session.
-///=============================================================================
-const z_loaned_session_t * ZenohSession::loan()
-{
-  return z_loan(inner_);
-}
-
-/// Close the zenoh session if destructed.
-///=============================================================================
-ZenohSession::~ZenohSession()
-{
-  z_close(z_loan_mut(inner_), NULL);
-}
-
 ///=============================================================================
 zenoh::Bytes create_map_and_set_sequence_num(
   int64_t sequence_number, std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid)

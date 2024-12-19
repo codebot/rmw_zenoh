@@ -26,21 +26,6 @@
 
 namespace rmw_zenoh_cpp
 {
-
-/// A wrapped zenoh session with customized destruction.
-///=============================================================================
-class ZenohSession final
-{
-public:
-  ZenohSession(z_owned_session_t sess)
-  : inner_(sess) {}
-  const z_loaned_session_t * loan();
-  ~ZenohSession();
-
-private:
-  z_owned_session_t inner_;
-};
-
 ///=============================================================================
 zenoh::Bytes create_map_and_set_sequence_num(
   int64_t sequence_number, std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid);
