@@ -15,13 +15,13 @@
 #ifndef DETAIL__PAYLOAD_HPP_
 #define DETAIL__PAYLOAD_HPP_
 
-#include <zenoh.hxx>
-
 #include <cstdint>
 #include <optional>
 #include <utility>
 #include <variant>
 #include <vector>
+
+#include <zenoh.hxx>
 
 namespace rmw_zenoh_cpp
 {
