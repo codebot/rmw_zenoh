@@ -77,4 +77,47 @@ int64_t get_system_time_in_ns()
   return std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
 }
 
+///=============================================================================
+Payload::Payload(const zenoh::Bytes & bytes)
+{
+  zenoh::Bytes::SliceIterator slices = bytes.slice_iter();
+  std::optional<zenoh::Slice> slice = slices.next();
+  if (!slice.has_value()) {
+    bytes_ = nullptr;
+  } else {
+    if (!slices.next().has_value()) {
+      bytes_ = Contiguous {slice.value(), bytes.clone()};
+    } else {
+      bytes_ = bytes.as_vector();
+    }
+  }
+}
+
+const uint8_t * Payload::data()
+{
+  if (std::holds_alternative<Empty>(bytes_)) {
+    return nullptr;
+  } else if (std::holds_alternative<NonContiguous>(bytes_)) {
+    return std::get<NonContiguous>(bytes_).data();
+  } else {
+    return std::get<Contiguous>(bytes_).slice.data;
+  }
+}
+
+size_t Payload::size()
+{
+  if (std::holds_alternative<Empty>(bytes_)) {
+    return 0;
+  } else if (std::holds_alternative<NonContiguous>(bytes_)) {
+    return std::get<NonContiguous>(bytes_).size();
+  } else {
+    return std::get<Contiguous>(bytes_).slice.len;
+  }
+}
+
+bool Payload::empty()
+{
+  return std::holds_alternative<Empty>(bytes_);
+}
+
 }  // namespace rmw_zenoh_cpp

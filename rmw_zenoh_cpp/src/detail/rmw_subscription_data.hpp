@@ -35,7 +35,6 @@
 #include "attachment_helpers.hpp"
 #include "type_support_common.hpp"
 #include "zenoh_utils.hpp"
-#include "payload.hpp"
 
 #include "rcutils/allocator.h"
 
