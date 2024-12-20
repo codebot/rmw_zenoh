@@ -91,7 +91,7 @@ private:
   // Is `std::vector<uint8_t>` in case of a non-contiguous payload
   // and `zenoh::Slice` plus a `zenoh::Bytes` otherwise.
   std::variant<NonContiguous, Contiguous, Empty> bytes_;
-}
+};
 }  // namespace rmw_zenoh_cpp
 
 #endif  // DETAIL__ZENOH_UTILS_HPP_

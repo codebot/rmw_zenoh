@@ -101,7 +101,7 @@ Payload::Payload(const zenoh::Bytes & bytes)
   }
 }
 
-const uint8_t * Payload::data()
+const uint8_t * Payload::data() const
 {
   if (std::holds_alternative<Empty>(bytes_)) {
     return nullptr;
@@ -112,7 +112,7 @@ const uint8_t * Payload::data()
   }
 }
 
-size_t Payload::size()
+size_t Payload::size() const
 {
   if (std::holds_alternative<Empty>(bytes_)) {
     return 0;
@@ -123,7 +123,7 @@ size_t Payload::size()
   }
 }
 
-bool Payload::empty()
+bool Payload::empty() const
 {
   return std::holds_alternative<Empty>(bytes_);
 }
