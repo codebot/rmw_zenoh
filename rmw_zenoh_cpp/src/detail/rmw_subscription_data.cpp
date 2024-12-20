@@ -16,6 +16,7 @@
 
 #include <fastcdr/FastBuffer.h>
 
+#include <chrono>
 #include <cinttypes>
 #include <limits>
 #include <memory>
@@ -23,6 +24,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "attachment_helpers.hpp"
 #include "cdr.hpp"
@@ -40,61 +42,23 @@
 
 namespace rmw_zenoh_cpp
 {
-namespace
-{
-//==============================================================================
-// TODO(Yadunund): Make this a class member and lambda capture weak_from_this()
-// instead of passing a rawptr to SubscriptionData when we switch to zenoh-cpp.
-void sub_data_handler(z_loaned_sample_t * sample, void * data)
-{
-  z_view_string_t keystr;
-  z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
-
-  auto sub_data = static_cast<SubscriptionData *>(data);
-  if (sub_data == nullptr) {
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp",
-      "Unable to obtain SubscriptionData from data for %s.",
-      z_loan(keystr)
-    );
-    return;
-  }
-
-  AttachmentData attachment(z_sample_attachment(sample));
-  const z_loaned_bytes_t * payload = z_sample_payload(sample);
-
-  z_owned_slice_t slice;
-  z_bytes_to_slice(payload, &slice);
-
-  std::string topic_name(z_string_data(z_loan(keystr)), z_string_len(z_loan(keystr)));
-
-  sub_data->add_new_message(
-    std::make_unique<SubscriptionData::Message>(
-      slice,
-      std::chrono::system_clock::now().time_since_epoch().count(),
-      std::move(attachment)),
-    topic_name);
-}
-}  // namespace
-
 ///=============================================================================
 SubscriptionData::Message::Message(
-  z_owned_slice_t p,
+  std::vector<uint8_t> && p,
   uint64_t recv_ts,
   AttachmentData && attachment_)
-: payload(p), recv_timestamp(recv_ts), attachment(std::move(attachment_))
+: payload(std::move(p)), recv_timestamp(recv_ts), attachment(std::move(attachment_))
 {
 }
 
 ///=============================================================================
 SubscriptionData::Message::~Message()
 {
-  z_drop(z_move(payload));
 }
 
 ///=============================================================================
 std::shared_ptr<SubscriptionData> SubscriptionData::make(
-  std::shared_ptr<ZenohSession> session,
+  std::shared_ptr<zenoh::Session> session,
   std::shared_ptr<GraphCache> graph_cache,
   const rmw_node_t * const node,
   liveliness::NodeInfo node_info,
@@ -124,7 +88,7 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
     *allocator,
     &type_hash_c_str);
   if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
-    RMW_SET_ERROR_MSG("Failed to allocate type_hash_c_str.");
+    // rosidl_stringify_type_hash already set the error
     return nullptr;
   }
   auto free_type_hash_c_str = rcpputils::make_scope_exit(
@@ -136,7 +100,7 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
   // with Zenoh; after this, callbacks may come in at any time.
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
-    z_info_zid(session->loan()),
+    session->get_zid(),
     std::to_string(node_id),
     std::to_string(subscription_id),
     liveliness::EntityType::Subscription,
@@ -179,13 +143,13 @@ SubscriptionData::SubscriptionData(
   const rmw_node_t * rmw_node,
   std::shared_ptr<GraphCache> graph_cache,
   std::shared_ptr<liveliness::Entity> entity,
-  std::shared_ptr<ZenohSession> sess,
+  std::shared_ptr<zenoh::Session> session,
   const void * type_support_impl,
   std::unique_ptr<MessageTypeSupport> type_support)
 : rmw_node_(rmw_node),
   graph_cache_(std::move(graph_cache)),
   entity_(std::move(entity)),
-  sess_(std::move(sess)),
+  sess_(std::move(session)),
   type_support_impl_(type_support_impl),
   type_support_(std::move(type_support)),
   last_known_published_msg_({}),
@@ -201,14 +165,9 @@ SubscriptionData::SubscriptionData(
 // enable_shared_from_this, which is not available in constructors.
 bool SubscriptionData::init()
 {
-  // TODO(Yadunund): Instead of passing a rawptr, rely on capturing weak_ptr<SubscriptionData>
-  // in the closure callback once we switch to zenoh-cpp.
-  z_owned_closure_sample_t callback;
-  z_closure(&callback, sub_data_handler, nullptr, this);
-
-  std::string topic_keyexpr = entity_->topic_info()->topic_keyexpr_;
-  z_view_keyexpr_t sub_ke;
-  if (z_view_keyexpr_from_str(&sub_ke, topic_keyexpr.c_str()) != Z_OK) {
+  zenoh::ZResult result;
+  zenoh::KeyExpr sub_ke(entity_->topic_info()->topic_keyexpr_, true, &result);
+  if (result != Z_OK) {
     RMW_SET_ERROR_MSG("unable to create zenoh keyexpr.");
     return false;
   }
@@ -222,14 +181,11 @@ bool SubscriptionData::init()
   // TODO(Yadunund): Rely on a separate function to return the sub
   // as we start supporting more qos settings.
   if (entity_->topic_info()->qos_.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
-    ze_querying_subscriber_options_t sub_options;
-    ze_querying_subscriber_options_default(&sub_options);
-    // Make the initial query to hit all the PublicationCaches, using a query_selector with
-    // '*' in place of the queryable_prefix of each PublicationCache
+    zenoh::ext::SessionExt::QueryingSubscriberOptions sub_options =
+      zenoh::ext::SessionExt::QueryingSubscriberOptions::create_default();
     const std::string selector = "*/" + entity_->topic_info()->topic_keyexpr_;
-    z_view_keyexpr_t selector_ke;
-    z_view_keyexpr_from_str(&selector_ke, selector.c_str());
-    sub_options.query_selector = z_loan(selector_ke);
+    zenoh::KeyExpr selector_ke(selector);
+    sub_options.query_keyexpr = std::move(selector_ke);
     // Tell the PublicationCache's Queryable that the query accepts any key expression as a reply.
     // By default a query accepts only replies that matches its query selector.
     // This allows us to selectively query certain PublicationCaches when defining the
@@ -240,19 +196,51 @@ bool SubscriptionData::init()
     // We set consolidation to none as we need to receive transient local messages
     // from a number of publishers. Eg: To receive TF data published over /tf_static
     // by various publishers.
-    sub_options.query_consolidation = z_query_consolidation_none();
-    ze_owned_querying_subscriber_t sub;
-    if (ze_declare_querying_subscriber(
-        sess_->loan(), &sub, z_loan(sub_ke), z_move(callback), &sub_options))
-    {
+    sub_options.query_consolidation =
+      zenoh::QueryConsolidation(zenoh::ConsolidationMode::Z_CONSOLIDATION_MODE_NONE);
+
+    std::weak_ptr<SubscriptionData> data_wp = shared_from_this();
+    auto sub = context_impl->session()->ext().declare_querying_subscriber(
+      sub_ke,
+      [data_wp](const zenoh::Sample & sample) {
+        auto sub_data = data_wp.lock();
+        if (sub_data == nullptr) {
+          RMW_ZENOH_LOG_ERROR_NAMED(
+            "rmw_zenoh_cpp",
+            "Unable to obtain SubscriptionData from data for %s.",
+            sample.get_keyexpr().as_string_view());
+          return;
+        }
+
+        auto attachment = sample.get_attachment();
+        if (!attachment.has_value()) {
+          RMW_ZENOH_LOG_ERROR_NAMED(
+            "rmw_zenoh_cpp",
+            "Unable to obtain attachment")
+          return;
+        }
+
+        auto attachment_value = attachment.value();
+        AttachmentData attachment_data(attachment_value);
+
+        sub_data->add_new_message(
+          std::make_unique<SubscriptionData::Message>(
+            sample.get_payload().as_vector(),
+            std::chrono::system_clock::now().time_since_epoch().count(),
+            std::move(attachment_data)),
+          std::string(sample.get_keyexpr().as_string_view()));
+      },
+      zenoh::closures::none,
+      std::move(sub_options),
+      &result);
+    if (result != Z_OK) {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
       return false;
     }
-    sub_ = sub;
+    sub_ = std::move(sub);
 
     // Register the querying subscriber with the graph cache to get latest
     // messages from publishers that were discovered after their first publication.
-    std::weak_ptr<SubscriptionData> data_wp = shared_from_this();
     graph_cache_->set_querying_subscriber_callback(
       entity_->topic_info().value().topic_keyexpr_,
       entity_->keyexpr_hash(),
@@ -276,70 +264,78 @@ bool SubscriptionData::init()
           "QueryingSubscriberCallback triggered over %s.",
           selector.c_str()
         );
-        z_get_options_t opts;
-        z_get_options_default(&opts);
+        zenoh::Session::GetOptions opts = zenoh::Session::GetOptions::create_default();
         opts.timeout_ms = std::numeric_limits<uint64_t>::max();
-        opts.consolidation = z_query_consolidation_latest();
+        opts.consolidation = zenoh::ConsolidationMode::Z_CONSOLIDATION_MODE_NONE;
         opts.accept_replies = ZC_REPLY_KEYEXPR_ANY;
 
-        z_view_keyexpr_t ke;
-        z_view_keyexpr_from_str(&ke, selector.c_str());
-        ze_querying_subscriber_get(
-          z_loan(std::get<ze_owned_querying_subscriber_t>(sub_data->sub_)),
-          z_loan(ke),
-          &opts);
+        zenoh::ZResult result;
+        std::get<zenoh::ext::QueryingSubscriber<void>>(sub_data->sub_.value()).get(
+          zenoh::KeyExpr(selector),
+          std::move(opts),
+          &result);
+
+        if (result != Z_OK) {
+          RMW_SET_ERROR_MSG("unable to get querying subscriber.");
+          return;
+        }
       }
     );
   } else {
-    // Create a regular subscriber for all other durability settings.
-    z_subscriber_options_t sub_options;
-    z_subscriber_options_default(&sub_options);
+    zenoh::Session::SubscriberOptions sub_options =
+      zenoh::Session::SubscriberOptions::create_default();
+    std::weak_ptr<SubscriptionData> data_wp = shared_from_this();
+    zenoh::Subscriber<void> sub = context_impl->session()->declare_subscriber(
+      sub_ke,
+      [data_wp](const zenoh::Sample & sample) {
+        auto sub_data = data_wp.lock();
+        if (sub_data == nullptr) {
+          RMW_ZENOH_LOG_ERROR_NAMED(
+            "rmw_zenoh_cpp",
+            "Unable to lock weak_ptr<SubscriptionData> within querying subscription callback."
+          );
+          return;
+        }
+        auto attachment = sample.get_attachment();
+        if (!attachment.has_value()) {
+          RMW_ZENOH_LOG_ERROR_NAMED(
+            "rmw_zenoh_cpp",
+            "Unable to obtain attachment")
+          return;
+        }
+        auto payload = sample.get_payload().clone();
+        auto attachment_value = attachment.value();
 
-    z_owned_subscriber_t sub;
-    if (z_declare_subscriber(
-        sess_->loan(), &sub, z_loan(sub_ke), z_move(callback),
-        &sub_options) != Z_OK)
-    {
+        AttachmentData attachment_data(attachment_value);
+        sub_data->add_new_message(
+          std::make_unique<SubscriptionData::Message>(
+            payload.as_vector(),
+            std::chrono::system_clock::now().time_since_epoch().count(),
+            std::move(attachment_data)),
+          std::string(sample.get_keyexpr().as_string_view()));
+      },
+      zenoh::closures::none,
+      std::move(sub_options),
+      &result);
+    if (result != Z_OK) {
       RMW_SET_ERROR_MSG("unable to create zenoh subscription");
       return false;
     }
-    sub_ = sub;
+    sub_ = std::move(sub);
   }
-
-  auto undeclare_z_sub = rcpputils::make_scope_exit(
-    [this]() {
-      z_owned_subscriber_t * sub = std::get_if<z_owned_subscriber_t>(&sub_);
-      if (sub == nullptr || z_undeclare_subscriber(z_move(*sub))) {
-        RMW_SET_ERROR_MSG("failed to undeclare sub");
-      } else {
-        ze_owned_querying_subscriber_t * querying_sub =
-        std::get_if<ze_owned_querying_subscriber_t>(&sub_);
-        if (querying_sub == nullptr || ze_undeclare_querying_subscriber(z_move(*querying_sub))) {
-          RMW_SET_ERROR_MSG("failed to undeclare sub");
-        }
-      }
-    });
 
   // Publish to the graph that a new subscription is in town.
   std::string liveliness_keyexpr = entity_->liveliness_keyexpr();
-  z_view_keyexpr_t liveliness_ke;
-  z_view_keyexpr_from_str(&liveliness_ke, liveliness_keyexpr.c_str());
-
-  auto free_token = rcpputils::make_scope_exit(
-    [this]() {
-      z_drop(z_move(token_));
-    });
-  if (z_liveliness_declare_token(
-      sess_->loan(), &token_, z_loan(liveliness_ke), NULL) != Z_OK)
-  {
+  token_ = context_impl->session()->liveliness_declare_token(
+    zenoh::KeyExpr(liveliness_keyexpr),
+    zenoh::Session::LivelinessDeclarationOptions::create_default(),
+    &result);
+  if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Unable to create liveliness token for the subscription.");
     return false;
   }
-
-  undeclare_z_sub.cancel();
-  free_token.cancel();
 
   initialized_ = true;
 
@@ -408,21 +404,36 @@ rmw_ret_t SubscriptionData::shutdown()
   graph_cache_->remove_qos_event_callbacks(entity_->keyexpr_hash());
 
   // Unregister this subscription from the ROS graph.
-  z_liveliness_undeclare_token(z_move(token_));
+  zenoh::ZResult result;
+  std::move(token_).value().undeclare(&result);
+  if (result != Z_OK) {
+    RMW_ZENOH_LOG_ERROR_NAMED(
+      "rmw_zenoh_cpp",
+      "Unable to undeclare liveliness token");
+    return RMW_RET_ERROR;
+  }
 
-  z_owned_subscriber_t * sub = std::get_if<z_owned_subscriber_t>(&sub_);
-  if (sub != nullptr) {
-    if (z_undeclare_subscriber(z_move(*sub)) != Z_OK) {
-      RMW_SET_ERROR_MSG("failed to undeclare sub.");
-      ret = RMW_RET_ERROR;
-    }
-  } else {
-    ze_owned_querying_subscriber_t * querying_sub =
-      std::get_if<ze_owned_querying_subscriber_t>(&sub_);
-    if (querying_sub != nullptr) {
-      if (ze_undeclare_querying_subscriber(z_move(*querying_sub)) != Z_OK) {
-        RMW_SET_ERROR_MSG("failed to undeclare querying sub.");
-        ret = RMW_RET_ERROR;
+  if (sub_.has_value()) {
+    zenoh::Subscriber<void> * sub = std::get_if<zenoh::Subscriber<void>>(&sub_.value());
+    if (sub != nullptr) {
+      std::move(*sub).undeclare(&result);
+      if (result != Z_OK) {
+        RMW_ZENOH_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "failed to undeclare sub.");
+        return RMW_RET_ERROR;
+      }
+    } else {
+      zenoh::ext::QueryingSubscriber<void> * sub =
+        std::get_if<zenoh::ext::QueryingSubscriber<void>>(&sub_.value());
+      if (sub != nullptr) {
+        std::move(*sub).undeclare(&result);
+        if (result != Z_OK) {
+          RMW_ZENOH_LOG_ERROR_NAMED(
+            "rmw_zenoh_cpp",
+            "failed to undeclare querying sub.");
+          return RMW_RET_ERROR;
+        }
       }
     }
   }
@@ -479,13 +490,18 @@ rmw_ret_t SubscriptionData::take_one_message(
   std::unique_ptr<Message> msg_data = std::move(message_queue_.front());
   message_queue_.pop_front();
 
-  const uint8_t * payload = z_slice_data(z_loan(msg_data->payload));
-  const size_t payload_len = z_slice_len(z_loan(msg_data->payload));
+  auto & payload_data = msg_data->payload;
 
+  if (payload_data.empty()) {
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp",
+      "SubscriptionData not able to get slice data");
+    return RMW_RET_ERROR;
+  }
   // Object that manages the raw buffer
   eprosima::fastcdr::FastBuffer fastbuffer(
-    reinterpret_cast<char *>(const_cast<uint8_t *>(payload)),
-    payload_len);
+    reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())),
+    payload_data.size());
 
   // Object that serializes the data
   rmw_zenoh_cpp::Cdr deser(fastbuffer);
@@ -505,10 +521,12 @@ rmw_ret_t SubscriptionData::take_one_message(
     // TODO(clalancette): fill in reception_sequence_number
     message_info->reception_sequence_number = 0;
     message_info->publisher_gid.implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-    msg_data->attachment.copy_gid(message_info->publisher_gid.data);
+    memcpy(
+      message_info->publisher_gid.data,
+      msg_data->attachment.copy_gid().data(),
+      RMW_GID_STORAGE_SIZE);
     message_info->from_intra_process = false;
   }
-
   *taken = true;
 
   return RMW_RET_OK;
@@ -530,18 +548,26 @@ rmw_ret_t SubscriptionData::take_serialized_message(
   std::unique_ptr<Message> msg_data = std::move(message_queue_.front());
   message_queue_.pop_front();
 
-  const uint8_t * payload = z_slice_data(z_loan(msg_data->payload));
-  const size_t payload_len = z_slice_len(z_loan(msg_data->payload));
+  auto & payload_data = msg_data->payload;
 
-  if (serialized_message->buffer_capacity < payload_len) {
+  if (payload_data.empty()) {
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp",
+      "SubscriptionData not able to get slice data");
+    return RMW_RET_ERROR;
+  }
+  if (serialized_message->buffer_capacity < payload_data.size()) {
     rmw_ret_t ret =
-      rmw_serialized_message_resize(serialized_message, payload_len);
+      rmw_serialized_message_resize(serialized_message, payload_data.size());
     if (ret != RMW_RET_OK) {
       return ret;  // Error message already set
     }
   }
-  serialized_message->buffer_length = payload_len;
-  memcpy(serialized_message->buffer, payload, payload_len);
+  serialized_message->buffer_length = payload_data.size();
+  memcpy(
+    serialized_message->buffer,
+    reinterpret_cast<char *>(const_cast<uint8_t *>(payload_data.data())),
+    payload_data.size());
 
   *taken = true;
 
@@ -552,7 +578,10 @@ rmw_ret_t SubscriptionData::take_serialized_message(
     // TODO(clalancette): fill in reception_sequence_number
     message_info->reception_sequence_number = 0;
     message_info->publisher_gid.implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-    msg_data->attachment.copy_gid(message_info->publisher_gid.data);
+    memcpy(
+      message_info->publisher_gid.data,
+      msg_data->attachment.copy_gid().data(),
+      RMW_GID_STORAGE_SIZE);
     message_info->from_intra_process = false;
   }
 
@@ -590,7 +619,7 @@ void SubscriptionData::add_new_message(
   }
 
   // Check for messages lost if the new sequence number is not monotonically increasing.
-  const size_t gid_hash = msg->attachment.gid_hash();
+  const size_t gid_hash = hash_gid(msg->attachment.copy_gid());
   auto last_known_pub_it = last_known_published_msg_.find(gid_hash);
   if (last_known_pub_it != last_known_published_msg_.end()) {
     const int64_t seq_increment = std::abs(

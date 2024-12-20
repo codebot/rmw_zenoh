@@ -26,6 +26,8 @@
 #include <utility>
 #include <vector>
 
+#include <zenoh.hxx>
+
 #include "logging_macros.hpp"
 #include "qos.hpp"
 #include "simplified_xxhash3.hpp"
@@ -372,16 +374,6 @@ std::optional<rmw_qos_profile_t> keyexpr_to_qos(const std::string & keyexpr)
 }
 
 ///=============================================================================
-std::string zid_to_str(const z_id_t & id)
-{
-  z_owned_string_t z_str;
-  z_id_to_string(&id, &z_str);
-  std::string str(z_string_data(z_loan(z_str)), z_string_len(z_loan(z_str)));
-  z_drop(z_move(z_str));
-  return str;
-}
-
-///=============================================================================
 std::string subscription_token(size_t domain_id)
 {
   std::string token = std::string(ADMIN_SPACE) + "/" + std::to_string(domain_id) + "/**";
@@ -445,8 +437,9 @@ Entity::Entity(
   // returned to the RMW layer as necessary.
   simplified_XXH128_hash_t keyexpr_gid =
     simplified_XXH3_128bits(this->liveliness_keyexpr_.c_str(), this->liveliness_keyexpr_.length());
-  memcpy(this->gid_, &keyexpr_gid.low64, sizeof(keyexpr_gid.low64));
-  memcpy(this->gid_ + sizeof(keyexpr_gid.low64), &keyexpr_gid.high64, sizeof(keyexpr_gid.high64));
+  memcpy(this->gid_.data(), &keyexpr_gid.low64, sizeof(keyexpr_gid.low64));
+  memcpy(this->gid_.data() + sizeof(keyexpr_gid.low64), &keyexpr_gid.high64,
+        sizeof(keyexpr_gid.high64));
 
   // We also hash the liveliness keyexpression into a size_t that we use to index into our maps.
   this->keyexpr_hash_ = hash_gid(this->gid_);
@@ -454,7 +447,7 @@ Entity::Entity(
 
 ///=============================================================================
 std::shared_ptr<Entity> Entity::make(
-  z_id_t zid,
+  zenoh::Id zid,
   const std::string & nid,
   const std::string & id,
   EntityType type,
@@ -480,7 +473,7 @@ std::shared_ptr<Entity> Entity::make(
 
   return std::make_shared<Entity>(
     Entity{
-        zid_to_str(zid),
+        std::string(zid.to_string()),
         nid,
         id,
         std::move(type),
@@ -638,9 +631,9 @@ std::string Entity::liveliness_keyexpr() const
 }
 
 ///=============================================================================
-void Entity::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
+std::array<uint8_t, RMW_GID_STORAGE_SIZE> Entity::copy_gid() const
 {
-  memcpy(out_gid, gid_, RMW_GID_STORAGE_SIZE);
+  return gid_;
 }
 
 ///=============================================================================
@@ -679,13 +672,12 @@ std::string demangle_name(const std::string & input)
 }  // namespace liveliness
 
 ///=============================================================================
-size_t hash_gid(const uint8_t gid[RMW_GID_STORAGE_SIZE])
+size_t hash_gid(const std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid)
 {
   std::stringstream hash_str;
   hash_str << std::hex;
-  size_t i = 0;
-  for (; i < (RMW_GID_STORAGE_SIZE - 1); i++) {
-    hash_str << static_cast<int>(gid[i]);
+  for (const auto & g : gid) {
+    hash_str << static_cast<int>(g);
   }
   return std::hash<std::string>{}(hash_str.str());
 }

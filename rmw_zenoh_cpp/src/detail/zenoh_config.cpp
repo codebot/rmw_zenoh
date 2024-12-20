@@ -19,6 +19,9 @@
 #include <limits>
 #include <string>
 
+#include <zenoh.hxx>
+#include <zenoh/api/config.hxx>
+
 #include "logging_macros.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -41,10 +44,9 @@ static const std::unordered_map<ConfigurableEntity,
 
 static const char * router_check_attempts_envar = "ZENOH_ROUTER_CHECK_ATTEMPTS";
 
-rmw_ret_t _get_z_config(
+std::optional<zenoh::Config> _get_z_config(
   const char * envar_name,
-  const char * default_uri,
-  z_owned_config_t * config)
+  const char * default_uri)
 {
   const char * configured_uri;
   const char * envar_uri;
@@ -53,40 +55,42 @@ rmw_ret_t _get_z_config(
     // NULL is returned if everything is ok.
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp", "Envar %s cannot be read.", envar_name);
-    return RMW_RET_ERROR;
+    return std::nullopt;
   }
   // If the environment variable is set, try to read the configuration from the file,
   // if the environment variable is not set use internal configuration
   configured_uri = envar_uri[0] != '\0' ? envar_uri : default_uri;
   // Try to read the configuration
-  if (zc_config_from_file(config, configured_uri) != Z_OK) {
+  zenoh::ZResult result;
+  zenoh::Config config = zenoh::Config::from_file(configured_uri, &result);
+  if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
       "Invalid configuration file %s", configured_uri);
-    return RMW_RET_ERROR;
+    return std::nullopt;
   }
   RMW_ZENOH_LOG_DEBUG_NAMED(
     "rmw_zenoh_cpp",
     "configured using configuration file %s", configured_uri);
-  return RMW_RET_OK;
+  return config;
 }
 }  // namespace
 
 ///=============================================================================
-rmw_ret_t get_z_config(const ConfigurableEntity & entity, z_owned_config_t * config)
+std::optional<zenoh::Config> get_z_config(const ConfigurableEntity & entity)
 {
   auto envar_map_it = envar_map.find(entity);
   if (envar_map_it == envar_map.end()) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp", "get_z_config called with invalid ConfigurableEntity.");
-    return RMW_RET_ERROR;
+    return std::nullopt;
   }
   // Get the absolute path to the default configuration file.
   static const std::string path_to_config_folder =
     ament_index_cpp::get_package_share_directory("rmw_zenoh_cpp") + "/config/";
   const std::string default_config_path = path_to_config_folder + envar_map_it->second.second;
 
-  return _get_z_config(envar_map_it->second.first, default_config_path.c_str(), config);
+  return _get_z_config(envar_map_it->second.first, default_config_path.c_str());
 }
 
 ///=============================================================================

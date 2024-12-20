@@ -15,14 +15,15 @@
 #ifndef DETAIL__RMW_PUBLISHER_DATA_HPP_
 #define DETAIL__RMW_PUBLISHER_DATA_HPP_
 
-#include <zenoh.h>
-
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
+
+#include <zenoh.hxx>
 
 #include "event.hpp"
 #include "liveliness_utils.hpp"
@@ -43,7 +44,8 @@ class PublisherData final
 public:
   // Make a shared_ptr of PublisherData.
   static std::shared_ptr<PublisherData> make(
-    std::shared_ptr<ZenohSession> session,
+    std::shared_ptr<zenoh::Session> session,
+    const rmw_publisher_t * const rmw_publisher,
     const rmw_node_t * const node,
     liveliness::NodeInfo node_info,
     std::size_t node_id,
@@ -55,12 +57,12 @@ public:
   // Publish a ROS message.
   rmw_ret_t publish(
     const void * ros_message,
-    std::optional<z_owned_shm_provider_t> & shm_provider);
+    std::optional<zenoh::ShmProvider> & shm_provider);
 
   // Publish a serialized ROS message.
   rmw_ret_t publish_serialized_message(
     const rmw_serialized_message_t * serialized_message,
-    std::optional<z_owned_shm_provider_t> & shm_provider);
+    std::optional<zenoh::ShmProvider> & shm_provider);
 
   // Get a copy of the keyexpr_hash of this PublisherData's liveliness::Entity.
   std::size_t keyexpr_hash() const;
@@ -68,8 +70,8 @@ public:
   // Get a copy of the TopicInfo of this PublisherData.
   liveliness::TopicInfo topic_info() const;
 
-  // Copy the GID of this PublisherData into an rmw_gid_t.
-  void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
+  // Return a copy of the GID of this publisher.
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> copy_gid() const;
 
   // Returns true if liveliness token is still valid.
   bool liveliness_is_valid() const;
@@ -89,29 +91,32 @@ public:
 private:
   // Constructor.
   PublisherData(
+    const rmw_publisher_t * const rmw_publisher,
     const rmw_node_t * rmw_node,
     std::shared_ptr<liveliness::Entity> entity,
-    std::shared_ptr<ZenohSession> sess,
-    z_owned_publisher_t pub,
-    std::optional<ze_owned_publication_cache_t> pub_cache,
-    z_owned_liveliness_token_t token,
+    std::shared_ptr<zenoh::Session> session,
+    zenoh::Publisher pub,
+    std::optional<zenoh::ext::PublicationCache> pub_cache,
+    zenoh::LivelinessToken token,
     const void * type_support_impl,
     std::unique_ptr<MessageTypeSupport> type_support);
 
   // Internal mutex.
   mutable std::mutex mutex_;
+  // The rmw publisher
+  const rmw_publisher_t * rmw_publisher_;
   // The parent node.
   const rmw_node_t * rmw_node_;
   // The Entity generated for the publisher.
   std::shared_ptr<liveliness::Entity> entity_;
   // A shared session.
-  std::shared_ptr<ZenohSession> sess_;
+  std::shared_ptr<zenoh::Session> sess_;
   // An owned publisher.
-  z_owned_publisher_t pub_;
+  zenoh::Publisher pub_;
   // Optional publication cache when durability is transient_local.
-  std::optional<ze_owned_publication_cache_t> pub_cache_;
+  std::optional<zenoh::ext::PublicationCache> pub_cache_;
   // Liveliness token for the publisher.
-  z_owned_liveliness_token_t token_;
+  std::optional<zenoh::LivelinessToken> token_;
   // Type support fields
   const void * type_support_impl_;
   std::unique_ptr<MessageTypeSupport> type_support_;

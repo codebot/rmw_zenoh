@@ -36,6 +36,7 @@
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/names_and_types.h"
 
+#include <zenoh/api/id.hxx>
 
 namespace rmw_zenoh_cpp
 {
@@ -110,7 +111,7 @@ public:
   /// @param id The id of the zenoh session that is building the graph cache.
   ///   This is used to infer which entities originated from the current session
   ///   so that appropriate event callbacks may be triggered.
-  explicit GraphCache(const z_id_t & zid);
+  explicit GraphCache(const zenoh::Id & zid);
 
   // Parse a PUT message over a token's key-expression and update the graph.
   void parse_put(const std::string & keyexpr, bool ignore_from_current_session = false);

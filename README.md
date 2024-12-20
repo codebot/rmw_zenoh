@@ -19,7 +19,7 @@ Build `rmw_zenoh_cpp`
 
 >Note: By default, we vendor and compile `zenoh-c` with a subset of `zenoh` features.
 The `ZENOHC_CARGO_FLAGS` CMake argument may be overwritten with other features included if required.
-See [zenoh_c_vendor/CMakeLists.txt](./zenoh_c_vendor/CMakeLists.txt) for more details.
+See [zenoh_cpp_vendor/CMakeLists.txt](./zenoh_cpp_vendor/CMakeLists.txt) for more details.
 
 ```bash
 mkdir ~/ws_rmw_zenoh/src -p && cd ~/ws_rmw_zenoh/src
@@ -45,7 +45,7 @@ source install/setup.bash
 ros2 run rmw_zenoh_cpp rmw_zenohd
 ```
 
-> Note: Without the Zenoh router, nodes will not be able to discover each other since multicast discovery is disabled by default in the node's session config. Instead, nodes will receive discovery information about other peers via the Zenoh router's gossip functionality. See more information on the session configs [below](#config).
+> Note: Without the Zenoh router, nodes will not be able to discover each other since multicast discovery is disabled by default in the node's session config. Instead, nodes will receive discovery information about other peers via the Zenoh router's gossip functionality. See more information on the session configs [below](#configuration).
 
 ### Terminate ROS 2 daemon started with another RMW
 ```bash

@@ -15,12 +15,12 @@
 #ifndef DETAIL__RMW_CONTEXT_IMPL_S_HPP_
 #define DETAIL__RMW_CONTEXT_IMPL_S_HPP_
 
-#include <zenoh.h>
-
 #include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
+
+#include <zenoh.hxx>
 
 #include "graph_cache.hpp"
 #include "rmw_node_data.hpp"
@@ -47,14 +47,14 @@ public:
   // Get a copy of the enclave.
   std::string enclave() const;
 
-  // Share the Zenoh session.
-  std::shared_ptr<rmw_zenoh_cpp::ZenohSession> session() const;
+  // Loan the Zenoh session.
+  const std::shared_ptr<zenoh::Session> session() const;
 
   // Get a reference to the shm_provider.
   // Note: This is not thread-safe.
   // TODO(Yadunund): Remove this API and instead include a publish() API
   // that handles the shm_provider once the context manages publishers.
-  std::optional<z_owned_shm_provider_t> & shm_provider();
+  std::optional<zenoh::ShmProvider> & shm_provider();
 
   // Get the graph guard condition.
   rmw_guard_condition_t * graph_guard_condition();

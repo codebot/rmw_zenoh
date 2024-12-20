@@ -15,8 +15,6 @@
 #ifndef DETAIL__RMW_SERVICE_DATA_HPP_
 #define DETAIL__RMW_SERVICE_DATA_HPP_
 
-#include <zenoh.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -25,6 +23,8 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+
+#include <zenoh.hxx>
 
 #include "event.hpp"
 #include "liveliness_utils.hpp"
@@ -42,13 +42,14 @@ namespace rmw_zenoh_cpp
 {
 
 ///=============================================================================
-class ServiceData final
+class ServiceData final : public std::enable_shared_from_this<ServiceData>
 {
 public:
   // Make a shared_ptr of ServiceData.
   static std::shared_ptr<ServiceData> make(
-    std::shared_ptr<ZenohSession> session,
+    std::shared_ptr<zenoh::Session> session,
     const rmw_node_t * const node,
+    const rmw_service_t * rmw_service,
     liveliness::NodeInfo node_info,
     std::size_t node_id,
     std::size_t service_id,
@@ -98,8 +99,9 @@ private:
   // Constructor.
   ServiceData(
     const rmw_node_t * rmw_node,
+    const rmw_service_t * rmw_service,
     std::shared_ptr<liveliness::Entity> entity,
-    std::shared_ptr<ZenohSession> sess,
+    std::shared_ptr<zenoh::Session> session,
     const void * request_type_support_impl,
     const void * response_type_support_impl,
     std::unique_ptr<RequestTypeSupport> request_type_support,
@@ -109,16 +111,35 @@ private:
   mutable std::mutex mutex_;
   // The parent node.
   const rmw_node_t * rmw_node_;
+  // The rmw service.
+  const rmw_service_t * rmw_service_;
   // The Entity generated for the service.
   std::shared_ptr<liveliness::Entity> entity_;
-  // An owned keyexpression.
-  z_owned_keyexpr_t keyexpr_;
-  // A shared session.
-  std::shared_ptr<ZenohSession> sess_;
+
+  // A shared session
+  std::shared_ptr<zenoh::Session> sess_;
+  // The keyexpr string.
+  std::string keyexpr_;
   // An owned queryable.
-  z_owned_queryable_t qable_;
+  // The Queryable *must* exist in order for anything in this ServiceData class,
+  // and hence rmw_zenoh_cpp, to work.
+  // However, zenoh::Queryable does not have an empty constructor,
+  // so just declaring this as a zenoh::Queryable fails to compile.
+  // We work around that by wrapping it in a std::optional, so the std::optional
+  // gets constructed at ServiceData constructor time,
+  // and then we initialize qable_ later. Note that the zenoh-cpp API declare_queryable() throws an
+  // exception if it fails, so this should all be safe to do.
+  std::optional<zenoh::Queryable<void>> qable_;
   // Liveliness token for the service.
-  z_owned_liveliness_token_t token_;
+  // The token_ *must* exist in order for anything in this ServiceData class,
+  // and hence rmw_zenoh_cpp, to work.
+  // However, zenoh::LivelinessToken does not have an empty constructor,
+  // so just declaring this as a zenoh::LivelinessToken fails to compile.
+  // We work around that by wrapping it in a std::optional, so the std::optional
+  // gets constructed at ServiceData constructor time,
+  // and then we initialize token_ later. Note that the zenoh-cpp API
+  // liveliness_declare_token() throws an exception if it fails, so this should all be safe to do.
+  std::optional<zenoh::LivelinessToken> token_;
   // Type support fields.
   const void * request_type_support_impl_;
   const void * response_type_support_impl_;

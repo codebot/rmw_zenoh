@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <zenoh.h>
-
+#include <array>
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
-#include <string_view>
+#include <string>
 #include <utility>
+
+#include <zenoh.hxx>
 
 #include "rmw/types.h"
 
@@ -27,75 +28,24 @@
 
 namespace rmw_zenoh_cpp
 {
-///=============================================================================
+
 AttachmentData::AttachmentData(
   const int64_t sequence_number,
   const int64_t source_timestamp,
-  const uint8_t source_gid[RMW_GID_STORAGE_SIZE])
+  const std::array<uint8_t, RMW_GID_STORAGE_SIZE> source_gid)
 : sequence_number_(sequence_number),
-  source_timestamp_(source_timestamp)
+  source_timestamp_(source_timestamp),
+  source_gid_(source_gid),
+  gid_hash_(hash_gid(source_gid))
 {
-  memcpy(source_gid_, source_gid, RMW_GID_STORAGE_SIZE);
-  gid_hash_ = hash_gid(source_gid_);
 }
 
-///=============================================================================
 AttachmentData::AttachmentData(AttachmentData && data)
-: sequence_number_(std::move(data.sequence_number_)),
-  source_timestamp_(std::move(data.source_timestamp_)),
-  gid_hash_(std::move(data.gid_hash_))
 {
-  memcpy(source_gid_, data.source_gid_, RMW_GID_STORAGE_SIZE);
-}
-
-///=============================================================================
-AttachmentData::AttachmentData(const z_loaned_bytes_t * attachment)
-{
-  ze_deserializer_t deserializer = ze_deserializer_from_bytes(attachment);
-  z_owned_string_t key;
-
-  // Deserialize the sequence_number
-  ze_deserializer_deserialize_string(&deserializer, &key);
-  if (std::string_view(
-      z_string_data(z_loan(key)),
-      z_string_len(z_loan(key))) != "sequence_number")
-  {
-    throw std::runtime_error("sequence_number is not found in the attachment.");
-  }
-  z_drop(z_move(key));
-  if (ze_deserializer_deserialize_int64(&deserializer, &this->sequence_number_)) {
-    throw std::runtime_error("Failed to deserialize the sequence_number.");
-  }
-
-  // Deserialize the source_timestamp
-  ze_deserializer_deserialize_string(&deserializer, &key);
-  if (std::string_view(
-      z_string_data(z_loan(key)),
-      z_string_len(z_loan(key))) != "source_timestamp")
-  {
-    throw std::runtime_error("source_timestamp is not found in the attachment");
-  }
-  z_drop(z_move(key));
-  if (ze_deserializer_deserialize_int64(&deserializer, &this->source_timestamp_)) {
-    throw std::runtime_error("Failed to deserialize the source_timestamp.");
-  }
-
-  // Deserialize the source_gid
-  ze_deserializer_deserialize_string(&deserializer, &key);
-  if (std::string_view(z_string_data(z_loan(key)), z_string_len(z_loan(key))) != "source_gid") {
-    throw std::runtime_error("Invalid attachment: the key source_gid is not found");
-  }
-  z_drop(z_move(key));
-  z_owned_slice_t slice;
-  if (ze_deserializer_deserialize_slice(&deserializer, &slice)) {
-    throw std::runtime_error("Failed to deserialize the source_gid.");
-  }
-  if (z_slice_len(z_loan(slice)) != RMW_GID_STORAGE_SIZE) {
-    throw std::runtime_error("The length of source_gid mismatched.");
-  }
-  memcpy(this->source_gid_, z_slice_data(z_loan(slice)), z_slice_len(z_loan(slice)));
-  z_drop(z_move(slice));
-  gid_hash_ = hash_gid(this->source_gid_);
+  gid_hash_ = std::move(data.gid_hash_);
+  sequence_number_ = std::move(data.sequence_number_);
+  source_timestamp_ = std::move(data.source_timestamp_);
+  source_gid_ = data.source_gid_;
 }
 
 ///=============================================================================
@@ -111,9 +61,9 @@ int64_t AttachmentData::source_timestamp() const
 }
 
 ///=============================================================================
-void AttachmentData::copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const
+std::array<uint8_t, RMW_GID_STORAGE_SIZE> AttachmentData::copy_gid() const
 {
-  memcpy(out_gid, source_gid_, RMW_GID_STORAGE_SIZE);
+  return source_gid_;
 }
 
 ///=============================================================================
@@ -122,17 +72,38 @@ size_t AttachmentData::gid_hash() const
   return gid_hash_;
 }
 
-///=============================================================================
-void AttachmentData::serialize_to_zbytes(z_owned_bytes_t * attachment)
+zenoh::Bytes AttachmentData::serialize_to_zbytes()
 {
-  ze_owned_serializer_t serializer;
-  ze_serializer_empty(&serializer);
-  ze_serializer_serialize_str(z_loan_mut(serializer), "sequence_number");
-  ze_serializer_serialize_int64(z_loan_mut(serializer), this->sequence_number_);
-  ze_serializer_serialize_str(z_loan_mut(serializer), "source_timestamp");
-  ze_serializer_serialize_int64(z_loan_mut(serializer), this->source_timestamp_);
-  ze_serializer_serialize_str(z_loan_mut(serializer), "source_gid");
-  ze_serializer_serialize_buf(z_loan_mut(serializer), this->source_gid_, RMW_GID_STORAGE_SIZE);
-  ze_serializer_finish(z_move(serializer), attachment);
+  auto serializer = zenoh::ext::Serializer();
+  serializer.serialize(std::string("sequence_number"));
+  serializer.serialize(this->sequence_number_);
+  serializer.serialize(std::string("source_timestamp"));
+  serializer.serialize(this->source_timestamp_);
+  serializer.serialize(std::string("source_gid"));
+  serializer.serialize(this->source_gid_);
+  return std::move(serializer).finish();
+}
+
+AttachmentData::AttachmentData(const zenoh::Bytes & bytes)
+{
+  zenoh::ext::Deserializer deserializer(bytes);
+  const auto sequence_number_str = deserializer.deserialize<std::string>();
+  if (sequence_number_str != "sequence_number") {
+    throw std::runtime_error("sequence_number is not found in the attachment.");
+  }
+  this->sequence_number_ = deserializer.deserialize<int64_t>();
+
+  const auto source_timestamp_str = deserializer.deserialize<std::string>();
+  if (source_timestamp_str != "source_timestamp") {
+    throw std::runtime_error("source_timestamp is not found in the attachment.");
+  }
+  this->source_timestamp_ = deserializer.deserialize<int64_t>();
+
+  const auto source_gid_str = deserializer.deserialize<std::string>();
+  if (source_gid_str != "source_gid") {
+    throw std::runtime_error("source_gid is not found in the attachment.");
+  }
+  this->source_gid_ = deserializer.deserialize<std::array<uint8_t, RMW_GID_STORAGE_SIZE>>();
+  gid_hash_ = hash_gid(this->source_gid_);
 }
 }  // namespace rmw_zenoh_cpp

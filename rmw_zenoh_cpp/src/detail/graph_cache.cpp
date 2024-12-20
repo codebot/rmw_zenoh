@@ -71,8 +71,8 @@ TopicData::TopicData(ConstEntityPtr entity)
 }
 
 ///=============================================================================
-GraphCache::GraphCache(const z_id_t & zid)
-: zid_str_(liveliness::zid_to_str(zid))
+GraphCache::GraphCache(const zenoh::Id & zid)
+: zid_str_(zid.to_string())
 {
   // Do nothing.
 }
@@ -1168,8 +1168,7 @@ rmw_ret_t GraphCache::get_entities_info_by_topic(
           }
         }
 
-        memset(ep.endpoint_gid, 0, RMW_GID_STORAGE_SIZE);
-        entity->copy_gid(ep.endpoint_gid);
+        memcpy(ep.endpoint_gid, entity->copy_gid().data(), RMW_GID_STORAGE_SIZE);
 
         endpoints.push_back(ep);
       }
@@ -1202,7 +1201,7 @@ rmw_ret_t GraphCache::service_server_is_available(
       service_it->second.find(client_topic_info.type_);
     if (type_it != service_it->second.end()) {
       for (const auto & [_, topic_data] : type_it->second) {
-        if (topic_data->subs_.size() > 0) {
+        if (!topic_data->subs_.empty()) {
           *is_available = true;
           return RMW_RET_OK;
         }

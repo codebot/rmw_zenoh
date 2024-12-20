@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(zenoh_c_vendor)
+project(zenoh_cpp_vendor)
 
 # Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
@@ -26,7 +26,7 @@ set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memor
 # - https://github.com/eclipse-zenoh/zenoh-c/pull/620 (fix ze_querying_subscriber_get API to query newly discovered publishers)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION 42e717ff7b633649f11ebb7800b71d4939cd21c7
+  VCS_VERSION 2f389597264c200d9ddf72bbabbfea878abd5179
   CMAKE_ARGS
     "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
     "-DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE"
@@ -34,5 +34,16 @@ ament_vendor(zenoh_c_vendor
 )
 
 ament_export_dependencies(zenohc)
+
+ament_vendor(zenoh_cpp_vendor
+  VCS_URL https://github.com/eclipse-zenoh/zenoh-cpp
+  VCS_VERSION c549fbdf54e866b9d8f29c883e66359fcac88ed4
+  CMAKE_ARGS
+    -DZENOHCXX_ZENOHC=OFF
+)
+
+externalproject_add_stepdependencies(zenoh_cpp_vendor configure zenoh_c_vendor)
+
+ament_export_dependencies(zenohcxx)
 
 ament_package()

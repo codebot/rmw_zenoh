@@ -15,8 +15,7 @@
 #ifndef DETAIL__LIVELINESS_UTILS_HPP_
 #define DETAIL__LIVELINESS_UTILS_HPP_
 
-#include <zenoh.h>
-
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -24,6 +23,8 @@
 #include <optional>
 #include <string>
 #include <vector>
+
+#include <zenoh.hxx>
 
 #include "rmw/types.h"
 
@@ -127,7 +128,7 @@ public:
   /// @param topic_info An optional topic information for relevant entities.
   /// @return An entity if all inputs are valid. This way no invalid entities can be created.
   static EntityPtr make(
-    z_id_t zid,
+    zenoh::Id zid,
     const std::string & nid,
     const std::string & id,
     EntityType type,
@@ -172,7 +173,7 @@ public:
   // Two entities are equal if their keyexpr_hash are equal.
   bool operator==(const Entity & other) const;
 
-  void copy_gid(uint8_t out_gid[RMW_GID_STORAGE_SIZE]) const;
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> copy_gid() const;
 
 private:
   Entity(
@@ -191,7 +192,7 @@ private:
   NodeInfo node_info_;
   std::optional<TopicInfo> topic_info_;
   std::string liveliness_keyexpr_;
-  uint8_t gid_[RMW_GID_STORAGE_SIZE];
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid_{};
 };
 
 ///=============================================================================
@@ -231,15 +232,10 @@ std::string qos_to_keyexpr(const rmw_qos_profile_t & qos);
 ///=============================================================================
 /// Convert a rmw_qos_profile_t from a keyexpr. Return std::nullopt if invalid.
 std::optional<rmw_qos_profile_t> keyexpr_to_qos(const std::string & keyexpr);
-
-///=============================================================================
-/// Convert a Zenoh id to a string.
-std::string zid_to_str(const z_id_t & id);
 }  // namespace liveliness
 
 ///=============================================================================
-/// Generate a hash for a given GID.
-size_t hash_gid(const uint8_t gid[RMW_GID_STORAGE_SIZE]);
+size_t hash_gid(const std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid);
 }  // namespace rmw_zenoh_cpp
 
 ///=============================================================================

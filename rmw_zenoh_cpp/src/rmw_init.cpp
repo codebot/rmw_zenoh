@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <zenoh.h>
-
-#include <new>
 #include <string>
 #include <thread>
 
-#include "detail/guard_condition.hpp"
+#include <zenoh.hxx>
+
 #include "detail/identifier.hpp"
 #include "detail/liveliness_utils.hpp"
 #include "detail/rmw_context_impl_s.hpp"
