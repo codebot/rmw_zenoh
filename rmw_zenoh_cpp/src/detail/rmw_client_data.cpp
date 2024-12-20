@@ -43,6 +43,8 @@
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
 
+#include "tracetools/tracetools.h"
+
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
@@ -362,10 +364,17 @@ rmw_ret_t ClientData::send_request(
   size_t data_length = ser.get_serialized_data_length();
   *sequence_id = sequence_number_++;
 
+  TRACETOOLS_TRACEPOINT(
+    rmw_send_request,
+    static_cast<const void *>(rmw_client_),
+    static_cast<const void *>(ros_request),
+    *sequence_id);
+
   // Send request
   zenoh::Session::GetOptions opts = zenoh::Session::GetOptions::create_default();
-  std::array<uint8_t, RMW_GID_STORAGE_SIZE> local_gid = entity_->copy_gid();
-  opts.attachment = rmw_zenoh_cpp::create_map_and_set_sequence_num(*sequence_id, local_gid);
+  int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
+  opts.attachment = rmw_zenoh_cpp::AttachmentData(
+    *sequence_id, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
   opts.target = Z_QUERY_TARGET_ALL_COMPLETE;
   // The default timeout for a z_get query is 10 seconds and if a response is not received within
   // this window, the queryable will return an invalid reply. However, it is common for actions,
