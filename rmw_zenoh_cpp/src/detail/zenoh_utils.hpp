@@ -27,10 +27,6 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-zenoh::Bytes create_map_and_set_sequence_num(
-  int64_t sequence_number, std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid);
-
-///=============================================================================
 // A class to store the replies to service requests.
 class ZenohReply final
 {
@@ -65,6 +61,8 @@ private:
   zenoh::Query query_;
   std::chrono::nanoseconds::rep received_timestamp_;
 };
+
+int64_t get_system_time_in_ns();
 }  // namespace rmw_zenoh_cpp
 
 #endif  // DETAIL__ZENOH_UTILS_HPP_
