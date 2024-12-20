@@ -17,13 +17,6 @@ find_package(ament_cmake_vendor_package REQUIRED)
 # when expanded.
 set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memory zenoh/transport_compression zenoh/transport_tcp zenoh/transport_tls")
 
-# Set VCS_VERSION to include latest changes from zenoh-c to benefit from :
-# - https://github.com/eclipse-zenoh/zenoh-c/pull/340 (fix build issue)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1021 (fix timeout issue with queries)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1022 (fix empty messages received if payload >btach size)
-# - https://github.com/eclipse-zenoh/zenoh-c/pull/358 (fix debian packaging issue: https://github.com/jspricke/ros-deb-builder-action/issues/49)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1150 (fix deadlock issue https://github.com/ros2/rmw_zenoh/issues/182)
-# - https://github.com/eclipse-zenoh/zenoh-c/pull/620 (fix ze_querying_subscriber_get API to query newly discovered publishers)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
   VCS_VERSION 57d5e4d31d9b38fef34d7bcad3d3e54869c4ce73
@@ -37,9 +30,6 @@ ament_export_dependencies(zenohc)
 
 # Set VCS_VERSION to include latest changes from zenoh-c to benefit from :
 # - https://github.com/eclipse-zenoh/zenoh-cpp/pull/342 (Fix include what you use)
-
-https://github.com/ros2/rmw_zenoh/issues/350
-
 ament_vendor(zenoh_cpp_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-cpp
   VCS_VERSION 964b64dc8b935a43147287199e7bb12da7b141e6
