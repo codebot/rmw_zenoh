@@ -72,6 +72,22 @@ target_link_libraries(rmw_zenoh_cpp
     zenohcxx::zenohc
 )
 
+# Get distro from ros_environment and create config header
+set(ROS_DISTRO "$ENV{ROS_DISTRO}")
+set(ROS_DISTRO_JAZZY OFF)
+set(ROS_DISTRO_ROLLING OFF)
+if(ROS_DISTRO STREQUAL "jazzy")
+  set(ROS_DISTRO_JAZZY ON)
+elseif(ROS_DISTRO STREQUAL "rolling")
+  set(ROS_DISTRO_ROLLING ON)
+else()
+  message(WARNING "Unexpected ROS_DISTRO: ${ROS_DISTRO}")
+endif()
+configure_file(include/${PROJECT_NAME}/distro.hpp.in include/${PROJECT_NAME}/distro.hpp)
+target_include_directories(rmw_zenoh_cpp PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
+)
+
 configure_rmw_library(rmw_zenoh_cpp)
 
 target_compile_definitions(rmw_zenoh_cpp
