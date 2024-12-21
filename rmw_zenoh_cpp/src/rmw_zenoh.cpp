@@ -39,6 +39,7 @@
 #include "detail/serialization_format.hpp"
 #include "detail/type_support_common.hpp"
 #include "detail/zenoh_utils.hpp"
+#include "rmw_zenoh_cpp/distro.hpp"
 
 #include "rcpputils/scope_exit.hpp"
 
@@ -1509,10 +1510,12 @@ rmw_create_client(
   free_rmw_client.cancel();
   free_service_name.cancel();
 
+#ifndef ROS_DISTRO_JAZZY
   TRACETOOLS_TRACEPOINT(
     rmw_client_init,
     static_cast<const void *>(rmw_client),
     client_data->copy_gid().data());
+#endif
   return rmw_client;
 }
 
@@ -1609,6 +1612,7 @@ rmw_take_response(
   RMW_CHECK_ARGUMENT_FOR_NULL(request_header, RMW_RET_INVALID_ARGUMENT);
 
   rmw_ret_t ret = client_data->take_response(request_header, ros_response, taken);
+#ifndef ROS_DISTRO_JAZZY
   TRACETOOLS_TRACEPOINT(
     rmw_take_response,
     static_cast<const void *>(client),
@@ -1616,6 +1620,7 @@ rmw_take_response(
     request_header->request_id.sequence_number,
     request_header->source_timestamp,
     *taken);
+#endif
   return ret;
 }
 
@@ -1838,6 +1843,7 @@ rmw_take_request(
     request_header,
     ros_request,
     taken);
+#ifndef ROS_DISTRO_JAZZY
   TRACETOOLS_TRACEPOINT(
     rmw_take_request,
     static_cast<const void *>(service),
@@ -1845,6 +1851,7 @@ rmw_take_request(
     request_header->request_id.writer_guid,
     request_header->request_id.sequence_number,
     *taken);
+#endif
   return ret;
 }
 

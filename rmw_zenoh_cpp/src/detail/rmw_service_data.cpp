@@ -33,6 +33,7 @@
 #include "message_type_support.hpp"
 #include "logging_macros.hpp"
 #include "qos.hpp"
+#include "rmw_zenoh_cpp/distro.hpp"
 
 #include "rcpputils/scope_exit.hpp"
 
@@ -460,6 +461,7 @@ rmw_ret_t ServiceData::send_response(
     return RMW_RET_ERROR;
   }
 
+#ifndef ROS_DISTRO_JAZZY
   TRACETOOLS_TRACEPOINT(
     rmw_send_response,
     static_cast<const void *>(rmw_service_),
@@ -467,6 +469,7 @@ rmw_ret_t ServiceData::send_response(
     request_id->writer_guid,
     request_id->sequence_number,
     source_timestamp);
+#endif
   loaned_query.reply(service_ke, std::move(payload), std::move(options), &result);
   if (result != Z_OK) {
     RMW_SET_ERROR_MSG("unable to reply");

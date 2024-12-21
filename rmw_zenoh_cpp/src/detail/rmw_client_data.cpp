@@ -37,6 +37,7 @@
 #include "message_type_support.hpp"
 #include "qos.hpp"
 #include "rmw_context_impl_s.hpp"
+#include "rmw_zenoh_cpp/distro.hpp"
 
 #include "rcpputils/scope_exit.hpp"
 
@@ -365,11 +366,13 @@ rmw_ret_t ClientData::send_request(
   size_t data_length = ser.get_serialized_data_length();
   *sequence_id = sequence_number_++;
 
+#ifndef ROS_DISTRO_JAZZY
   TRACETOOLS_TRACEPOINT(
     rmw_send_request,
     static_cast<const void *>(rmw_client_),
     static_cast<const void *>(ros_request),
     *sequence_id);
+#endif
 
   // Send request
   zenoh::Session::GetOptions opts = zenoh::Session::GetOptions::create_default();
