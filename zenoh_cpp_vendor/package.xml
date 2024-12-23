@@ -3,7 +3,7 @@
 <package format="3">
   <name>zenoh_cpp_vendor</name>
   <version>0.0.1</version>
-  <description>Vendor pkg to install zenoh-c</description>
+  <description>Vendor pkg to install zenoh-cpp</description>
   <maintainer email="yadunund@openrobotics.org">Yadunund</maintainer>
   <license>Apache License 2.0</license>
 
