@@ -157,7 +157,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
         RMW_ZENOH_LOG_ERROR_NAMED(
           "rmw_zenoh_cpp",
           "Unable to obtain ServiceData from data for %s.",
-          query.get_keyexpr().as_string_view());
+          std::string(query.get_keyexpr().as_string_view()).c_str());
         return;
       }
 
