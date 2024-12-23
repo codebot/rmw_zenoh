@@ -2,7 +2,7 @@ name: build
 on:
   pull_request:
   push:
-    branches: [ rolling ]
+    branches: [ jazzy ]
   workflow_dispatch:
   schedule:
     # Run every morning to detect flakiness and broken dependencies
@@ -17,9 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Rolling (source)
-          - ROS_DISTRO: rolling
-            BUILD_TYPE: source
           # Jazzy (binary)
           - ROS_DISTRO: jazzy
             BUILD_TYPE: binary

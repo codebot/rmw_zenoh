@@ -2,7 +2,7 @@ name: style
 on:
   pull_request:
   push:
-    branches: [ rolling ]
+    branches: [ jazzy ]
 defaults:
   run:
     shell: bash
@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: ['jazzy', 'rolling']
+        distro: ['jazzy']
     container:
       image: ros:${{ matrix.distro }}-ros-base
     timeout-minutes: 30
