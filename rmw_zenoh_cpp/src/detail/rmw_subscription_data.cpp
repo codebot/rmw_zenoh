@@ -24,7 +24,6 @@
 #include <string>
 #include <utility>
 #include <variant>
-#include <vector>
 
 #include "attachment_helpers.hpp"
 #include "cdr.hpp"
@@ -44,10 +43,10 @@ namespace rmw_zenoh_cpp
 {
 ///=============================================================================
 SubscriptionData::Message::Message(
-  std::vector<uint8_t> && p,
+  const zenoh::Bytes & p,
   uint64_t recv_ts,
   AttachmentData && attachment_)
-: payload(std::move(p)), recv_timestamp(recv_ts), attachment(std::move(attachment_))
+: payload(p), recv_timestamp(recv_ts), attachment(std::move(attachment_))
 {
 }
 
@@ -225,7 +224,7 @@ bool SubscriptionData::init()
 
         sub_data->add_new_message(
           std::make_unique<SubscriptionData::Message>(
-            sample.get_payload().as_vector(),
+            sample.get_payload(),
             std::chrono::system_clock::now().time_since_epoch().count(),
             std::move(attachment_data)),
           std::string(sample.get_keyexpr().as_string_view()));
@@ -303,13 +302,12 @@ bool SubscriptionData::init()
             "Unable to obtain attachment")
           return;
         }
-        auto payload = sample.get_payload().clone();
         auto attachment_value = attachment.value();
 
         AttachmentData attachment_data(attachment_value);
         sub_data->add_new_message(
           std::make_unique<SubscriptionData::Message>(
-            payload.as_vector(),
+            sample.get_payload(),
             std::chrono::system_clock::now().time_since_epoch().count(),
             std::move(attachment_data)),
           std::string(sample.get_keyexpr().as_string_view()));
