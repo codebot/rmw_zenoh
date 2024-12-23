@@ -23,7 +23,7 @@ See [zenoh_cpp_vendor/CMakeLists.txt](./zenoh_cpp_vendor/CMakeLists.txt) for mor
 
 ```bash
 mkdir ~/ws_rmw_zenoh/src -p && cd ~/ws_rmw_zenoh/src
-git clone https://github.com/ros2/rmw_zenoh.git
+git clone https://github.com/ros2/rmw_zenoh.git -b <DISTRO>
 cd ~/ws_rmw_zenoh
 rosdep install --from-paths src --ignore-src --rosdistro <DISTRO> -y # replace <DISTRO> with ROS 2 distro of choice
 source /opt/ros/<DISTRO>/setup.bash # replace <DISTRO> with ROS 2 distro of choice
