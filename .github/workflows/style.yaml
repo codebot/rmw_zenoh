@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: ['jazzy', 'rolling']
+        distro: ['rolling']
     container:
       image: ros:${{ matrix.distro }}-ros-base
     timeout-minutes: 30
