@@ -17,7 +17,6 @@
 #include <fastcdr/FastBuffer.h>
 
 #include <array>
-#include <chrono>
 #include <cinttypes>
 #include <limits>
 #include <memory>
@@ -413,10 +412,8 @@ rmw_ret_t ClientData::send_request(
         return;
       }
 
-      std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
-
       sub_data->add_new_reply(
-        std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, now.time_since_epoch().count()));
+        std::make_unique<rmw_zenoh_cpp::ZenohReply>(reply, get_system_time_in_ns()));
     },
     zenoh::closures::none,
     std::move(opts),

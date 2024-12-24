@@ -161,10 +161,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
         return;
       }
 
-      std::chrono::nanoseconds::rep received_timestamp =
-      std::chrono::system_clock::now().time_since_epoch().count();
-
-      sub_data->add_new_query(std::make_unique<ZenohQuery>(query, received_timestamp));
+      sub_data->add_new_query(std::make_unique<ZenohQuery>(query, get_system_time_in_ns()));
     },
     zenoh::closures::none,
     std::move(qable_options),
