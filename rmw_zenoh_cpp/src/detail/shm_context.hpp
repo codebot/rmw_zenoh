@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+
 #ifndef DETAIL__SHM_CONTEXT_HPP_
 #define DETAIL__SHM_CONTEXT_HPP_
 
@@ -20,7 +22,6 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
 struct ShmContext
 {
   zenoh::PosixShmProvider shm_provider;
@@ -28,7 +29,8 @@ struct ShmContext
 
   ShmContext(size_t alloc_size, size_t msgsize_threshold);
 };
-#endif
 }  // namespace rmw_zenoh_cpp
 
 #endif  // DETAIL__SHM_CONTEXT_HPP_
+
+#endif

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+
 #include <stdexcept>
 
 #include "shm_context.hpp"
@@ -19,13 +21,13 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
 ShmContext::ShmContext(size_t alloc_size, size_t msgsize_threshold)
 :  // Create Layout for provider's memory
-   // Provider's alignment will be 1 byte as we are going to make only 1-byte aligned allocations
+   // Provider's alignment will be 1 (=2^0) bytes as we are going to make only 1-byte aligned allocations
    // TODO(yellowhatter): use zenoh_shm_message_size_threshold as base for alignment
   shm_provider(zenoh::PosixShmProvider(zenoh::MemoryLayout(alloc_size, zenoh::AllocAlignment {0}))),
   msgsize_threshold(msgsize_threshold)
 {}
-#endif
 }  // namespace rmw_zenoh_cpp
+
+#endif
