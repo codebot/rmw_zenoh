@@ -44,8 +44,6 @@ ament_vendor(zenoh_cpp_vendor
   CMAKE_ARGS
       -DZENOHCXX_ZENOHC=ON
       -DZENOHCXX_ZENOHPICO=OFF
-      -DZENOHC_BUILD_WITH_SHARED_MEMORY:BOOL=${RMW_ZENOH_BUILD_WITH_SHARED_MEMORY}
-      -DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE
   )
 
 externalproject_add_stepdependencies(zenoh_cpp_vendor configure zenoh_c_vendor)
