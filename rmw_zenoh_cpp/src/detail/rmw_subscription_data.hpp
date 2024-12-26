@@ -34,6 +34,7 @@
 #include "liveliness_utils.hpp"
 #include "message_type_support.hpp"
 #include "attachment_helpers.hpp"
+#include "shm_context.hpp"
 #include "type_support_common.hpp"
 #include "zenoh_utils.hpp"
 
@@ -76,8 +77,11 @@ public:
 
   // Publish a ROS message.
   rmw_ret_t publish(
-    const void * ros_message,
-    std::optional<z_owned_shm_provider_t> & shm_provider);
+    const void * ros_message
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+    , const std::optional<ShmContext> & shm
+#endif
+  );
 
   // Get a copy of the keyexpr_hash of this SubscriptionData's liveliness::Entity.
   std::size_t keyexpr_hash() const;
