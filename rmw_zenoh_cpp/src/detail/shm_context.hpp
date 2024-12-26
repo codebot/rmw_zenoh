@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-
 #ifndef DETAIL__SHM_CONTEXT_HPP_
 #define DETAIL__SHM_CONTEXT_HPP_
+
+#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
 
 #include <zenoh.hxx>
 
@@ -31,6 +31,6 @@ struct ShmContext
 };
 }  // namespace rmw_zenoh_cpp
 
-#endif  // DETAIL__SHM_CONTEXT_HPP_
-
 #endif
+
+#endif  // DETAIL__SHM_CONTEXT_HPP_
