@@ -370,6 +370,10 @@ rmw_ret_t PublisherData::publish_serialized_message(
       auto msg_bytes = reinterpret_cast<char *>(buf.data());
       memcpy(msg_bytes, serialized_message->buffer, data_length);
       zenoh::Bytes payload(std::move(buf));
+
+      TRACETOOLS_TRACEPOINT(
+        rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
+
       pub_.put(std::move(payload), std::move(options), &result);
     } else {
       // TODO(Yadunund): Should we revert to regular allocation and not return an error?
@@ -382,6 +386,10 @@ rmw_ret_t PublisherData::publish_serialized_message(
     serialized_message->buffer,
     serialized_message->buffer + data_length);
   zenoh::Bytes payload(raw_image);
+
+  TRACETOOLS_TRACEPOINT(
+    rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
+
   pub_.put(std::move(payload), std::move(options), &result);
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
 }
