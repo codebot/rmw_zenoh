@@ -3,30 +3,32 @@
 [![build](https://github.com/ros2/rmw_zenoh/actions/workflows/build.yaml/badge.svg)](https://github.com/ros2/rmw_zenoh/actions/workflows/build.yaml)
 [![style](https://github.com/ros2/rmw_zenoh/actions/workflows/style.yaml/badge.svg)](https://github.com/ros2/rmw_zenoh/actions/workflows/style.yaml)
 
-A ROS 2 RMW implementation based on Zenoh that is written using the zenoh-c bindings.
+A ROS 2 RMW implementation based on Zenoh that is written using the zenoh-cpp bindings.
 
 ## Design
 
 For information about the Design please visit [design](docs/design.md) page.
 
 ## Requirements
-- [ROS 2](https://docs.ros.org): Rolling/Jazzy/Iron
+- [ROS 2](https://docs.ros.org)
 
+> Note: See available distro branches, eg. `jazzy`, for supported ROS 2 distributions.
 
 ## Setup
 
 Build `rmw_zenoh_cpp`
 
->Note: By default, we vendor and compile `zenoh-c` with a subset of `zenoh` features.
+>Note: By default, we vendor and compile `zenoh-cpp` with a subset of `zenoh` features.
 The `ZENOHC_CARGO_FLAGS` CMake argument may be overwritten with other features included if required.
 See [zenoh_cpp_vendor/CMakeLists.txt](./zenoh_cpp_vendor/CMakeLists.txt) for more details.
 
 ```bash
+# replace <DISTRO> with ROS 2 distro of choice
 mkdir ~/ws_rmw_zenoh/src -p && cd ~/ws_rmw_zenoh/src
-git clone https://github.com/ros2/rmw_zenoh.git
+git clone https://github.com/ros2/rmw_zenoh.git -b <DISTRO>
 cd ~/ws_rmw_zenoh
-rosdep install --from-paths src --ignore-src --rosdistro <DISTRO> -y # replace <DISTRO> with ROS 2 distro of choice
-source /opt/ros/<DISTRO>/setup.bash # replace <DISTRO> with ROS 2 distro of choice
+rosdep install --from-paths src --ignore-src --rosdistro <DISTRO> -y
+source /opt/ros/<DISTRO>/setup.bash
 colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 

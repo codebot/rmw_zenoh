@@ -19,16 +19,9 @@ set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=zenoh/transp
 
 set(RMW_ZENOH_BUILD_WITH_SHARED_MEMORY TRUE CACHE BOOL "Compile Zenoh RMW with Shared Memory support")
 
-# Set VCS_VERSION to include latest changes from zenoh-c to benefit from :
-# - https://github.com/eclipse-zenoh/zenoh-c/pull/340 (fix build issue)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1021 (fix timeout issue with queries)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1022 (fix empty messages received if payload >btach size)
-# - https://github.com/eclipse-zenoh/zenoh-c/pull/358 (fix debian packaging issue: https://github.com/jspricke/ros-deb-builder-action/issues/49)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1150 (fix deadlock issue https://github.com/ros2/rmw_zenoh/issues/182)
-# - https://github.com/eclipse-zenoh/zenoh-c/pull/620 (fix ze_querying_subscriber_get API to query newly discovered publishers)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION 2f389597264c200d9ddf72bbabbfea878abd5179
+  VCS_VERSION 57d5e4d31d9b38fef34d7bcad3d3e54869c4ce73
   CMAKE_ARGS
     "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
     "-DZENOHC_BUILD_WITH_SHARED_MEMORY:BOOL=${RMW_ZENOH_BUILD_WITH_SHARED_MEMORY}"
@@ -38,9 +31,11 @@ ament_vendor(zenoh_c_vendor
 
 ament_export_dependencies(zenohc)
 
+# Set VCS_VERSION to include latest changes from zenoh-c to benefit from :
+# - https://github.com/eclipse-zenoh/zenoh-cpp/pull/342 (Fix include what you use)
 ament_vendor(zenoh_cpp_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-cpp
-  VCS_VERSION c549fbdf54e866b9d8f29c883e66359fcac88ed4
+  VCS_VERSION 964b64dc8b935a43147287199e7bb12da7b141e6
   CMAKE_ARGS
       -DZENOHCXX_ZENOHC=ON
       -DZENOHCXX_ZENOHPICO=OFF

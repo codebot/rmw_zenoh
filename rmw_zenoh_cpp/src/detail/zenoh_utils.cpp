@@ -77,4 +77,55 @@ int64_t get_system_time_in_ns()
   return std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
 }
 
+///=============================================================================
+Payload::Payload(const zenoh::Bytes & bytes)
+{
+  // NOTE(fuzzypixelz): `zenoh::Bytes` is an list of reference-couted buffers. When the list of
+  // buffers contains exactly one element, it is not necessary to concatenate the list of buffers.
+  // In this case, we store a clone of the bytes object to maintain a non-zero reference-count on
+  // the buffer. This ensures that the slice into said buffer stays valid until we drop our copy
+  // of the bytes object (at the very least). This case corresponds to the `Contiguous`
+  // alternative of the `bytes_` variant and aims to optimize away a memcpy during "session-local"
+  // communication.
+
+  zenoh::Bytes::SliceIterator slices = bytes.slice_iter();
+  std::optional<zenoh::Slice> slice = slices.next();
+  if (!slice.has_value()) {
+    bytes_ = nullptr;
+  } else {
+    if (!slices.next().has_value()) {
+      bytes_ = Contiguous {slice.value(), bytes.clone()};
+    } else {
+      bytes_ = bytes.as_vector();
+    }
+  }
+}
+
+const uint8_t * Payload::data() const
+{
+  if (std::holds_alternative<Empty>(bytes_)) {
+    return nullptr;
+  } else if (std::holds_alternative<NonContiguous>(bytes_)) {
+    return std::get<NonContiguous>(bytes_).data();
+  } else {
+    return std::get<Contiguous>(bytes_).slice.data;
+  }
+}
+
+size_t Payload::size() const
+{
+  if (std::holds_alternative<Empty>(bytes_)) {
+    return 0;
+  } else if (std::holds_alternative<NonContiguous>(bytes_)) {
+    return std::get<NonContiguous>(bytes_).size();
+  } else {
+    return std::get<Contiguous>(bytes_).slice.len;
+  }
+}
+
+bool Payload::empty() const
+{
+  return std::holds_alternative<Empty>(bytes_);
+}
+
 }  // namespace rmw_zenoh_cpp

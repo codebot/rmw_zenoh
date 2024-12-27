@@ -20,8 +20,8 @@ jobs:
           # Rolling (source)
           - ROS_DISTRO: rolling
             BUILD_TYPE: source
-          # Jazzy (binary)
-          - ROS_DISTRO: jazzy
+          # Rolling (binary)
+          - ROS_DISTRO: rolling
             BUILD_TYPE: binary
     env:
       ROS2_REPOS_FILE_URL: 'https://raw.githubusercontent.com/ros2/ros2/${{ matrix.ROS_DISTRO }}/ros2.repos'

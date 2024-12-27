@@ -21,6 +21,9 @@
 #include <chrono>
 #include <functional>
 #include <optional>
+#include <utility>
+#include <variant>
+#include <vector>
 
 #include "rmw/types.h"
 
@@ -63,6 +66,32 @@ private:
 };
 
 int64_t get_system_time_in_ns();
+
+class Payload
+{
+public:
+  explicit Payload(const zenoh::Bytes & bytes);
+
+  ~Payload() = default;
+
+  const uint8_t * data() const;
+
+  size_t size() const;
+
+  bool empty() const;
+
+private:
+  struct Contiguous
+  {
+    zenoh::Slice slice;
+    zenoh::Bytes bytes;
+  };
+  using NonContiguous = std::vector<uint8_t>;
+  using Empty = std::nullptr_t;
+  // Is `std::vector<uint8_t>` in case of a non-contiguous payload
+  // and `zenoh::Slice` plus a `zenoh::Bytes` otherwise.
+  std::variant<NonContiguous, Contiguous, Empty> bytes_;
+};
 }  // namespace rmw_zenoh_cpp
 
 #endif  // DETAIL__ZENOH_UTILS_HPP_
