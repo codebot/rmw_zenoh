@@ -372,7 +372,8 @@ rmw_ret_t PublisherData::publish_serialized_message(
       zenoh::Bytes payload(std::move(buf));
 
       TRACETOOLS_TRACEPOINT(
-        rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
+        rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message,
+        source_timestamp);
 
       pub_.put(std::move(payload), std::move(options), &result);
     } else {
