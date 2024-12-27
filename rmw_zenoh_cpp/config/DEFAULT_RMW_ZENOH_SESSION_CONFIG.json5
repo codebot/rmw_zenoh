@@ -464,7 +464,7 @@
       /// subscriber side. By doing so, the probing procedure will succeed and shared memory will operate as expected.
       ///
       /// ROS setting: disabled by default until fully tested
-      enabled: false,
+      enabled: true,
     },
     auth: {
       /// The configuration of authentication.
