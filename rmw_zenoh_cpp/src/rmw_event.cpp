@@ -73,15 +73,15 @@ rmw_publisher_event_init(
     pub_data->keyexpr_hash(),
     zenoh_event_type,
     [data_wp,
-    zenoh_event_type](std::unique_ptr<rmw_zenoh_cpp::rmw_zenoh_event_status_t> zenoh_event)
+    zenoh_event_type](int32_t change)
     {
       auto pub_data = data_wp.lock();
       if (pub_data == nullptr) {
         return;
       }
-      pub_data->events_mgr()->add_new_event(
+      pub_data->events_mgr()->update_event_status(
         zenoh_event_type,
-        std::move(zenoh_event));
+        change);
     }
   );
 
@@ -132,14 +132,14 @@ rmw_subscription_event_init(
     sub_data->keyexpr_hash(),
     zenoh_event_type,
     [sub_data,
-    zenoh_event_type](std::unique_ptr<rmw_zenoh_cpp::rmw_zenoh_event_status_t> zenoh_event)
+    zenoh_event_type](int32_t change)
     {
       if (sub_data == nullptr) {
         return;
       }
-      sub_data->events_mgr()->add_new_event(
+      sub_data->events_mgr()->update_event_status(
         zenoh_event_type,
-        std::move(zenoh_event));
+        change);
     }
   );
 
@@ -206,30 +206,33 @@ rmw_take_event(
   rmw_zenoh_cpp::EventsManager * event_data =
     static_cast<rmw_zenoh_cpp::EventsManager *>(event_handle->data);
   RMW_CHECK_ARGUMENT_FOR_NULL(event_data, RMW_RET_INVALID_ARGUMENT);
-  std::unique_ptr<rmw_zenoh_cpp::rmw_zenoh_event_status_t> st = event_data->pop_next_event(
+  rmw_zenoh_cpp::rmw_zenoh_event_status_t st = event_data->take_event_status(
     zenoh_event_type);
-  if (st == nullptr) {
-    RMW_SET_ERROR_MSG_WITH_FORMAT_STRING(
-      "rmw_take_event called when event queue for event type [%d] is empty",
-      event_handle->event_type);
-    return RMW_RET_ERROR;
-  }
 
   // Now depending on the event, populate the rmw event status.
   switch (zenoh_event_type) {
     case rmw_zenoh_cpp::ZENOH_EVENT_REQUESTED_QOS_INCOMPATIBLE: {
         auto ei = static_cast<rmw_requested_qos_incompatible_event_status_t *>(event_info);
         RMW_CHECK_ARGUMENT_FOR_NULL(ei, RMW_RET_INVALID_ARGUMENT);
-        ei->total_count = static_cast<int32_t>(st->total_count);
-        ei->total_count_change = static_cast<int32_t>(st->total_count_change);
+        ei->total_count = static_cast<int32_t>(st.total_count);
+        ei->total_count_change = static_cast<int32_t>(st.total_count_change);
         *taken = true;
         return RMW_RET_OK;
       }
     case rmw_zenoh_cpp::ZENOH_EVENT_MESSAGE_LOST: {
         auto ei = static_cast<rmw_message_lost_status_t *>(event_info);
         RMW_CHECK_ARGUMENT_FOR_NULL(ei, RMW_RET_INVALID_ARGUMENT);
-        ei->total_count = static_cast<int32_t>(st->total_count);
-        ei->total_count_change = static_cast<int32_t>(st->total_count_change);
+        ei->total_count = static_cast<int32_t>(st.total_count);
+        ei->total_count_change = static_cast<int32_t>(st.total_count_change);
+        *taken = true;
+        return RMW_RET_OK;
+      }
+    case rmw_zenoh_cpp::ZENOH_EVENT_SUBSCRIPTION_INCOMPATIBLE_TYPE:
+    case rmw_zenoh_cpp::ZENOH_EVENT_PUBLISHER_INCOMPATIBLE_TYPE: {
+        auto ei = static_cast<rmw_incompatible_type_status_t *>(event_info);
+        RMW_CHECK_ARGUMENT_FOR_NULL(ei, RMW_RET_INVALID_ARGUMENT);
+        ei->total_count = static_cast<int32_t>(st.total_count);
+        ei->total_count_change = static_cast<int32_t>(st.total_count_change);
         *taken = true;
         return RMW_RET_OK;
       }
@@ -237,18 +240,18 @@ rmw_take_event(
     case rmw_zenoh_cpp::ZENOH_EVENT_SUBSCRIPTION_MATCHED: {
         auto ei = static_cast<rmw_matched_status_t *>(event_info);
         RMW_CHECK_ARGUMENT_FOR_NULL(ei, RMW_RET_INVALID_ARGUMENT);
-        ei->total_count = st->total_count;
-        ei->total_count_change = st->total_count_change;
-        ei->current_count = st->current_count;
-        ei->current_count_change = st->current_count_change;
+        ei->total_count = st.total_count;
+        ei->total_count_change = st.total_count_change;
+        ei->current_count = st.current_count;
+        ei->current_count_change = st.current_count_change;
         *taken = true;
         return RMW_RET_OK;
       }
     case rmw_zenoh_cpp::ZENOH_EVENT_OFFERED_QOS_INCOMPATIBLE: {
         auto ei = static_cast<rmw_offered_qos_incompatible_event_status_t *>(event_info);
         RMW_CHECK_ARGUMENT_FOR_NULL(ei, RMW_RET_INVALID_ARGUMENT);
-        ei->total_count = static_cast<int32_t>(st->total_count);
-        ei->total_count_change = static_cast<int32_t>(st->total_count_change);
+        ei->total_count = static_cast<int32_t>(st.total_count);
+        ei->total_count_change = static_cast<int32_t>(st.total_count_change);
         *taken = true;
         return RMW_RET_OK;
       }

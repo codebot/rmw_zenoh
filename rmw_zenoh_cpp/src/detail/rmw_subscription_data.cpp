@@ -151,7 +151,6 @@ SubscriptionData::SubscriptionData(
   type_support_impl_(type_support_impl),
   type_support_(std::move(type_support)),
   last_known_published_msg_({}),
-  total_messages_lost_(0),
   wait_set_data_(nullptr),
   is_shutdown_(false),
   initialized_(false)
@@ -624,13 +623,9 @@ void SubscriptionData::add_new_message(
       last_known_pub_it->second);
     if (seq_increment > 1) {
       const size_t num_msg_lost = seq_increment - 1;
-      total_messages_lost_ += num_msg_lost;
-      auto event_status = std::make_unique<rmw_zenoh_event_status_t>();
-      event_status->total_count_change = num_msg_lost;
-      event_status->total_count = total_messages_lost_;
-      events_mgr_->add_new_event(
+      events_mgr_->update_event_status(
         ZENOH_EVENT_MESSAGE_LOST,
-        std::move(event_status));
+        num_msg_lost);
     }
   }
   // Always update the last known sequence number for the publisher.
