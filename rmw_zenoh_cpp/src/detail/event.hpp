@@ -63,13 +63,11 @@ struct rmw_zenoh_event_status_t
   int32_t current_count_change;
   // The data field can be used to store serialized information for more complex statuses.
   std::string data;
+  // A boolean field to indicate if the status changed since the last take.
+  bool changed;
 
-  rmw_zenoh_event_status_t()
-  : total_count(0),
-    total_count_change(0),
-    current_count(0),
-    current_count_change(0)
-  {}
+  // Constructor.
+  rmw_zenoh_event_status_t();
 };
 
 ///=============================================================================
@@ -110,16 +108,16 @@ public:
     rmw_event_callback_t callback,
     const void * user_data);
 
-  /// Pop the next event in the queue.
-  /// @param event_id the event id whose queue should be popped.
-  std::unique_ptr<rmw_zenoh_event_status_t> pop_next_event(
-    rmw_zenoh_event_type_t event_id);
+  /// @brief Get the status for an event.
+  /// @param event_id the id for the event whose status should be retrieved.
+  rmw_zenoh_event_status_t take_event_status(rmw_zenoh_event_type_t event_id);
 
-  /// Add an event status for an event.
-  /// @param event_id the event id queue to which the status should be added.
-  void add_new_event(
+  /// @brief Update the status for an event.
+  /// @param event_id the id for the event whose status should be changed.
+  /// @param current_count_change the change in the current count.
+  void update_event_status(
     rmw_zenoh_event_type_t event_id,
-    std::unique_ptr<rmw_zenoh_event_status_t> event);
+    int32_t current_count_change);
 
   /// @brief Attach the condition variable provided by rmw_wait.
   /// @param condition_variable to attach.
@@ -148,9 +146,8 @@ private:
   rmw_event_callback_t event_callback_[ZENOH_EVENT_ID_MAX + 1] {nullptr};
   const void * event_data_[ZENOH_EVENT_ID_MAX + 1] {nullptr};
   size_t event_unread_count_[ZENOH_EVENT_ID_MAX + 1] {0};
-  // A dequeue of events for each type of event this RMW supports.
-  std::deque<std::unique_ptr<rmw_zenoh_event_status_t>> event_queues_[ZENOH_EVENT_ID_MAX + 1] {};
-  const std::size_t event_queue_depth_ = 10;
+  // Statuses for events supported.
+  rmw_zenoh_event_status_t event_statuses_[ZENOH_EVENT_ID_MAX + 1];
 };
 }  // namespace rmw_zenoh_cpp
 
