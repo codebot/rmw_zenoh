@@ -103,7 +103,7 @@ class GraphCache final
 public:
   /// @brief Signature for a function that will be invoked by the GraphCache when a QoS
   ///   event is detected.
-  using GraphCacheEventCallback = std::function<void (std::unique_ptr<rmw_zenoh_event_status_t>)>;
+  using GraphCacheEventCallback = std::function<void (int32_t change)>;
   /// Callback to be triggered when a publication cache is detected in the ROS Graph.
   using QueryingSubscriberCallback = std::function<void (const std::string & queryable_prefix)>;
 
@@ -230,14 +230,9 @@ private:
   bool is_entity_local(const liveliness::Entity & entity) const;
 
   void update_event_counters(
-    const std::string & topic_name,
+    liveliness::ConstEntityPtr entity,
     const rmw_zenoh_event_type_t event_id,
     int32_t change);
-
-  // Take status and reset change counters.
-  std::unique_ptr<rmw_zenoh_event_status_t> take_event_status(
-    const std::string & topic_name,
-    const rmw_zenoh_event_type_t event_id);
 
   void handle_matched_events_for_put(
     liveliness::ConstEntityPtr entity,
@@ -246,10 +241,6 @@ private:
   void handle_matched_events_for_del(
     liveliness::ConstEntityPtr entity,
     const GraphNode::TopicQoSMap & topic_qos_map);
-
-  using EntityEventMap =
-    std::unordered_map<liveliness::ConstEntityPtr, std::unordered_set<rmw_zenoh_event_type_t>>;
-  void take_entities_with_events(const EntityEventMap & entities_with_events);
 
   std::string zid_str_;
   /*
@@ -299,9 +290,6 @@ private:
   // Map key expressions to a map of sub keyexpr_hash and QueryingSubscriberCallback.
   std::unordered_map<std::string, std::unordered_map<std::size_t,
     QueryingSubscriberCallback>> querying_subs_cbs_;
-  // Counters to track changes to event statues for each topic.
-  std::unordered_map<std::string,
-    std::array<rmw_zenoh_event_status_t, ZENOH_EVENT_ID_MAX + 1>> event_statuses_;
   std::mutex events_mutex_;
 
   // Mutex to lock before modifying the members above.
