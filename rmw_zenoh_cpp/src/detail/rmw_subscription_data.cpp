@@ -16,7 +16,6 @@
 
 #include <fastcdr/FastBuffer.h>
 
-#include <chrono>
 #include <cinttypes>
 #include <limits>
 #include <memory>
@@ -225,7 +224,7 @@ bool SubscriptionData::init()
         sub_data->add_new_message(
           std::make_unique<SubscriptionData::Message>(
             sample.get_payload(),
-            std::chrono::system_clock::now().time_since_epoch().count(),
+            get_system_time_in_ns(),
             std::move(attachment_data)),
           std::string(sample.get_keyexpr().as_string_view()));
       },
@@ -308,7 +307,7 @@ bool SubscriptionData::init()
         sub_data->add_new_message(
           std::make_unique<SubscriptionData::Message>(
             sample.get_payload(),
-            std::chrono::system_clock::now().time_since_epoch().count(),
+            get_system_time_in_ns(),
             std::move(attachment_data)),
           std::string(sample.get_keyexpr().as_string_view()));
       },
