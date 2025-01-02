@@ -14,6 +14,7 @@
 
 #include "rcutils/allocator.h"
 
+#include "rmw/error_handling.h"
 #include "rmw/get_network_flow_endpoints.h"
 #include "rmw/types.h"
 
@@ -30,6 +31,7 @@ rmw_publisher_get_network_flow_endpoints(
   (void) publisher;
   (void) allocator;
   (void) network_flow_endpoint_array;
+  RMW_SET_ERROR_MSG("rmw_publisher_get_network_flow_endpoints not implemented");
   return RMW_RET_UNSUPPORTED;
 }
 
@@ -44,6 +46,7 @@ rmw_subscription_get_network_flow_endpoints(
   (void) subscription;
   (void) allocator;
   (void) network_flow_endpoint_array;
+  RMW_SET_ERROR_MSG("rmw_subscription_get_network_flow_endpoints not implemented");
   return RMW_RET_UNSUPPORTED;
 }
 }  // extern "C"
