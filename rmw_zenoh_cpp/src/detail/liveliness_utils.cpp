@@ -179,8 +179,6 @@ static const std::unordered_map<std::string, rmw_qos_liveliness_policy_e> str_to
   {std::to_string(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC),
     RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC},
   {std::to_string(RMW_QOS_POLICY_LIVELINESS_UNKNOWN), RMW_QOS_POLICY_LIVELINESS_UNKNOWN},
-  {std::to_string(RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE),
-    RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE}
 };
 
 std::vector<std::string> split_keyexpr(
@@ -438,8 +436,9 @@ Entity::Entity(
   simplified_XXH128_hash_t keyexpr_gid =
     simplified_XXH3_128bits(this->liveliness_keyexpr_.c_str(), this->liveliness_keyexpr_.length());
   memcpy(this->gid_.data(), &keyexpr_gid.low64, sizeof(keyexpr_gid.low64));
-  memcpy(this->gid_.data() + sizeof(keyexpr_gid.low64), &keyexpr_gid.high64,
-        sizeof(keyexpr_gid.high64));
+  memcpy(
+    this->gid_.data() + sizeof(keyexpr_gid.low64), &keyexpr_gid.high64,
+    sizeof(keyexpr_gid.high64));
 
   // We also hash the liveliness keyexpression into a size_t that we use to index into our maps.
   this->keyexpr_hash_ = hash_gid(this->gid_);
@@ -631,7 +630,7 @@ std::string Entity::liveliness_keyexpr() const
 }
 
 ///=============================================================================
-std::array<uint8_t, RMW_GID_STORAGE_SIZE> Entity::copy_gid() const
+std::array<uint8_t, 16> Entity::copy_gid() const
 {
   return gid_;
 }
@@ -672,7 +671,7 @@ std::string demangle_name(const std::string & input)
 }  // namespace liveliness
 
 ///=============================================================================
-size_t hash_gid(const std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid)
+size_t hash_gid(const std::array<uint8_t, 16> gid)
 {
   std::stringstream hash_str;
   hash_str << std::hex;

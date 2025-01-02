@@ -33,8 +33,6 @@
 #include "rmw/validate_namespace.h"
 #include "rmw/validate_node_name.h"
 
-#include "rosidl_runtime_c/type_hash.h"
-
 #include "graph_cache.hpp"
 #include "logging_macros.hpp"
 
@@ -233,7 +231,8 @@ void GraphCache::handle_matched_events_for_put(
       }
       // Update event counters for the new entity.
       if (is_entity_local(*entity) && match_count_for_entity > 0) {
-        update_event_counters(entity,
+        update_event_counters(
+          entity,
           ZENOH_EVENT_PUBLICATION_MATCHED,
           match_count_for_entity);
       }
@@ -1124,18 +1123,7 @@ rmw_ret_t GraphCache::get_entities_info_by_topic(
           return ret;
         }
 
-        rosidl_type_hash_t type_hash;
-        rcutils_ret_t rc_ret = rosidl_parse_type_hash_string(
-          topic_data->info_.type_hash_.c_str(),
-          &type_hash);
-        if (RCUTILS_RET_OK == rc_ret) {
-          ret = rmw_topic_endpoint_info_set_topic_type_hash(&ep, &type_hash);
-          if (RMW_RET_OK != ret) {
-            return ret;
-          }
-        }
-
-        memcpy(ep.endpoint_gid, entity->copy_gid().data(), RMW_GID_STORAGE_SIZE);
+        memcpy(ep.endpoint_gid, entity->copy_gid().data(), 16);
 
         endpoints.push_back(ep);
       }

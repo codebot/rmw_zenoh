@@ -227,26 +227,6 @@ rmw_take_event(
         *taken = true;
         return RMW_RET_OK;
       }
-    case rmw_zenoh_cpp::ZENOH_EVENT_SUBSCRIPTION_INCOMPATIBLE_TYPE:
-    case rmw_zenoh_cpp::ZENOH_EVENT_PUBLISHER_INCOMPATIBLE_TYPE: {
-        auto ei = static_cast<rmw_incompatible_type_status_t *>(event_info);
-        RMW_CHECK_ARGUMENT_FOR_NULL(ei, RMW_RET_INVALID_ARGUMENT);
-        ei->total_count = static_cast<int32_t>(st.total_count);
-        ei->total_count_change = static_cast<int32_t>(st.total_count_change);
-        *taken = true;
-        return RMW_RET_OK;
-      }
-    case rmw_zenoh_cpp::ZENOH_EVENT_PUBLICATION_MATCHED:
-    case rmw_zenoh_cpp::ZENOH_EVENT_SUBSCRIPTION_MATCHED: {
-        auto ei = static_cast<rmw_matched_status_t *>(event_info);
-        RMW_CHECK_ARGUMENT_FOR_NULL(ei, RMW_RET_INVALID_ARGUMENT);
-        ei->total_count = st.total_count;
-        ei->total_count_change = st.total_count_change;
-        ei->current_count = st.current_count;
-        ei->current_count_change = st.current_count_change;
-        *taken = true;
-        return RMW_RET_OK;
-      }
     case rmw_zenoh_cpp::ZENOH_EVENT_OFFERED_QOS_INCOMPATIBLE: {
         auto ei = static_cast<rmw_offered_qos_incompatible_event_status_t *>(event_info);
         RMW_CHECK_ARGUMENT_FOR_NULL(ei, RMW_RET_INVALID_ARGUMENT);
