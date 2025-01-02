@@ -69,6 +69,8 @@ private:
   std::chrono::nanoseconds::rep received_timestamp_;
 };
 
+int64_t get_system_time_in_ns();
+
 class Payload
 {
 public:
