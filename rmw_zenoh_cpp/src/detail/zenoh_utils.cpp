@@ -83,6 +83,13 @@ std::chrono::nanoseconds::rep ZenohReply::get_received_timestamp() const
   return received_timestamp_;
 }
 
+int64_t get_system_time_in_ns()
+{
+  auto now = std::chrono::system_clock::now().time_since_epoch();
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
+}
+
+///=============================================================================
 Payload::Payload(const zenoh::Bytes & bytes)
 {
   // NOTE(fuzzypixelz): `zenoh::Bytes` is an list of reference-couted buffers. When the list of
