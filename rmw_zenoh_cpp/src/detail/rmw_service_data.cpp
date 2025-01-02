@@ -62,9 +62,6 @@ std::shared_ptr<ServiceData> ServiceData::make(
     return nullptr;
   }
 
-  rcutils_allocator_t * allocator = &node->context->options.allocator;
-
-  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto service_members = static_cast<const service_type_support_callbacks_t *>(type_support->data);
   auto request_members = static_cast<const message_type_support_callbacks_t *>(
     service_members->request_members_->data);
@@ -88,20 +85,9 @@ std::shared_ptr<ServiceData> ServiceData::make(
     return nullptr;
   }
 
-  // Convert the type hash to a string so that it can be included in the keyexpr.
-  char * type_hash_c_str = nullptr;
-  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
-    type_hash,
-    *allocator,
-    &type_hash_c_str);
-  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
-    // rosidl_stringify_type_hash already set the error
-    return nullptr;
-  }
-  auto free_type_hash_c_str = rcpputils::make_scope_exit(
-    [&allocator, &type_hash_c_str]() {
-      allocator->deallocate(type_hash_c_str, allocator->state);
-    });
+  // Humble doesn't support type hash, but we leave it in place as a constant so we don't have to
+  // change the graph and liveliness token code.
+  const char * type_hash_c_str = "TypeHashNotSupported";
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -329,8 +315,8 @@ rmw_ret_t ServiceData::take_request(
     return RMW_RET_ERROR;
   }
 
-  std::array<uint8_t, RMW_GID_STORAGE_SIZE> writer_guid = attachment.copy_gid();
-  memcpy(request_header->request_id.writer_guid, writer_guid.data(), RMW_GID_STORAGE_SIZE);
+  std::array<uint8_t, 16> writer_guid = attachment.copy_gid();
+  memcpy(request_header->request_id.writer_guid, writer_guid.data(), 16);
 
   request_header->source_timestamp = attachment.source_timestamp();
   if (request_header->source_timestamp < 0) {
@@ -374,8 +360,8 @@ rmw_ret_t ServiceData::send_response(
     return RMW_RET_OK;
   }
 
-  std::array<uint8_t, RMW_GID_STORAGE_SIZE> writer_guid;
-  memcpy(writer_guid.data(), request_id->writer_guid, RMW_GID_STORAGE_SIZE);
+  std::array<uint8_t, 16> writer_guid;
+  memcpy(writer_guid.data(), request_id->writer_guid, 16);
 
   // Create the queryable payload
   const size_t hash = hash_gid(writer_guid);
@@ -433,8 +419,8 @@ rmw_ret_t ServiceData::send_response(
 
   const zenoh::Query & loaned_query = query->get_query();
   zenoh::Query::ReplyOptions options = zenoh::Query::ReplyOptions::create_default();
-  std::array<uint8_t, RMW_GID_STORAGE_SIZE> writer_gid;
-  memcpy(writer_gid.data(), request_id->writer_guid, RMW_GID_STORAGE_SIZE);
+  std::array<uint8_t, 16> writer_gid;
+  memcpy(writer_gid.data(), request_id->writer_guid, 16);
   options.attachment = create_map_and_set_sequence_num(
     request_id->sequence_number,
     writer_gid);

@@ -70,7 +70,7 @@ public:
   liveliness::TopicInfo topic_info() const;
 
   // Return a copy of the GID of this publisher.
-  std::array<uint8_t, RMW_GID_STORAGE_SIZE> copy_gid() const;
+  std::array<uint8_t, 16> copy_gid() const;
 
   // Returns true if liveliness token is still valid.
   bool liveliness_is_valid() const;

@@ -47,7 +47,6 @@
 #include "rcutils/types.h"
 
 #include "rmw/allocators.h"
-#include "rmw/dynamic_message_type_support.h"
 #include "rmw/error_handling.h"
 #include "rmw/features.h"
 #include "rmw/impl/cpp/macros.hpp"
@@ -138,10 +137,6 @@ bool rmw_feature_supported(rmw_feature_t feature)
     case RMW_FEATURE_MESSAGE_INFO_PUBLICATION_SEQUENCE_NUMBER:
       return false;
     case RMW_FEATURE_MESSAGE_INFO_RECEPTION_SEQUENCE_NUMBER:
-      return false;
-    case RMW_MIDDLEWARE_SUPPORTS_TYPE_DISCOVERY:
-      return true;
-    case RMW_MIDDLEWARE_CAN_TAKE_DYNAMIC_MESSAGE:
       return false;
     default:
       return false;
@@ -495,51 +490,6 @@ rmw_destroy_publisher(rmw_node_t * node, rmw_publisher_t * publisher)
   allocator->deallocate(const_cast<char *>(publisher->topic_name), allocator->state);
   allocator->deallocate(publisher, allocator->state);
   return RMW_RET_OK;
-}
-
-//==============================================================================
-rmw_ret_t
-rmw_take_dynamic_message(
-  const rmw_subscription_t * subscription,
-  rosidl_dynamic_typesupport_dynamic_data_t * dynamic_message,
-  bool * taken,
-  rmw_subscription_allocation_t * allocation)
-{
-  static_cast<void>(subscription);
-  static_cast<void>(dynamic_message);
-  static_cast<void>(taken);
-  static_cast<void>(allocation);
-  return RMW_RET_UNSUPPORTED;
-}
-
-//==============================================================================
-rmw_ret_t
-rmw_take_dynamic_message_with_info(
-  const rmw_subscription_t * subscription,
-  rosidl_dynamic_typesupport_dynamic_data_t * dynamic_message,
-  bool * taken,
-  rmw_message_info_t * message_info,
-  rmw_subscription_allocation_t * allocation)
-{
-  static_cast<void>(subscription);
-  static_cast<void>(dynamic_message);
-  static_cast<void>(taken);
-  static_cast<void>(message_info);
-  static_cast<void>(allocation);
-  return RMW_RET_UNSUPPORTED;
-}
-
-//==============================================================================
-rmw_ret_t
-rmw_serialization_support_init(
-  const char * serialization_lib_name,
-  rcutils_allocator_t * allocator,
-  rosidl_dynamic_typesupport_serialization_support_t * serialization_support)
-{
-  static_cast<void>(serialization_lib_name);
-  static_cast<void>(allocator);
-  static_cast<void>(serialization_support);
-  return RMW_RET_UNSUPPORTED;
 }
 
 //==============================================================================
@@ -2451,7 +2401,7 @@ rmw_get_gid_for_publisher(const rmw_publisher_t * publisher, rmw_gid_t * gid)
   RMW_CHECK_ARGUMENT_FOR_NULL(pub_data, RMW_RET_INVALID_ARGUMENT);
 
   gid->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-  memcpy(gid->data, pub_data->copy_gid().data(), RMW_GID_STORAGE_SIZE);
+  memcpy(gid->data, pub_data->copy_gid().data(), 16);
 
   return RMW_RET_OK;
 }
@@ -2468,7 +2418,7 @@ rmw_get_gid_for_client(const rmw_client_t * client, rmw_gid_t * gid)
   RMW_CHECK_ARGUMENT_FOR_NULL(client_data, RMW_RET_INVALID_ARGUMENT);
 
   gid->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-  memcpy(gid->data, client_data->copy_gid().data(), RMW_GID_STORAGE_SIZE);
+  memcpy(gid->data, client_data->copy_gid().data(), 16);
 
   return RMW_RET_OK;
 }
@@ -2492,7 +2442,7 @@ rmw_compare_gids_equal(const rmw_gid_t * gid1, const rmw_gid_t * gid2, bool * re
     return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
   RMW_CHECK_ARGUMENT_FOR_NULL(result, RMW_RET_INVALID_ARGUMENT);
 
-  *result = memcmp(gid1->data, gid2->data, RMW_GID_STORAGE_SIZE) == 0;
+  *result = memcmp(gid1->data, gid2->data, 16) == 0;
 
   return RMW_RET_OK;
 }
