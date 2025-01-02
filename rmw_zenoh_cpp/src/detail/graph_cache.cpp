@@ -231,7 +231,8 @@ void GraphCache::handle_matched_events_for_put(
       }
       // Update event counters for the new entity.
       if (is_entity_local(*entity) && match_count_for_entity > 0) {
-        update_event_counters(entity,
+        update_event_counters(
+          entity,
           ZENOH_EVENT_PUBLICATION_MATCHED,
           match_count_for_entity);
       }
