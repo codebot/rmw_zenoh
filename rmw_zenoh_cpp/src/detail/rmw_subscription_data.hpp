@@ -73,11 +73,6 @@ public:
     const rosidl_message_type_support_t * type_support,
     const rmw_qos_profile_t * qos_profile);
 
-  // Publish a ROS message.
-  rmw_ret_t publish(
-    const void * ros_message,
-    std::optional<z_owned_shm_provider_t> & shm_provider);
-
   // Get a copy of the keyexpr_hash of this SubscriptionData's liveliness::Entity.
   std::size_t keyexpr_hash() const;
 
