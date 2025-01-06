@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <algorithm>
 #include <array>
 #include <functional>
 #include <limits>
@@ -207,8 +206,6 @@ void GraphCache::handle_matched_events_for_put(
   }
   const liveliness::TopicInfo topic_info = entity->topic_info().value();
   const bool is_pub = is_entity_pub(*entity);
-  // Initialize a map that will be populated with any QoS events that may be detected.
-  EntityEventMap local_entities_with_events = {};
   // The entity added may be local with callbacks registered but there
   // may be other local entities in the graph that are matched.
   int32_t match_count_for_entity = 0;
@@ -229,18 +226,16 @@ void GraphCache::handle_matched_events_for_put(
         if (entity->topic_info()->topic_keyexpr_ ==
           sub_entity->topic_info().value().topic_keyexpr_)
         {
-          update_event_counters(topic_info.name_, ZENOH_EVENT_SUBSCRIPTION_MATCHED, 1);
           if (is_entity_local(*sub_entity)) {
-            local_entities_with_events[sub_entity].insert(ZENOH_EVENT_SUBSCRIPTION_MATCHED);
+            update_event_counters(sub_entity, ZENOH_EVENT_SUBSCRIPTION_MATCHED, 1);
           }
         }
       }
-      // Update event counters for the new entity->
-      update_event_counters(topic_info.name_,
-        ZENOH_EVENT_PUBLICATION_MATCHED,
-        match_count_for_entity);
+      // Update event counters for the new entity.
       if (is_entity_local(*entity) && match_count_for_entity > 0) {
-        local_entities_with_events[entity].insert(ZENOH_EVENT_PUBLICATION_MATCHED);
+        update_event_counters(entity,
+          ZENOH_EVENT_PUBLICATION_MATCHED,
+          match_count_for_entity);
       }
     } else {
       // Entity is a sub.
@@ -259,23 +254,20 @@ void GraphCache::handle_matched_events_for_put(
         if (entity->topic_info()->topic_keyexpr_ ==
           pub_entity->topic_info().value().topic_keyexpr_)
         {
-          update_event_counters(topic_info.name_, ZENOH_EVENT_PUBLICATION_MATCHED, 1);
           if (is_entity_local(*pub_entity)) {
-            local_entities_with_events[pub_entity].insert(ZENOH_EVENT_PUBLICATION_MATCHED);
+            update_event_counters(pub_entity, ZENOH_EVENT_PUBLICATION_MATCHED, 1);
           }
         }
       }
-      // Update event counters for the new entity->
-      update_event_counters(
-        topic_info.name_,
-        ZENOH_EVENT_SUBSCRIPTION_MATCHED,
-        match_count_for_entity);
+      // Update event counters for the new entity.
       if (is_entity_local(*entity) && match_count_for_entity > 0) {
-        local_entities_with_events[entity].insert(ZENOH_EVENT_SUBSCRIPTION_MATCHED);
+        update_event_counters(
+          entity,
+          ZENOH_EVENT_SUBSCRIPTION_MATCHED,
+          match_count_for_entity);
       }
     }
   }
-  take_entities_with_events(local_entities_with_events);
 }
 
 ///=============================================================================
@@ -290,17 +282,15 @@ void GraphCache::handle_matched_events_for_del(
     return;
   }
   const liveliness::TopicInfo topic_info = entity->topic_info().value();
-  EntityEventMap local_entities_with_events;
   if (is_entity_pub(*entity)) {
     // Notify any local subs of a matched event with change -1.
     for (const auto & [_, topic_data_ptr] : topic_qos_map) {
       for (liveliness::ConstEntityPtr sub_entity : topic_data_ptr->subs_) {
-        update_event_counters(
-          topic_info.name_,
-          ZENOH_EVENT_SUBSCRIPTION_MATCHED,
-          static_cast<int32_t>(-1));
         if (is_entity_local(*sub_entity)) {
-          local_entities_with_events[sub_entity].insert(ZENOH_EVENT_SUBSCRIPTION_MATCHED);
+          update_event_counters(
+            sub_entity,
+            ZENOH_EVENT_SUBSCRIPTION_MATCHED,
+            static_cast<int32_t>(-1));
         }
       }
     }
@@ -308,34 +298,11 @@ void GraphCache::handle_matched_events_for_del(
     // Notify any local pubs of a matched event with change -1.
     for (const auto & [_, topic_data_ptr] : topic_qos_map) {
       for (liveliness::ConstEntityPtr pub_entity : topic_data_ptr->pubs_) {
-        update_event_counters(
-          topic_info.name_,
-          ZENOH_EVENT_PUBLICATION_MATCHED,
-          static_cast<int32_t>(-1));
         if (is_entity_local(*pub_entity)) {
-          local_entities_with_events[pub_entity].insert(ZENOH_EVENT_PUBLICATION_MATCHED);
-        }
-      }
-    }
-  }
-  take_entities_with_events(local_entities_with_events);
-}
-
-///=============================================================================
-void GraphCache::take_entities_with_events(const EntityEventMap & entities_with_events)
-{
-  for (const auto & [local_entity, event_set] : entities_with_events) {
-    // Trigger callback set for this entity for the event type.
-    GraphEventCallbackMap::const_iterator event_callbacks_it =
-      event_callbacks_.find(local_entity->keyexpr_hash());
-    if (event_callbacks_it != event_callbacks_.end()) {
-      for (const rmw_zenoh_event_type_t & event_type : event_set) {
-        GraphEventCallbacks::const_iterator callback_it =
-          event_callbacks_it->second.find(event_type);
-        if (callback_it != event_callbacks_it->second.end()) {
-          std::unique_ptr<rmw_zenoh_event_status_t> taken_event =
-            take_event_status(local_entity->topic_info()->name_, event_type);
-          callback_it->second(std::move(taken_event));
+          update_event_counters(
+            pub_entity,
+            ZENOH_EVENT_PUBLICATION_MATCHED,
+            static_cast<int32_t>(-1));
         }
       }
     }
@@ -1218,7 +1185,7 @@ void GraphCache::set_qos_event_callback(
   const rmw_zenoh_event_type_t & event_type,
   GraphCacheEventCallback callback)
 {
-  std::lock_guard<std::mutex> lock(graph_mutex_);
+  std::lock_guard<std::mutex> lock(events_mutex_);
 
   if (event_type > ZENOH_EVENT_ID_MAX) {
     RMW_ZENOH_LOG_WARN_NAMED(
@@ -1239,7 +1206,7 @@ void GraphCache::set_qos_event_callback(
 ///=============================================================================
 void GraphCache::remove_qos_event_callbacks(std::size_t entity_keyexpr_hash)
 {
-  std::lock_guard<std::mutex> lock(graph_mutex_);
+  std::lock_guard<std::mutex> lock(events_mutex_);
   event_callbacks_.erase(entity_keyexpr_hash);
 }
 
@@ -1265,7 +1232,7 @@ bool GraphCache::is_entity_pub(const liveliness::Entity & entity)
 
 ///=============================================================================
 void GraphCache::update_event_counters(
-  const std::string & topic_name,
+  liveliness::ConstEntityPtr entity,
   const rmw_zenoh_event_type_t event_id,
   int32_t change)
 {
@@ -1275,42 +1242,16 @@ void GraphCache::update_event_counters(
 
   std::lock_guard<std::mutex> lock(events_mutex_);
 
-  auto event_statuses_it = event_statuses_.find(topic_name);
-  if (event_statuses_it == event_statuses_.end()) {
-    // Initialize statuses.
-    std::array<rmw_zenoh_event_status_t, ZENOH_EVENT_ID_MAX + 1> status_array {};
-    event_statuses_[topic_name] = std::move(status_array);
+  // Trigger callback set for this entity for the event type.
+  GraphEventCallbackMap::const_iterator event_callbacks_it =
+    event_callbacks_.find(entity->keyexpr_hash());
+  if (event_callbacks_it != event_callbacks_.end()) {
+    GraphEventCallbacks::const_iterator callback_it =
+      event_callbacks_it->second.find(event_id);
+    if (callback_it != event_callbacks_it->second.end()) {
+      callback_it->second(change);
+    }
   }
-
-  rmw_zenoh_event_status_t & status_to_update = event_statuses_[topic_name][event_id];
-  status_to_update.total_count += std::max(0, change);
-  status_to_update.total_count_change += std::max(0, change);
-  status_to_update.current_count += change;
-  status_to_update.current_count_change = change;
-}
-
-///=============================================================================
-std::unique_ptr<rmw_zenoh_event_status_t> GraphCache::take_event_status(
-  const std::string & topic_name,
-  const rmw_zenoh_event_type_t event_id)
-{
-  if (event_id > ZENOH_EVENT_ID_MAX) {
-    return nullptr;
-  }
-
-  std::lock_guard<std::mutex> lock(events_mutex_);
-
-  auto event_statuses_it = event_statuses_.find(topic_name);
-  if (event_statuses_it == event_statuses_.end()) {
-    return nullptr;
-  }
-
-  rmw_zenoh_event_status_t & status_to_take = event_statuses_[topic_name][event_id];
-  auto result = std::make_unique<rmw_zenoh_event_status_t>(status_to_take);
-  // Reset changes.
-  status_to_take.total_count_change = 0;
-  status_to_take.current_count_change = 0;
-  return result;
 }
 
 ///=============================================================================

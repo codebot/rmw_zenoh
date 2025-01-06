@@ -74,14 +74,6 @@ public:
     const rosidl_message_type_support_t * type_support,
     const rmw_qos_profile_t * qos_profile);
 
-  // Publish a ROS message.
-  rmw_ret_t publish(
-    const void * ros_message
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-    , const std::optional<ShmContext> & shm
-#endif
-  );
-
   // Get a copy of the keyexpr_hash of this SubscriptionData's liveliness::Entity.
   std::size_t keyexpr_hash() const;
 
@@ -157,7 +149,6 @@ private:
   std::deque<std::unique_ptr<Message>> message_queue_;
   // Map GID of a subscription to the sequence number of the message it published.
   std::unordered_map<size_t, int64_t> last_known_published_msg_;
-  size_t total_messages_lost_;
   // Wait set data.
   rmw_wait_set_data_t * wait_set_data_;
   // Callback managers.
