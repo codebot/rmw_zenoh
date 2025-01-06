@@ -19,6 +19,8 @@
 
 #include <zenoh.hxx>
 
+#include <cstddef>
+
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
