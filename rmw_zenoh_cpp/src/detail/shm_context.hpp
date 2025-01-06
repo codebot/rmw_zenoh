@@ -17,9 +17,9 @@
 
 #ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
 
-#include <zenoh.hxx>
-
 #include <cstddef>
+
+#include <zenoh.hxx>
 
 namespace rmw_zenoh_cpp
 {
