@@ -112,7 +112,7 @@ To bridge communications across two hosts, the `Zenoh router` configuration for 
 This is done by specifying an endpoint in host's `Zenoh router` configuration file to as seen below.
 In this example, the `Zenoh router` will connect to the `Zenoh router` running on a second host with IP address `192.168.1.1` and port `7447`.
 
-```json
+```json5
 {
   connect: {
     endpoints: ["tcp/192.168.1.1:7447"],
