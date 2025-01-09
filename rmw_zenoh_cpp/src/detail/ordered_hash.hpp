@@ -1457,7 +1457,7 @@ class ordered_hash : private Hash, private KeyEqual {
 #endif
 
     /*
-     * The insertion didn't happend at the end of the m_values container,
+     * The insertion didn't happened at the end of the m_values container,
      * we need to shift the indexes in m_buckets_data.
      */
     if (index_insert_position != m_values.size() - 1) {
@@ -1661,7 +1661,7 @@ class ordered_hash : private Hash, private KeyEqual {
   static constexpr float REHASH_ON_HIGH_NB_PROBES__MIN_LOAD_FACTOR = 0.15f;
 
   /**
-   * Protocol version currenlty used for serialization.
+   * Protocol version currently used for serialization.
    */
   static const slz_size_type SERIALIZATION_PROTOCOL_VERSION = 1;
 
