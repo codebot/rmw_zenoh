@@ -91,7 +91,7 @@ struct GraphNode
   TopicMap pubs_ = {};
   TopicMap subs_ = {};
 
-  // Entires for service/client.
+  // Entries for service/client.
   TopicMap clients_ = {};
   TopicMap services_ = {};
 };

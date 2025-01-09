@@ -355,7 +355,7 @@ void GraphCache::parse_put(
     range.first, range.second,
     [entity](const std::pair<std::string, GraphNodePtr> & node_it)
     {
-      // Match nodes if their zenoh sesion and node ids match.
+      // Match nodes if their zenoh session and node ids match.
       return entity->zid() == node_it.second->zid_ && entity->nid() == node_it.second->nid_;
     });
   if (node_it == range.second) {
@@ -572,7 +572,7 @@ void GraphCache::parse_del(
     range.first, range.second,
     [entity](const std::pair<std::string, GraphNodePtr> & node_it)
     {
-      // Match nodes if their zenoh sesion and node ids match.
+      // Match nodes if their zenoh session and node ids match.
       return entity->zid() == node_it.second->zid_ && entity->nid() == node_it.second->nid_;
     });
   if (node_it == range.second) {
