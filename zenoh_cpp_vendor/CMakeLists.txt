@@ -21,7 +21,7 @@ set(RMW_ZENOH_BUILD_WITH_SHARED_MEMORY TRUE CACHE BOOL "Compile Zenoh RMW with S
 
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION 85ca060fa4037239ca4102a3a61f96626cc6b434
+  VCS_VERSION 61d8fcc136ce4ed36d921a32244da4f3d81a6097
   CMAKE_ARGS
     "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
     "-DZENOHC_BUILD_WITH_SHARED_MEMORY:BOOL=${RMW_ZENOH_BUILD_WITH_SHARED_MEMORY}"
@@ -35,7 +35,7 @@ ament_export_dependencies(zenohc)
 # - https://github.com/eclipse-zenoh/zenoh-cpp/pull/342 (Fix include what you use)
 ament_vendor(zenoh_cpp_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-cpp
-  VCS_VERSION 8dce692942246448a9e64f3bae68793634792c33
+  VCS_VERSION 05942637c29d3346ad18bab5a178aeebf4be5d62
   CMAKE_ARGS
       -DZENOHCXX_ZENOHC=ON
       -DZENOHCXX_ZENOHPICO=OFF
