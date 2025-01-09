@@ -252,7 +252,7 @@ rmw_ret_t PublisherData::publish(
     auto & provider = shm.value().shm_provider;
 
     // TODO(yellowhatter): SHM, use alignment based on msgsize_threshold
-    auto alloc_result = provider.alloc_gc_defrag_blocking(
+    auto alloc_result = provider.alloc_gc_defrag(
       max_data_length,
       zenoh::AllocAlignment({0}));
 
@@ -261,9 +261,15 @@ rmw_ret_t PublisherData::publish(
       msg_bytes = reinterpret_cast<char *>(buf.data());
       shmbuf = std::make_optional(std::move(buf));
     } else {
-      // TODO(Yadunund): Should we revert to regular allocation and not return an error?
-      RMW_SET_ERROR_MSG("Failed to allocate a SHM buffer, even after GCing.");
-      return RMW_RET_ERROR;
+      // Print a warning and revert to regular allocation
+      RMW_ZENOH_LOG_DEBUG_NAMED(
+        "rmw_zenoh_cpp", "Failed to allocate a SHM buffer, fallback to non-SHM");
+
+      // TODO(yellowhatter): split the whole publish method onto shm and non-shm versions
+      // Get memory from the allocator.
+      msg_bytes = static_cast<char *>(allocator->allocate(max_data_length, allocator->state));
+      RMW_CHECK_FOR_NULL_WITH_MSG(
+        msg_bytes, "bytes for message is null", return RMW_RET_BAD_ALLOC);
     }
   } else {
 #endif
