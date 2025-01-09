@@ -29,7 +29,7 @@ struct rmw_wait_set_data_t
   // there isn't a race in rmw_wait().  That could happen because of the following sequence:
   //
   // 1. Without taking a lock, rmw_wait() checks if any of the entities in the wait_set are ready,
-  //    and if not attachs the condition_variable to it.
+  //    and if not attaches the condition_variable to it.
   // 2. It then takes the lock, and sleeps on the condition_variable.
   //
   // However, doing step 1 takes time, and checks in a particular order: guard_conditions, events,
