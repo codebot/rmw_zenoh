@@ -17,6 +17,9 @@ find_package(ament_cmake_vendor_package REQUIRED)
 # when expanded.
 set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memory zenoh/transport_compression zenoh/transport_tcp zenoh/transport_tls")
 
+# Set VCS_VERSION to include latest changes from zenoh/zenoh-c to benefit from :
+# - https://github.com/eclipse-zenoh/zenoh/pull/1685 (Fix deadlock in advanced subscription undeclaration)
+# - https://github.com/eclipse-zenoh/zenoh/pull/1696 (Fix SHM Garbage Collection (GC) policy)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
   VCS_VERSION 61d8fcc136ce4ed36d921a32244da4f3d81a6097
@@ -28,8 +31,9 @@ ament_vendor(zenoh_c_vendor
 
 ament_export_dependencies(zenohc)
 
-# Set VCS_VERSION to include latest changes from zenoh-c to benefit from :
+# Set VCS_VERSION to include latest changes from zenoh-cpp to benefit from :
 # - https://github.com/eclipse-zenoh/zenoh-cpp/pull/342 (Fix include what you use)
+# - https://github.com/eclipse-zenoh/zenoh-cpp/pull/363 (Fix memory leak in string deserialization)
 ament_vendor(zenoh_cpp_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-cpp
   VCS_VERSION 05942637c29d3346ad18bab5a178aeebf4be5d62
