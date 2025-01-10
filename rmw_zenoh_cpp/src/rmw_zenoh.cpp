@@ -388,6 +388,10 @@ rmw_create_publisher(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (context_impl->is_shutdown()) {
+    RMW_SET_ERROR_MSG("context_impl is shutdown");
+    return nullptr;
+  }
   if (!context_impl->session_is_valid()) {
     RMW_SET_ERROR_MSG("zenoh session is invalid");
     return nullptr;
@@ -876,6 +880,10 @@ rmw_create_subscription(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (context_impl->is_shutdown()) {
+    RMW_SET_ERROR_MSG("context_impl is shutdown");
+    return nullptr;
+  }
   if (!context_impl->session_is_valid()) {
     RMW_SET_ERROR_MSG("zenoh session is invalid");
     return nullptr;
@@ -1348,6 +1356,10 @@ rmw_create_client(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (context_impl->is_shutdown()) {
+    RMW_SET_ERROR_MSG("context_impl is shutdown");
+    return nullptr;
+  }
   if (!context_impl->session_is_valid()) {
     RMW_SET_ERROR_MSG("zenoh session is invalid");
     return nullptr;
@@ -1596,6 +1608,10 @@ rmw_create_service(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (context_impl->is_shutdown()) {
+    RMW_SET_ERROR_MSG("context_impl is shutdown");
+    return nullptr;
+  }
   if (!context_impl->session_is_valid()) {
     RMW_SET_ERROR_MSG("zenoh session is invalid");
     return nullptr;
