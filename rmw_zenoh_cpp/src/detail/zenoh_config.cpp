@@ -47,7 +47,7 @@ static const char * router_check_attempts_envar = "ZENOH_ROUTER_CHECK_ATTEMPTS";
 static const char * zenoh_shm_enabled_envar = "ZENOH_SHM_ENABLED";
 static const bool zenoh_shm_enabled_default = true;
 static const char * zenoh_shm_alloc_size_envar = "ZENOH_SHM_ALLOC_SIZE";
-static const size_t zenoh_shm_alloc_size_default = 1 * 1024 * 1024;
+static const size_t zenoh_shm_alloc_size_default = 16 * 1024 * 1024;
 static const char * zenoh_shm_message_size_threshold_envar = "ZENOH_SHM_MESSAGE_SIZE_THRESHOLD";
 static const size_t zenoh_shm_message_size_threshold_default = 2 * 1024;
 #endif
