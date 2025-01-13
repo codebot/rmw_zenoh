@@ -57,7 +57,7 @@ std::optional<zenoh::Config> get_z_config(const ConfigurableEntity & entity);
 /// @details The behavior is as follows:
 ///   - If not set or 0, the max value is returned.
 ///   - If less than 0, std::nullopt is returned.
-///   - Else value of environemnt variable is returned.
+///   - Else value of environment variable is returned.
 /// @return The number of times to try connecting to a zenoh router and
 ///   std::nullopt if establishing a connection to a router is not required.
 std::optional<uint64_t> zenoh_router_check_attempts();

@@ -395,6 +395,10 @@ rmw_create_publisher(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (context_impl->is_shutdown()) {
+    RMW_SET_ERROR_MSG("context_impl is shutdown");
+    return nullptr;
+  }
   if (!context_impl->session_is_valid()) {
     RMW_SET_ERROR_MSG("zenoh session is invalid");
     return nullptr;
@@ -942,6 +946,10 @@ rmw_create_subscription(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (context_impl->is_shutdown()) {
+    RMW_SET_ERROR_MSG("context_impl is shutdown");
+    return nullptr;
+  }
   if (!context_impl->session_is_valid()) {
     RMW_SET_ERROR_MSG("zenoh session is invalid");
     return nullptr;
@@ -1239,12 +1247,12 @@ rmw_take_sequence(
   }
 
   if (count > message_sequence->capacity) {
-    RMW_SET_ERROR_MSG("Insuffient capacity in message_sequence");
+    RMW_SET_ERROR_MSG("Insufficient capacity in message_sequence");
     return RMW_RET_INVALID_ARGUMENT;
   }
 
   if (count > message_info_sequence->capacity) {
-    RMW_SET_ERROR_MSG("Insuffient capacity in message_info_sequence");
+    RMW_SET_ERROR_MSG("Insufficient capacity in message_info_sequence");
     return RMW_RET_INVALID_ARGUMENT;
   }
 
@@ -1445,6 +1453,10 @@ rmw_create_client(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (context_impl->is_shutdown()) {
+    RMW_SET_ERROR_MSG("context_impl is shutdown");
+    return nullptr;
+  }
   if (!context_impl->session_is_valid()) {
     RMW_SET_ERROR_MSG("zenoh session is invalid");
     return nullptr;
@@ -1707,6 +1719,10 @@ rmw_create_service(
     context_impl,
     "unable to get rmw_context_impl_s",
     return nullptr);
+  if (context_impl->is_shutdown()) {
+    RMW_SET_ERROR_MSG("context_impl is shutdown");
+    return nullptr;
+  }
   if (!context_impl->session_is_valid()) {
     RMW_SET_ERROR_MSG("zenoh session is invalid");
     return nullptr;
@@ -2587,7 +2603,7 @@ rmw_service_server_is_available(
     static_cast<rmw_zenoh_cpp::ClientData *>(client->data);
   if (client_data == nullptr) {
     RMW_SET_ERROR_MSG_WITH_FORMAT_STRING(
-      "Unable to retreive client_data from client for service %s", client->service_name);
+      "Unable to retrieve client_data from client for service %s", client->service_name);
     return RMW_RET_INVALID_ARGUMENT;
   }
 
