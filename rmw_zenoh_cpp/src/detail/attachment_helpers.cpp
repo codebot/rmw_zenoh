@@ -35,14 +35,12 @@ AttachmentData::AttachmentData(
   const std::array<uint8_t, RMW_GID_STORAGE_SIZE> source_gid)
 : sequence_number_(sequence_number),
   source_timestamp_(source_timestamp),
-  source_gid_(source_gid),
-  gid_hash_(hash_gid(source_gid))
+  source_gid_(source_gid)
 {
 }
 
 AttachmentData::AttachmentData(AttachmentData && data)
 {
-  gid_hash_ = std::move(data.gid_hash_);
   sequence_number_ = std::move(data.sequence_number_);
   source_timestamp_ = std::move(data.source_timestamp_);
   source_gid_ = data.source_gid_;
@@ -64,12 +62,6 @@ int64_t AttachmentData::source_timestamp() const
 std::array<uint8_t, RMW_GID_STORAGE_SIZE> AttachmentData::copy_gid() const
 {
   return source_gid_;
-}
-
-///=============================================================================
-size_t AttachmentData::gid_hash() const
-{
-  return gid_hash_;
 }
 
 zenoh::Bytes AttachmentData::serialize_to_zbytes()
@@ -104,6 +96,5 @@ AttachmentData::AttachmentData(const zenoh::Bytes & bytes)
     throw std::runtime_error("source_gid is not found in the attachment.");
   }
   this->source_gid_ = deserializer.deserialize<std::array<uint8_t, RMW_GID_STORAGE_SIZE>>();
-  gid_hash_ = hash_gid(this->source_gid_);
 }
 }  // namespace rmw_zenoh_cpp
