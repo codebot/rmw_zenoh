@@ -95,11 +95,6 @@ AttachmentData::AttachmentData(const zenoh::Bytes & bytes)
   if (source_gid_str != "source_gid") {
     throw std::runtime_error("source_gid is not found in the attachment.");
   }
-<<<<<<< HEAD
   this->source_gid_ = deserializer.deserialize<std::array<uint8_t, 16>>();
-  gid_hash_ = hash_gid(this->source_gid_);
-=======
-  this->source_gid_ = deserializer.deserialize<std::array<uint8_t, RMW_GID_STORAGE_SIZE>>();
->>>>>>> f040f5c (Remove `gid_hash_` from `AttachmentData` (#416))
 }
 }  // namespace rmw_zenoh_cpp
