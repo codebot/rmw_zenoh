@@ -39,7 +39,6 @@ public:
   int64_t sequence_number() const;
   int64_t source_timestamp() const;
   std::array<uint8_t, 16> copy_gid() const;
-  size_t gid_hash() const;
 
   zenoh::Bytes serialize_to_zbytes();
 
@@ -47,7 +46,6 @@ private:
   int64_t sequence_number_;
   int64_t source_timestamp_;
   std::array<uint8_t, 16> source_gid_;
-  size_t gid_hash_;
 };
 }  // namespace rmw_zenoh_cpp
 
