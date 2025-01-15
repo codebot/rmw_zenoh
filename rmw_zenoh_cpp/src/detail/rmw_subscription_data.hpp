@@ -54,7 +54,7 @@ public:
       uint64_t recv_ts,
       AttachmentData && attachment);
 
-    ~Message();
+    ~Message() = default;
 
     Payload payload;
     uint64_t recv_timestamp;
