@@ -20,9 +20,11 @@ set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memor
 # Set VCS_VERSION to include latest changes from zenoh/zenoh-c to benefit from :
 # - https://github.com/eclipse-zenoh/zenoh/pull/1685 (Fix deadlock in advanced subscription undeclaration)
 # - https://github.com/eclipse-zenoh/zenoh/pull/1696 (Fix SHM Garbage Collection (GC) policy)
+# - https://github.com/eclipse-zenoh/zenoh/pull/1708 (Fix gossip with TLS endpoints)
+# - https://github.com/eclipse-zenoh/zenoh/pull/1717 (Improve performance of a large number of peers)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION 61d8fcc136ce4ed36d921a32244da4f3d81a6097
+  VCS_VERSION 328736fe9bb9b654b1d9f47eecfc6d52f0d7d587
   CMAKE_ARGS
     "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
     "-DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE"
@@ -36,7 +38,7 @@ ament_export_dependencies(zenohc)
 # - https://github.com/eclipse-zenoh/zenoh-cpp/pull/363 (Fix memory leak in string deserialization)
 ament_vendor(zenoh_cpp_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-cpp
-  VCS_VERSION 05942637c29d3346ad18bab5a178aeebf4be5d62
+  VCS_VERSION bbfef04e843289aae70b5aa060a925e8ee5b1b6f
   CMAKE_ARGS
     -DZENOHCXX_ZENOHC=OFF
 )
