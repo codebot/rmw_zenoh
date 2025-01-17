@@ -21,9 +21,6 @@ set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memor
 # - https://github.com/eclipse-zenoh/zenoh/pull/1685 (Fix deadlock in advanced subscription undeclaration)
 # - https://github.com/eclipse-zenoh/zenoh/pull/1696 (Fix SHM Garbage Collection (GC) policy)
 # - https://github.com/eclipse-zenoh/zenoh/pull/1708 (Fix gossip with TLS endpoints)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1704 (Improve performance of a large number of peers)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1710 (Improve performance of a large number of peers)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1713 (Improve performance of a large number of peers)
 # - https://github.com/eclipse-zenoh/zenoh/pull/1717 (Improve performance of a large number of peers)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
