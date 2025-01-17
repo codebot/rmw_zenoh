@@ -184,7 +184,6 @@ bool SubscriptionData::init()
     adv_sub_opts.history->detect_late_publishers = true;
     adv_sub_opts.history->max_samples = entity_->topic_info()->qos_.depth;
     adv_sub_opts.recovery = zenoh::ext::SessionExt::AdvancedSubscriberOptions::RecoveryOptions{};
-    adv_sub_opts.recovery->periodic_queries_period_ms = 1000;
   }
 
   std::weak_ptr<SubscriptionData> data_wp = shared_from_this();
