@@ -74,7 +74,28 @@ public:
     if (rmw_dds_common::get_security_files(
         true, "", security_options->security_root_path, security_files_paths))
     {
-      // TODO(ahcorde): Fill this
+      config.value().insert_json5("connect/endpoints", "[\"tls/localhost:7447\"]");
+      config.value().insert_json5("listen/endpoints", "[\"tls/localhost:0\"]");
+
+      std::string tls_config = "{\"link\": \n"
+        "\t\t{ \n"
+        "\t\t\t\"protocols\": [ \n"
+        "\t\t\t\t\"tls\" \n"
+        "\t\t\t], \n"
+        "\t\t\t\"tls\": { \n"
+        "\t\t\t\t\"enable_mtls\": true, \n"
+        "\t\t\t\t\"verify_name_on_connect\": false, \n"
+        "\t\t\t\t\"root_ca_certificate\": \"" + security_files_paths["IDENTITY_CA"] + "\",\n" +
+        "\t\t\t\t\"listen_private_key\": \"" + security_files_paths["PRIVATE_KEY"] + "\",\n" +
+        "\t\t\t\t\"listen_certificate\": \"" + security_files_paths["CERTIFICATE"] + "\",\n" +
+        "\t\t\t\t\"connect_private_key\": \"" + security_files_paths["PRIVATE_KEY"] + "\",\n" +
+        "\t\t\t\t\"connect_certificate\": \"" + security_files_paths["CERTIFICATE"] + "\",\n" +
+        "\t\t\t}, \n"
+        "\t\t}, \n"
+        "\t}\n";
+      config.value().insert_json5(
+        "transport",
+        tls_config);
     } else {
       std::cout << "Error getting secutiry data" << std::endl;
     }
