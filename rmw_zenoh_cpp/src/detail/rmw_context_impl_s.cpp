@@ -100,8 +100,8 @@ public:
       constexpr int64_t ticks_between_print(std::chrono::milliseconds(1000) / sleep_time);
       do {
         zenoh::ZResult result;
-        this->session_->get_routers_z_id(&result);
-        if (result == Z_OK) {
+        const auto zids = this->session_->get_routers_z_id(&result);
+        if (result == Z_OK && !zids.empty()) {
           break;
         }
         if ((connection_attempts % ticks_between_print) == 0) {
