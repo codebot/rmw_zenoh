@@ -168,7 +168,8 @@ bool SubscriptionData::init()
 
   sess_ = context_impl->session();
 
-  auto adv_sub_opts = zenoh::ext::SessionExt::AdvancedSubscriberOptions::create_default();
+  using AdvancedSubscriberOptions = zenoh::ext::SessionExt::AdvancedSubscriberOptions;
+  auto adv_sub_opts = AdvancedSubscriberOptions::create_default();
 
   // Instantiate the subscription with suitable options depending on the
   // adapted_qos_profile.
@@ -179,11 +180,18 @@ bool SubscriptionData::init()
     adv_sub_opts.subscriber_detection = true;
     adv_sub_opts.query_timeout_ms = std::numeric_limits<uint64_t>::max();
     // History can only be retransmitted by Publishers that enable caching.
-    adv_sub_opts.history =
-      zenoh::ext::SessionExt::AdvancedSubscriberOptions::HistoryOptions::create_default();
+    adv_sub_opts.history = AdvancedSubscriberOptions::HistoryOptions::create_default();
+    // Enable detection of late joiner publishers and query for their historical data.
     adv_sub_opts.history->detect_late_publishers = true;
     adv_sub_opts.history->max_samples = entity_->topic_info()->qos_.depth;
-    adv_sub_opts.recovery = zenoh::ext::SessionExt::AdvancedSubscriberOptions::RecoveryOptions{};
+
+  }
+
+  if (entity_->topic_info()->qos_.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
+    // Retransmission of detected lost Samples. This requires publishers to enable caching and sample_miss_detection.
+    adv_sub_opts.recovery = AdvancedSubscriberOptions::RecoveryOptions::create_default();
+    // Heartbeat-based last sample detection.
+    adv_sub_opts.recovery->last_sample_miss_detection = AdvancedSubscriberOptions::RecoveryOptions::Heartbeat{};
   }
 
   std::weak_ptr<SubscriptionData> data_wp = shared_from_this();
