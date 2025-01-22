@@ -115,16 +115,19 @@ std::shared_ptr<PublisherData> PublisherData::make(
     adv_pub_opts.publisher_detection = true;
   }
 
-  if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL
-    || adapted_qos_profile.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
+  if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL ||
+    adapted_qos_profile.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE)
+  {
     adv_pub_opts.cache = AdvancedPublisherOptions::CacheOptions::create_default();
     adv_pub_opts.cache->max_samples = adapted_qos_profile.depth;
   }
 
   if (adapted_qos_profile.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
     // Allow matching Subscribers to detect lost samples and ask for retransimission.
-    adv_pub_opts.sample_miss_detection = AdvancedPublisherOptions::SampleMissDetectionOptions::create_default();
-    // The period of publisher heartbeats in ms, used by ``AdvancedSubscriber`` with heartbeat-based recovery enabled for missed sample retransimission.
+    adv_pub_opts.sample_miss_detection =
+      AdvancedPublisherOptions::SampleMissDetectionOptions::create_default();
+    // The period of publisher heartbeats in ms, used by ``AdvancedSubscriber`` with
+    // heartbeat-based recovery enabled for missed sample retransimission.
     adv_pub_opts.sample_miss_detection->heartbeat_period_ms = 1000;
   }
 

@@ -184,14 +184,15 @@ bool SubscriptionData::init()
     // Enable detection of late joiner publishers and query for their historical data.
     adv_sub_opts.history->detect_late_publishers = true;
     adv_sub_opts.history->max_samples = entity_->topic_info()->qos_.depth;
-
   }
 
   if (entity_->topic_info()->qos_.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
-    // Retransmission of detected lost Samples. This requires publishers to enable caching and sample_miss_detection.
+    // Retransmission of detected lost Samples. This requires publishers to enable caching
+    // and sample_miss_detection.
     adv_sub_opts.recovery = AdvancedSubscriberOptions::RecoveryOptions::create_default();
     // Heartbeat-based last sample detection.
-    adv_sub_opts.recovery->last_sample_miss_detection = AdvancedSubscriberOptions::RecoveryOptions::Heartbeat{};
+    adv_sub_opts.recovery->last_sample_miss_detection =
+      AdvancedSubscriberOptions::RecoveryOptions::Heartbeat{};
   }
 
   std::weak_ptr<SubscriptionData> data_wp = shared_from_this();
