@@ -37,7 +37,7 @@
 
 #include "rcpputils/scope_exit.hpp"
 #include "rmw/error_handling.h"
-#include "rmw_dds_common/security.hpp"
+#include "rmw_security_common/security.hpp"
 #include "zenoh_utils.hpp"
 
 // Megabytes of SHM to reserve.
@@ -71,7 +71,7 @@ public:
     }
 #ifdef HAVE_SECURITY
     std::unordered_map<std::string, std::string> security_files_paths;
-    if (rmw_dds_common::get_security_files(
+    if (rmw_security_common::get_security_files(
         true, "", security_options->security_root_path, security_files_paths))
     {
       config.value().insert_json5("connect/endpoints", "[\"tls/localhost:7447\"]");
