@@ -165,7 +165,7 @@ public:
           "rmw_zenoh_cpp", "[rmw_context_impl_s] z_call received an invalid reply.\n");
       }
     }
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
+
     // Initialize the shm subsystem if shared_memory is enabled in the config
     if (rmw_zenoh_cpp::zenoh_shm_enabled()) {
       RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled");
@@ -178,7 +178,6 @@ public:
     } else {
       RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is disabled");
     }
-#endif
 
     graph_guard_condition_ = std::make_unique<rmw_guard_condition_t>();
     graph_guard_condition_->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
@@ -262,13 +261,11 @@ public:
     return session_;
   }
 
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   std::optional<rmw_zenoh_cpp::ShmContext> & shm()
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     return shm_;
   }
-#endif
 
   rmw_guard_condition_t * graph_guard_condition()
   {
@@ -400,11 +397,9 @@ private:
   std::string enclave_;
   // An owned session.
   std::shared_ptr<zenoh::Session> session_;
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   // An optional SHM context that is initialized of SHM is enabled in the
   // zenoh session config.
   std::optional<rmw_zenoh_cpp::ShmContext> shm_;
-#endif
   // Graph cache.
   std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache_;
   // ROS graph liveliness subscriber.
@@ -460,13 +455,11 @@ const std::shared_ptr<zenoh::Session> rmw_context_impl_s::session() const
   return data_->session();
 }
 
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
 ///=============================================================================
 std::optional<rmw_zenoh_cpp::ShmContext> & rmw_context_impl_s::shm()
 {
   return data_->shm();
 }
-#endif
 
 ///=============================================================================
 rmw_guard_condition_t * rmw_context_impl_s::graph_guard_condition()

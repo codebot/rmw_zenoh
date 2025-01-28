@@ -57,18 +57,14 @@ public:
 
   // Publish a ROS message.
   rmw_ret_t publish(
-    const void * ros_message
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-    , const std::optional<ShmContext> & shm
-#endif
+    const void * ros_message,
+    const std::optional<ShmContext> & shm
   );
 
   // Publish a serialized ROS message.
   rmw_ret_t publish_serialized_message(
-    const rmw_serialized_message_t * serialized_message
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-    , const std::optional<ShmContext> & shm
-#endif
+    const rmw_serialized_message_t * serialized_message,
+    const std::optional<ShmContext> & shm
   );
 
   // Get a copy of the keyexpr_hash of this PublisherData's liveliness::Entity.

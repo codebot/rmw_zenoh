@@ -62,7 +62,6 @@ std::optional<zenoh::Config> get_z_config(const ConfigurableEntity & entity);
 ///   std::nullopt if establishing a connection to a router is not required.
 std::optional<uint64_t> zenoh_router_check_attempts();
 
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
 ///=============================================================================
 /// Get the enabled state of shared memory subsystem
 /// based on the environment variable ZENOH_SHM_ENABLED.
@@ -90,7 +89,6 @@ size_t zenoh_shm_alloc_size();
 ///   - Else value of environemnt variable is returned.
 /// @return The amount of shared memory to be pre-allocated for Zenoh SHM operation
 size_t zenoh_shm_message_size_threshold();
-#endif
 }  // namespace rmw_zenoh_cpp
 
 #endif  // DETAIL__ZENOH_CONFIG_HPP_

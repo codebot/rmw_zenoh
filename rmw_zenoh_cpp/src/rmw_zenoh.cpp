@@ -618,10 +618,8 @@ rmw_publish(
   }
 
   return pub_data->publish(
-    ros_message
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-    , context_impl->shm()
-#endif
+    ros_message,
+    context_impl->shm()
   );
 }
 
@@ -728,10 +726,8 @@ rmw_publish_serialized_message(
   RMW_CHECK_ARGUMENT_FOR_NULL(publisher_data, RMW_RET_INVALID_ARGUMENT);
 
   return publisher_data->publish_serialized_message(
-    serialized_message
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-    , context_impl->shm()
-#endif
+    serialized_message,
+    context_impl->shm()
   );
 }
 

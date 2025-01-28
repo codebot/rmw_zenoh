@@ -15,8 +15,6 @@
 #ifndef DETAIL__SHM_CONTEXT_HPP_
 #define DETAIL__SHM_CONTEXT_HPP_
 
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-
 #include <cstddef>
 
 #include <zenoh.hxx>
@@ -32,7 +30,5 @@ struct ShmContext
   ShmContext(size_t alloc_size, size_t msgsize_threshold);
 };
 }  // namespace rmw_zenoh_cpp
-
-#endif
 
 #endif  // DETAIL__SHM_CONTEXT_HPP_

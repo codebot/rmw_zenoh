@@ -201,10 +201,8 @@ PublisherData::PublisherData(
 
 ///=============================================================================
 rmw_ret_t PublisherData::publish(
-  const void * ros_message
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-  , const std::optional<ShmContext> & shm
-#endif
+  const void * ros_message,
+  const std::optional<ShmContext> & shm
 )
 {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -221,30 +219,17 @@ rmw_ret_t PublisherData::publish(
   // To store serialized message byte array.
   char * msg_bytes = nullptr;
 
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   std::optional<zenoh::ZShmMut> shmbuf = std::nullopt;
-#endif
 
   rcutils_allocator_t * allocator = &rmw_node_->context->options.allocator;
 
   auto always_free_msg_bytes = rcpputils::make_scope_exit(
-    [&msg_bytes, allocator
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-    , &shmbuf
-#endif
-    ]() {
-      if (msg_bytes
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-      && !shmbuf.has_value()
-#endif
-      )
-      {
+    [&msg_bytes, allocator, &shmbuf]() {
+      if (msg_bytes && !shmbuf.has_value()) {
         allocator->deallocate(msg_bytes, allocator->state);
       }
     });
 
-
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   // Get memory from SHM buffer if available.
   if (shm.has_value() && max_data_length >= shm.value().msgsize_threshold) {
     RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled.");
@@ -272,14 +257,11 @@ rmw_ret_t PublisherData::publish(
         msg_bytes, "bytes for message is null", return RMW_RET_BAD_ALLOC);
     }
   } else {
-#endif
-  // Get memory from the allocator.
-  msg_bytes = static_cast<char *>(allocator->allocate(max_data_length, allocator->state));
-  RMW_CHECK_FOR_NULL_WITH_MSG(
-    msg_bytes, "bytes for message is null", return RMW_RET_BAD_ALLOC);
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-}
-#endif
+    // Get memory from the allocator.
+    msg_bytes = static_cast<char *>(allocator->allocate(max_data_length, allocator->state));
+    RMW_CHECK_FOR_NULL_WITH_MSG(
+      msg_bytes, "bytes for message is null", return RMW_RET_BAD_ALLOC);
+  }
 
   // Object that manages the raw buffer
   eprosima::fastcdr::FastBuffer fastbuffer(msg_bytes, max_data_length);
@@ -306,10 +288,7 @@ rmw_ret_t PublisherData::publish(
   options.attachment = rmw_zenoh_cpp::AttachmentData(
     sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
 
-  auto payload =
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-    shmbuf.has_value() ? zenoh::Bytes(std::move(*shmbuf)) :
-#endif
+  auto payload = shmbuf.has_value() ? zenoh::Bytes(std::move(*shmbuf)) :
     zenoh::Bytes(
     std::vector<uint8_t>(
       reinterpret_cast<const uint8_t *>(msg_bytes),
@@ -334,11 +313,8 @@ rmw_ret_t PublisherData::publish(
 
 ///=============================================================================
 rmw_ret_t PublisherData::publish_serialized_message(
-  const rmw_serialized_message_t * serialized_message
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-  , const std::optional<ShmContext> & shm
-#endif
-)
+  const rmw_serialized_message_t * serialized_message,
+  const std::optional<ShmContext> & shm)
 {
   eprosima::fastcdr::FastBuffer buffer(
     reinterpret_cast<char *>(serialized_message->buffer), serialized_message->buffer_length);
@@ -360,8 +336,6 @@ rmw_ret_t PublisherData::publish_serialized_message(
   options.attachment = rmw_zenoh_cpp::AttachmentData(
     sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
 
-
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
   // Get memory from SHM buffer if available.
   if (shm.has_value() && data_length >= shm.value().msgsize_threshold) {
     RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is enabled.");
@@ -388,19 +362,16 @@ rmw_ret_t PublisherData::publish_serialized_message(
       return RMW_RET_ERROR;
     }
   } else {
-#endif
-  std::vector<uint8_t> raw_image(
-    serialized_message->buffer,
-    serialized_message->buffer + data_length);
-  zenoh::Bytes payload(raw_image);
+    std::vector<uint8_t> raw_image(
+      serialized_message->buffer,
+      serialized_message->buffer + data_length);
+    zenoh::Bytes payload(raw_image);
 
-  TRACETOOLS_TRACEPOINT(
-    rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
+    TRACETOOLS_TRACEPOINT(
+      rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
 
-  pub_.put(std::move(payload), std::move(options), &result);
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-}
-#endif
+    pub_.put(std::move(payload), std::move(options), &result);
+  }
 
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef RMW_ZENOH_BUILD_WITH_SHARED_MEMORY
-
 #include <stdexcept>
 
 #include "shm_context.hpp"
@@ -29,5 +27,3 @@ ShmContext::ShmContext(size_t alloc_size, size_t msgsize_threshold)
   msgsize_threshold(msgsize_threshold)
 {}
 }  // namespace rmw_zenoh_cpp
-
-#endif
