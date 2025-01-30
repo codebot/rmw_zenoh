@@ -108,9 +108,17 @@ public:
           RMW_ZENOH_LOG_WARN_NAMED(
             "rmw_zenoh_cpp",
             "Unable to connect to a Zenoh router. "
-            "Have you started a router with `ros2 run rmw_zenoh_cpp rmw_zenohd`?");
+            "Have you started a router with `ros2 run rmw_zenoh_cpp rmw_zenohd`? "
+            "You may also increase the number of attempts to check for a router "
+            "but setting the ZENOH_ROUTER_CHECK_ATTEMPTS environment variable.");
         }
         if (++connection_attempts >= configured_connection_attempts.value()) {
+          RMW_ZENOH_LOG_WARN_NAMED(
+            "rmw_zenoh_cpp",
+            "Unable to connect to a Zenoh router after %zu attempt(s). "
+            "Proceeding with initialization but other peers will not discover "
+            "or receive data from peers in this session until the router is started.",
+            configured_connection_attempts.value());
           break;
         }
         std::this_thread::sleep_for(sleep_time);
