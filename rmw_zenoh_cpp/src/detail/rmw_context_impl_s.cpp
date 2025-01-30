@@ -70,9 +70,24 @@ public:
       throw std::runtime_error("Error configuring Zenoh session.");
     }
 #ifdef HAVE_SECURITY
-    std::unordered_map<std::string, std::string> security_files_paths;
-    if (rmw_security_common::get_security_files(
-        true, "", security_options->security_root_path, security_files_paths))
+    rcutils_allocator_t allocator = rcutils_get_default_allocator();
+    rcutils_string_map_t security_files = rcutils_get_zero_initialized_string_map();
+    rcutils_ret_t ret = rcutils_string_map_init(&security_files, 0, allocator);
+
+    auto scope_exit = rcpputils::make_scope_exit(
+      [&security_files]() {
+        rcutils_ret_t ret = rcutils_string_map_fini(&security_files);
+        if (ret != RMW_RET_OK) {
+          throw std::runtime_error("Failed to fini string map for security.");
+        }
+    });
+
+    if (ret != RMW_RET_OK) {
+      throw std::runtime_error("Failed to initialize string map for security.");
+    }
+
+    if (get_security_files_support_pkcs(
+        false, "", security_options->security_root_path, &security_files) == RMW_RET_OK)
     {
       config.value().insert_json5("connect/endpoints", "[\"tls/localhost:7447\"]");
       config.value().insert_json5("listen/endpoints", "[\"tls/localhost:0\"]");
@@ -85,19 +100,22 @@ public:
         "\t\t\t\"tls\": { \n"
         "\t\t\t\t\"enable_mtls\": true, \n"
         "\t\t\t\t\"verify_name_on_connect\": false, \n"
-        "\t\t\t\t\"root_ca_certificate\": \"" + security_files_paths["IDENTITY_CA"] + "\",\n" +
-        "\t\t\t\t\"listen_private_key\": \"" + security_files_paths["PRIVATE_KEY"] + "\",\n" +
-        "\t\t\t\t\"listen_certificate\": \"" + security_files_paths["CERTIFICATE"] + "\",\n" +
-        "\t\t\t\t\"connect_private_key\": \"" + security_files_paths["PRIVATE_KEY"] + "\",\n" +
-        "\t\t\t\t\"connect_certificate\": \"" + security_files_paths["CERTIFICATE"] + "\",\n" +
+        "\t\t\t\t\"root_ca_certificate\": \"" + std::string(rcutils_string_map_get(&security_files,
+        "IDENTITY_CA")) + "\",\n" +
+        "\t\t\t\t\"listen_private_key\": \"" + std::string(rcutils_string_map_get(&security_files,
+        "PRIVATE_KEY")) + "\",\n" +
+        "\t\t\t\t\"listen_certificate\": \"" + std::string(rcutils_string_map_get(&security_files,
+        "CERTIFICATE")) + "\",\n" +
+        "\t\t\t\t\"connect_private_key\": \"" + std::string(rcutils_string_map_get(&security_files,
+        "PRIVATE_KEY")) + "\",\n" +
+        "\t\t\t\t\"connect_certificate\": \"" + std::string(rcutils_string_map_get(&security_files,
+        "CERTIFICATE")) + "\",\n" +
         "\t\t\t}, \n"
         "\t\t}, \n"
         "\t}\n";
       config.value().insert_json5(
         "transport",
         tls_config);
-    } else {
-      std::cout << "Error getting secutiry data" << std::endl;
     }
 #endif
     zenoh::ZResult result;
@@ -132,8 +150,8 @@ public:
       constexpr int64_t ticks_between_print(std::chrono::milliseconds(1000) / sleep_time);
       do {
         zenoh::ZResult result;
-        const auto zids = this->session_->get_routers_z_id(&result);
-        if (result == Z_OK && !zids.empty()) {
+        this->session_->get_routers_z_id(&result);
+        if (result == Z_OK) {
           break;
         }
         if ((connection_attempts % ticks_between_print) == 0) {
