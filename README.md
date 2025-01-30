@@ -83,11 +83,15 @@ The `ZENOH_ROUTER_CHECK_ATTEMPTS` environment variable can be used to configure 
 The behavior is explained in the table below.
 
 
-| ZENOH_ROUTER_CHECK_ATTEMPTS |                                                 Session behavior                                                 |
-|:---------------------------:|:----------------------------------------------------------------------------------------------------------------:|
-|            unset or 0           |                                                             Indefinitely waits for connection to a Zenoh router. |
-|             < 0            |                                                                                        Skips Zenoh router check. |
+| ZENOH_ROUTER_CHECK_ATTEMPTS |                                                 Session behavior                                                   |
+|:---------------------------:|:------------------------------------------------------------------------------------------------------------------:|
+|               0             |                                                             Indefinitely waits for connection to a Zenoh router.   |
+|             < 0             |                                                                                        Skips Zenoh router check.   |
 |             > 0             | Attempts to connect to a Zenoh router in `ZENOH_ROUTER_CHECK_ATTEMPTS` attempts with 1 second wait between checks. |
+|            unset            |                                                                    Equivalent to `1`: the check is made only once. |
+
+If after the configured number of attempts the Node is still not connected to a `Zenoh router`, the initialisation goes on anyway.  
+If a `Zenoh router` is started after initialization phase, the Node will automatically connect to it, and autoconnect to other Nodes if gossip scouting is enabled (true with default configuratiuon).
 
 ### Session and Router configs
 `rmw_zenoh` relies on separate configurations files to configure the `Zenoh router` and `Zenoh session` respectively.
