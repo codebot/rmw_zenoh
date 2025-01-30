@@ -50,11 +50,6 @@ SubscriptionData::Message::Message(
 }
 
 ///=============================================================================
-SubscriptionData::Message::~Message()
-{
-}
-
-///=============================================================================
 std::shared_ptr<SubscriptionData> SubscriptionData::make(
   std::shared_ptr<zenoh::Session> session,
   std::shared_ptr<GraphCache> graph_cache,
