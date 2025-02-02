@@ -40,6 +40,14 @@ cd ~/ws_rmw_zenoh
 source install/setup.bash
 ```
 
+### Terminate ROS 2 daemon started with another RMW
+```bash
+pkill -9 -f ros && ros2 daemon stop
+```
+Without this step, ROS 2 CLI commands (e.g. `ros2 node list`) may
+not work properly since they would query ROS graph information from the ROS 2 daemon that
+may have been started with different a RMW.
+
 ### Start the Zenoh router
 > Note: Manually launching Zenoh router won't be necessary in the future.
 ```bash
@@ -48,14 +56,6 @@ ros2 run rmw_zenoh_cpp rmw_zenohd
 ```
 
 > Note: Without the Zenoh router, nodes will not be able to discover each other since multicast discovery is disabled by default in the node's session config. Instead, nodes will receive discovery information about other peers via the Zenoh router's gossip functionality. See more information on the session configs [below](#configuration).
-
-### Terminate ROS 2 daemon started with another RMW
-```bash
-pkill -9 -f ros && ros2 daemon stop
-```
-Without this step, ROS 2 CLI commands (e.g. `ros2 node list`) may
-not work properly since they would query ROS graph information from the ROS 2 daemon that
-may have been started with different a RMW.
 
 ### Run the `talker`
 ```bash
@@ -111,17 +111,29 @@ export ZENOH_ROUTER_CONFIG_URI=$HOME/MY_ZENOH_ROUTER_CONFIG.json5
 ```
 
 ### Connecting multiple hosts
-By default, all discovery traffic is local per host, where the host is the PC running a `Zenoh router`.
-To bridge communications across two hosts, the `Zenoh router` configuration for one the hosts must be updated to connect to the other `Zenoh router` at startup.
-This is done by specifying an endpoint in host's `Zenoh router` configuration file to as seen below.
+By default, all discovery traffic is local per host, where the host is the computer running a `Zenoh router`,
+and each host in a multiple-host system runs a `Zenoh router`.
+To bridge communications across two hosts, the `Zenoh router` configuration for one of the hosts must be
+updated to connect to the other host's `Zenoh router` at startup.
+This is done by setting the `ZENOH_ROUTER_CONFIG_URI` environment variable in one of the hosts to point to a
+modified `Zenoh router` configuration file which specifies an endpoint that the other host's `Zenoh router` is
+is listening on. `Zenoh routers` print a list of endpoints they listen on when they start - choose a suitable one.
+
+Make a copy of rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5 and modify the section that begins:
+```json5
+mode: "router",
+```
+as seen below.
 In this example, the `Zenoh router` will connect to the `Zenoh router` running on a second host with IP address `192.168.1.1` and port `7447`.
 
 ```json5
+.... preceding parts of file
 {
   connect: {
     endpoints: ["tcp/192.168.1.1:7447"],
   },
 }
+.... following parts of file
 ```
 
 > Note: To connect multiple hosts, include the endpoints of all `Zenoh routers` in the network.
