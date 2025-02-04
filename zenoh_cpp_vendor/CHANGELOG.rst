@@ -2,8 +2,8 @@
 Changelog for package zenoh_cpp_vendor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.3.1 (2025-02-04)
+------------------
 * Bump Zenoh to commit id e4ea6f0 (1.2.0 + few commits) (`#446 <https://github.com/ros2/rmw_zenoh/issues/446>`_)
 * Bump zenoh-c and zenoh-cpp to 1.1.1 (`#424 <https://github.com/ros2/rmw_zenoh/issues/424>`_)
 * Update Zenoh version (`#405 <https://github.com/ros2/rmw_zenoh/issues/405>`_)
