@@ -49,6 +49,7 @@ ament_vendor(zenoh_cpp_vendor
   )
 
 externalproject_add_stepdependencies(zenoh_cpp_vendor configure zenoh_c_vendor)
+externalproject_add_stepdependencies(zenoh_cpp_vendor build zenoh_c_vendor)
 
 ament_export_dependencies(zenohcxx)
 
