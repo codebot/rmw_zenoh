@@ -24,7 +24,7 @@ set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memor
 # - https://github.com/eclipse-zenoh/zenoh/pull/1717 (Improve performance of a large number of peers)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION 15d56e1fb44eead6611cf847f503ef030aee5287
+  VCS_VERSION 5fce7fb1d397e016ad02a50bde4262007d755424
   CMAKE_ARGS
   "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
   "-DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE"
