@@ -15,7 +15,7 @@ find_package(ament_cmake_vendor_package REQUIRED)
 # Note: We separate the two args needed for cargo with "$<SEMICOLON>" and not ";" as the
 # latter is a list separater in cmake and hence the string will be split into two
 # when expanded.
-set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=zenoh/transport_compression zenoh/transport_tcp zenoh/transport_tls")
+set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memory zenoh/transport_compression zenoh/transport_tcp zenoh/transport_tls")
 
 # Set VCS_VERSION to include latest changes from zenoh/zenoh-c to benefit from :
 # - https://github.com/eclipse-zenoh/zenoh/pull/1685 (Fix deadlock in advanced subscription undeclaration)
@@ -24,12 +24,11 @@ set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=zenoh/transp
 # - https://github.com/eclipse-zenoh/zenoh/pull/1717 (Improve performance of a large number of peers)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION 9844b6988a0c11821c52874d56825058ac732a9f
+  VCS_VERSION 15d56e1fb44eead6611cf847f503ef030aee5287
   CMAKE_ARGS
-    -DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}
-    -DZENOHC_BUILD_WITH_SHARED_MEMORY=TRUE
-    -DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE
-    -DZENOHC_CUSTOM_TARGET=${ZENOHC_CUSTOM_TARGET}
+    "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
+    "-DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE"
+    "-DZENOHC_CUSTOM_TARGET=${ZENOHC_CUSTOM_TARGET}"
 )
 
 ament_export_dependencies(zenohc)
@@ -39,17 +38,12 @@ ament_export_dependencies(zenohc)
 # - https://github.com/eclipse-zenoh/zenoh-cpp/pull/363 (Fix memory leak in string deserialization)
 ament_vendor(zenoh_cpp_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-cpp
-  VCS_VERSION 86119ade03e46a51a02384471bf44de9daae9793
+  VCS_VERSION bd4d741c6c4fa6509d8d745e22c3c50b4306bd65
   CMAKE_ARGS
-      -DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}
-      -DZENOHCXX_ZENOHC=ON
-      -DZENOHCXX_ZENOHPICO=OFF
-      -DZENOHC_BUILD_WITH_SHARED_MEMORY=TRUE
-      -DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE
-  )
+    -DZENOHCXX_ZENOHC=OFF
+)
 
-externalproject_add_stepdependencies(zenoh_cpp_vendor configure zenoh_c)
-externalproject_add_stepdependencies(zenoh_cpp_vendor build zenoh_c)
+externalproject_add_stepdependencies(zenoh_cpp_vendor configure zenoh_c_vendor)
 
 ament_export_dependencies(zenohcxx)
 
