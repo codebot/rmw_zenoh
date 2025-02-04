@@ -48,8 +48,8 @@ ament_vendor(zenoh_cpp_vendor
       -DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE
   )
 
-externalproject_add_stepdependencies(zenoh_cpp_vendor configure zenoh_c_vendor)
-externalproject_add_stepdependencies(zenoh_cpp_vendor build zenoh_c_vendor)
+externalproject_add_stepdependencies(zenoh_cpp_vendor configure zenoh_c)
+externalproject_add_stepdependencies(zenoh_cpp_vendor build zenoh_c)
 
 ament_export_dependencies(zenohcxx)
 
