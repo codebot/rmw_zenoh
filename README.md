@@ -14,9 +14,14 @@ For information about the Design please visit [design](docs/design.md) page.
 
 > Note: See available distro branches, eg. `jazzy`, for supported ROS 2 distributions.
 
-## Setup
+## Installation
+Options for installing `rmw_zenoh`
 
-Build `rmw_zenoh_cpp`
+### Binary Packages
+Binary packages are available for Tier-1 operating systems. Install `ros-<DISTRO>-rmw-zenoh-cpp. Replace
+<DISTRO> with your ROS 2 distro of choice.
+
+### Building rmw_zenoh_cpp from source
 
 >Note: By default, we vendor and compile `zenoh-cpp` with a subset of `zenoh` features.
 The `ZENOHC_CARGO_FLAGS` CMake argument may be overwritten with other features included if required.
@@ -32,13 +37,13 @@ source /opt/ros/<DISTRO>/setup.bash
 colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-## Test
-
 Make sure to source the built workspace using the commands below prior to running any other commands.
 ```bash
 cd ~/ws_rmw_zenoh
 source install/setup.bash
 ```
+
+## Test
 
 ### Terminate ROS 2 daemon started with another RMW
 ```bash
