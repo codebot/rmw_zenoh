@@ -120,11 +120,6 @@ modified `Zenoh router` configuration file which specifies an endpoint that the 
 is listening on. 
 
 Make a copy of [DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5]( rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5) and modify the `connect` block to include the endpoint of the other `Zenoh router`. For example, if the other `Zenoh router` is listening on IP address `192.168.1.1` and port `7447` on its host, modify config file to connect to this router as shown below:
-```json5
-mode: "router",
-```
-as seen below.
-In this example, the `Zenoh router` will connect to the `Zenoh router` running on a second host with IP address `192.168.1.1` and port `7447`.
 
 ```json5
 .... preceding parts of file
