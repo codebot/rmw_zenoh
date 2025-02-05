@@ -119,7 +119,7 @@ This is done by setting the `ZENOH_ROUTER_CONFIG_URI` environment variable in on
 modified `Zenoh router` configuration file which specifies an endpoint that the other host's `Zenoh router` is
 is listening on. 
 
-Make a copy of rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5 and modify the section that begins:
+Make a copy of [DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5]( rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5) and modify the `connect` block to include the endpoint of the other `Zenoh router`. For example, if the other `Zenoh router` is listening on IP address `192.168.1.1` and port `7447` on its host, modify config file to connect to this router as shown below:
 ```json5
 mode: "router",
 ```
