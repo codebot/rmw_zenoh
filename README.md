@@ -25,7 +25,7 @@ Then install `rmw_zenoh` binaries using the command
 ```bash
 sudo apt update && sudo apt install ros-<DISTRO>-rmw-zenoh-cpp # replace <DISTRO> with codename for the distribution, eg., rolling
 
-### Building rmw_zenoh_cpp from source
+### Source Installation
 
 >Note: By default, we vendor and compile `zenoh-cpp` with a subset of `zenoh` features.
 The `ZENOHC_CARGO_FLAGS` CMake argument may be overwritten with other features included if required.
