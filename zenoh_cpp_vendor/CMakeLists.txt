@@ -17,14 +17,14 @@ find_package(ament_cmake_vendor_package REQUIRED)
 # when expanded.
 set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memory zenoh/transport_compression zenoh/transport_tcp zenoh/transport_tls")
 
-# Set VCS_VERSION to include latest changes from zenoh/zenoh-c to benefit from :
-# - https://github.com/eclipse-zenoh/zenoh/pull/1685 (Fix deadlock in advanced subscription undeclaration)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1696 (Fix SHM Garbage Collection (GC) policy)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1708 (Fix gossip with TLS endpoints)
-# - https://github.com/eclipse-zenoh/zenoh/pull/1717 (Improve performance of a large number of peers)
+# Set VCS_VERSION to include latest changes from zenoh/zenoh-c/zenoh-cpp to benefit from :
+# - https://github.com/eclipse-zenoh/zenoh/pull/173 (Improve config to support priorities range in locators)
+# - https://github.com/eclipse-zenoh/zenoh/pull/1736, https://github.com/eclipse-zenoh/zenoh/pull/1735,
+#   https://github.com/eclipse-zenoh/zenoh/pull/1744, https://github.com/eclipse-zenoh/zenoh/pull/1749,
+#   https://github.com/eclipse-zenoh/zenoh/pull/1751 (Improve performance of a large number of peers)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION 328736fe9bb9b654b1d9f47eecfc6d52f0d7d587
+  VCS_VERSION 5fce7fb1d397e016ad02a50bde4262007d755424
   CMAKE_ARGS
     "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
     "-DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE"
@@ -33,12 +33,9 @@ ament_vendor(zenoh_c_vendor
 
 ament_export_dependencies(zenohc)
 
-# Set VCS_VERSION to include latest changes from zenoh-cpp to benefit from :
-# - https://github.com/eclipse-zenoh/zenoh-cpp/pull/342 (Fix include what you use)
-# - https://github.com/eclipse-zenoh/zenoh-cpp/pull/363 (Fix memory leak in string deserialization)
 ament_vendor(zenoh_cpp_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-cpp
-  VCS_VERSION bbfef04e843289aae70b5aa060a925e8ee5b1b6f
+  VCS_VERSION bd4d741c6c4fa6509d8d745e22c3c50b4306bd65
   CMAKE_ARGS
     -DZENOHCXX_ZENOHC=OFF
 )
