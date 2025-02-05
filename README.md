@@ -17,7 +17,7 @@ For information about the Design please visit [design](docs/design.md) page.
 ## Installation
 `rmw_zenoh` can either be installed via binaries (recommended for stable development) or from source (recommended if latest features are needed). See instructions below.
 
-### Binary Packages
+### Binary Installation
 Binary packages are available for Tier-1 operating systems. Install `ros-<DISTRO>-rmw-zenoh-cpp`. Replace
 `<DISTRO>` with the ROS distro into which the packages should be installed.
 
