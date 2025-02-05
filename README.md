@@ -117,7 +117,7 @@ To bridge communications across two hosts, the `Zenoh router` configuration for 
 updated to connect to the other host's `Zenoh router` at startup.
 This is done by setting the `ZENOH_ROUTER_CONFIG_URI` environment variable in one of the hosts to point to a
 modified `Zenoh router` configuration file which specifies an endpoint that the other host's `Zenoh router` is
-is listening on. `Zenoh routers` print a list of endpoints they listen on when they start - choose a suitable one.
+is listening on. 
 
 Make a copy of rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5 and modify the section that begins:
 ```json5
