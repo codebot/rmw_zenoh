@@ -18,8 +18,8 @@ For information about the Design please visit [design](docs/design.md) page.
 Options for installing `rmw_zenoh`
 
 ### Binary Packages
-Binary packages are available for Tier-1 operating systems. Install `ros-<DISTRO>-rmw-zenoh-cpp. Replace
-<DISTRO> with your ROS 2 distro of choice.
+Binary packages are available for Tier-1 operating systems. Install `ros-<DISTRO>-rmw-zenoh-cpp`. Replace
+`<DISTRO>` with the ROS distro into which the packages should be installed.
 
 ### Building rmw_zenoh_cpp from source
 
