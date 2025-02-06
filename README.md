@@ -14,9 +14,20 @@ For information about the Design please visit [design](docs/design.md) page.
 
 > Note: See available distro branches, eg. `jazzy`, for supported ROS 2 distributions.
 
-## Setup
+## Installation
+`rmw_zenoh` can either be installed via binaries (recommended for stable development) or built from source (recommended if latest features are needed). See instructions below.
 
-Build `rmw_zenoh_cpp`
+### Binary Installation
+Binary packages for supported ROS 2 distributions (see distro branches) are available on respective [Tier-1](https://www.ros.org/reps/rep-2000.html#support-tiers) platforms for the distributions.
+First ensure that your system is set up to install ROS 2 binaries by following the instructions [here](https://docs.ros.org/en/rolling/Installation/Ubuntu-Install-Debs.html).
+
+Then install `rmw_zenoh` binaries using the command
+
+```bash
+sudo apt update && sudo apt install ros-<DISTRO>-rmw-zenoh-cpp # replace <DISTRO> with the codename for the distribution, eg., rolling
+```
+
+### Source Installation
 
 >Note: By default, we vendor and compile `zenoh-cpp` with a subset of `zenoh` features.
 The `ZENOHC_CARGO_FLAGS` CMake argument may be overwritten with other features included if required.
@@ -32,13 +43,21 @@ source /opt/ros/<DISTRO>/setup.bash
 colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-## Test
-
 Make sure to source the built workspace using the commands below prior to running any other commands.
 ```bash
 cd ~/ws_rmw_zenoh
 source install/setup.bash
 ```
+
+## Test
+
+### Terminate ROS 2 daemon started with another RMW
+```bash
+pkill -9 -f ros && ros2 daemon stop
+```
+Without this step, ROS 2 CLI commands (e.g. `ros2 node list`) may
+not work properly since they would query ROS graph information from the ROS 2 daemon that
+may have been started with different a RMW.
 
 ### Start the Zenoh router
 > Note: Manually launching Zenoh router won't be necessary in the future.
@@ -48,14 +67,6 @@ ros2 run rmw_zenoh_cpp rmw_zenohd
 ```
 
 > Note: Without the Zenoh router, nodes will not be able to discover each other since multicast discovery is disabled by default in the node's session config. Instead, nodes will receive discovery information about other peers via the Zenoh router's gossip functionality. See more information on the session configs [below](#configuration).
-
-### Terminate ROS 2 daemon started with another RMW
-```bash
-pkill -9 -f ros && ros2 daemon stop
-```
-Without this step, ROS 2 CLI commands (e.g. `ros2 node list`) may
-not work properly since they would query ROS graph information from the ROS 2 daemon that
-may have been started with different a RMW.
 
 ### Run the `talker`
 ```bash
@@ -90,7 +101,7 @@ The behavior is explained in the table below.
 |             > 0             | Attempts to connect to a Zenoh router in `ZENOH_ROUTER_CHECK_ATTEMPTS` attempts with 1 second wait between checks. |
 |            unset            |                                                                    Equivalent to `1`: the check is made only once. |
 
-If after the configured number of attempts the Node is still not connected to a `Zenoh router`, the initialisation goes on anyway.  
+If after the configured number of attempts the Node is still not connected to a `Zenoh router`, the initialisation goes on anyway.
 If a `Zenoh router` is started after initialization phase, the Node will automatically connect to it, and autoconnect to other Nodes if gossip scouting is enabled (true with default configuratiuon).
 
 ### Session and Router configs
@@ -111,20 +122,23 @@ export ZENOH_ROUTER_CONFIG_URI=$HOME/MY_ZENOH_ROUTER_CONFIG.json5
 ```
 
 ### Connecting multiple hosts
-By default, all discovery traffic is local per host, where the host is the PC running a `Zenoh router`.
-To bridge communications across two hosts, the `Zenoh router` configuration for one the hosts must be updated to connect to the other `Zenoh router` at startup.
-This is done by specifying an endpoint in host's `Zenoh router` configuration file to as seen below.
-In this example, the `Zenoh router` will connect to the `Zenoh router` running on a second host with IP address `192.168.1.1` and port `7447`.
+By default, all discovery & communication is restricted within a host, where a host is a machine running a `Zenoh router` along with various ROS 2 nodes with their default [configurations](rmw_zenoh_cpp/config/).
+To bridge communications across two or more hosts, the `Zenoh router` configuration for one of the hosts must be updated to connect to the other host's `Zenoh router` at startup.
+
+First, make a copy of the [DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5](rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5) and modify the `connect` block to include the endpoint(s) that the other host's `Zenoh router(s)` is listening on.
+For example, if another `Zenoh router` is listening on IP address `192.168.1.1` and port `7447` on its host, modify the config file to connect to this router as shown below:
 
 ```json5
+/// ... preceding parts of the config file.
 {
   connect: {
     endpoints: ["tcp/192.168.1.1:7447"],
   },
 }
+/// ... following parts of the config file.
 ```
 
-> Note: To connect multiple hosts, include the endpoints of all `Zenoh routers` in the network.
+Then, start the `Zenoh router` after setting the `ZENOH_ROUTER_CONFIG_URI` environment variable to the absolute path of the modified config file.
 
 ### Logging
 
