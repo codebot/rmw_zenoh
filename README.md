@@ -15,15 +15,17 @@ For information about the Design please visit [design](docs/design.md) page.
 > Note: See available distro branches, eg. `jazzy`, for supported ROS 2 distributions.
 
 ## Installation
-`rmw_zenoh` can either be installed via binaries (recommended for stable development) or from source (recommended if latest features are needed). See instructions below.
+`rmw_zenoh` can either be installed via binaries (recommended for stable development) or built from source (recommended if latest features are needed). See instructions below.
 
 ### Binary Installation
-Binary packages for supported ROS 2 distributions (see available distro branches) are available on respective [Tier-1](https://www.ros.org/reps/rep-2000.html#support-tiers) platforms for the distributions. First ensure that you system is set up to install ROS 2 binaries by following the instructions [here](https://docs.ros.org/en/rolling/Installation/Ubuntu-Install-Debs.html).
+Binary packages for supported ROS 2 distributions (see distro branches) are available on respective [Tier-1](https://www.ros.org/reps/rep-2000.html#support-tiers) platforms for the distributions.
+First ensure that your system is set up to install ROS 2 binaries by following the instructions [here](https://docs.ros.org/en/rolling/Installation/Ubuntu-Install-Debs.html).
 
 Then install `rmw_zenoh` binaries using the command
 
 ```bash
-sudo apt update && sudo apt install ros-<DISTRO>-rmw-zenoh-cpp # replace <DISTRO> with codename for the distribution, eg., rolling
+sudo apt update && sudo apt install ros-<DISTRO>-rmw-zenoh-cpp # replace <DISTRO> with the codename for the distribution, eg., rolling
+```
 
 ### Source Installation
 
@@ -99,7 +101,7 @@ The behavior is explained in the table below.
 |             > 0             | Attempts to connect to a Zenoh router in `ZENOH_ROUTER_CHECK_ATTEMPTS` attempts with 1 second wait between checks. |
 |            unset            |                                                                    Equivalent to `1`: the check is made only once. |
 
-If after the configured number of attempts the Node is still not connected to a `Zenoh router`, the initialisation goes on anyway.  
+If after the configured number of attempts the Node is still not connected to a `Zenoh router`, the initialisation goes on anyway.
 If a `Zenoh router` is started after initialization phase, the Node will automatically connect to it, and autoconnect to other Nodes if gossip scouting is enabled (true with default configuratiuon).
 
 ### Session and Router configs
@@ -120,27 +122,23 @@ export ZENOH_ROUTER_CONFIG_URI=$HOME/MY_ZENOH_ROUTER_CONFIG.json5
 ```
 
 ### Connecting multiple hosts
-By default, all discovery traffic is local per host, where the host is the computer running a `Zenoh router`,
-and each host in a multiple-host system runs a `Zenoh router`.
-To bridge communications across two hosts, the `Zenoh router` configuration for one of the hosts must be
-updated to connect to the other host's `Zenoh router` at startup.
-This is done by setting the `ZENOH_ROUTER_CONFIG_URI` environment variable in one of the hosts to point to a
-modified `Zenoh router` configuration file which specifies an endpoint that the other host's `Zenoh router` is
-is listening on. 
+By default, all discovery & communication is restricted within a host, where a host is a machine running a `Zenoh router` along with various ROS 2 nodes with their default [configurations](rmw_zenoh_cpp/config/).
+To bridge communications across two or more hosts, the `Zenoh router` configuration for one of the hosts must be updated to connect to the other host's `Zenoh router` at startup.
 
-Make a copy of [DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5]( rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5) and modify the `connect` block to include the endpoint of the other `Zenoh router`. For example, if the other `Zenoh router` is listening on IP address `192.168.1.1` and port `7447` on its host, modify config file to connect to this router as shown below:
+First, make a copy of the [DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5](rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5) and modify the `connect` block to include the endpoint(s) that the other host's `Zenoh router(s)` is listening on.
+For example, if another `Zenoh router` is listening on IP address `192.168.1.1` and port `7447` on its host, modify the config file to connect to this router as shown below:
 
 ```json5
-.... preceding parts of file
+/// ... preceding parts of the config file.
 {
   connect: {
     endpoints: ["tcp/192.168.1.1:7447"],
   },
 }
-.... following parts of file
+/// ... following parts of the config file.
 ```
 
-> Note: To connect multiple hosts, include the endpoints of all `Zenoh routers` in the network.
+Then, start the `Zenoh router` after setting the `ZENOH_ROUTER_CONFIG_URI` environment variable to the absolute path of the modified config file.
 
 ### Logging
 
