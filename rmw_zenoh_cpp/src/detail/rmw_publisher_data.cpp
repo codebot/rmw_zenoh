@@ -122,15 +122,6 @@ std::shared_ptr<PublisherData> PublisherData::make(
     adv_pub_opts.cache->max_samples = adapted_qos_profile.depth;
   }
 
-  if (adapted_qos_profile.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
-    // Allow matching Subscribers to detect lost samples and ask for retransimission.
-    adv_pub_opts.sample_miss_detection =
-      AdvancedPublisherOptions::SampleMissDetectionOptions::create_default();
-    // The period of publisher heartbeats in ms, used by ``AdvancedSubscriber`` with
-    // heartbeat-based recovery enabled for missed sample retransimission.
-    adv_pub_opts.sample_miss_detection->heartbeat_period_ms = 1000;
-  }
-
   zenoh::KeyExpr pub_ke(entity->topic_info()->topic_keyexpr_);
   // Set congestion_control to BLOCK if appropriate.
   auto pub_opts = zenoh::Session::PublisherOptions::create_default();
