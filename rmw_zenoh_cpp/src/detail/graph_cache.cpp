@@ -449,9 +449,11 @@ void GraphCache::update_topic_map_for_del(
   GraphNode::TopicMap::iterator cache_topic_it =
     topic_map.find(topic_info.name_);
   if (cache_topic_it == topic_map.end()) {
-    // This should not happen.
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp", "topic name %s not found in topic_map. Report this.",
+    // If an entity is short-lived, it is possible to receive the liveliness token
+    // for its deletion before the one for its creation given that Zenoh does not
+    // guarantee ordering of liveliness tokens. This situation is harmless.
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp", "topic name %s not found in topic_map.",
       topic_info.name_.c_str());
     return;
   }
