@@ -54,7 +54,7 @@ public:
   Data(
     std::size_t domain_id,
     const std::string & enclave,
-    const rmw_security_options_t * security_options)
+    const rmw_security_options_t & security_options)
   : domain_id_(std::move(domain_id)),
     enclave_(std::move(enclave)),
     is_shutdown_(false),
@@ -87,7 +87,7 @@ public:
     }
 
     if (get_security_files_support_pkcs(
-        false, "", security_options->security_root_path, &security_files) == RMW_RET_OK)
+        false, "", security_options.security_root_path, &security_files) == RMW_RET_OK)
     {
       config.value().insert_json5("connect/endpoints", "[\"tls/localhost:7447\"]");
       config.value().insert_json5("listen/endpoints", "[\"tls/localhost:0\"]");
@@ -483,7 +483,7 @@ private:
 rmw_context_impl_s::rmw_context_impl_s(
   const std::size_t domain_id,
   const std::string & enclave,
-  const rmw_security_options_t * security_options)
+  const rmw_security_options_t & security_options)
 {
   data_ = std::make_shared<Data>(domain_id, std::move(enclave), security_options);
   data_->init();

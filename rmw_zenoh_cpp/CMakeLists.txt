@@ -26,7 +26,6 @@ find_package(tracetools REQUIRED)
 find_package(zenoh_cpp_vendor REQUIRED)
 
 if(SECURITY)
-  find_package(OpenSSL REQUIRED)
   set(HAVE_SECURITY 1)
 endif()
 
