@@ -135,11 +135,11 @@
       /// Accepts a single value (e.g. autoconnect: ["router", "peer"])
       /// or different values for router, peer and client (e.g. autoconnect: { router: [], peer: ["router", "peer"] }).
       /// Each value is a list of: "peer", "router" and/or "client".
-      autoconnect: { router: [], peer: ["router", "peer"] },
+      autoconnect: { router: [], peer: ["router", "peer"], client: ["router"] },
       /// Whether or not to listen for scout messages on UDP multicast and reply to them.
       listen: true,
     },
-    /// The gossip scouting configuration.
+    /// The gossip scouting configuration. Note that instances in "client" mode do not participate in gossip.
     gossip: {
       /// Whether gossip scouting is enabled or not
       enabled: true,
@@ -149,10 +149,17 @@
       /// It mostly makes sense when using "linkstate" routing mode where all nodes in the subsystem don't have
       /// direct connectivity with each other.
       multihop: false,
+      /// Which type of Zenoh instances to send gossip messages to.
+      /// Accepts a single value (e.g. target: ["router", "peer"]) which applies whatever the configured "mode" is,
+      /// or different values for router or peer mode (e.g. target: { router: ["router", "peer"], peer: ["router"] }).
+      /// Each value is a list of "peer" and/or "router".
+      /// ROS setting: by default all peers rely on the router to discover each other. Thus configuring the peer to send gossip
+      ///               messages only to the router is sufficient and avoids unecessary traffic between Nodes at launch time.
+      target: { router: ["router", "peer"], peer: ["router"]},
       /// Which type of Zenoh instances to automatically establish sessions with upon discovery on gossip.
       /// Accepts a single value (e.g. autoconnect: ["router", "peer"])
-      /// or different values for router, peer and client (e.g. autoconnect: { router: [], peer: ["router", "peer"] }).
-      /// Each value is a list of: "peer", "router" and/or "client".
+      /// or different values for router or peer mode (e.g. autoconnect: { router: [], peer: ["router", "peer"] }).
+      /// Each value is a list of: "peer" and/or "router".
       autoconnect: { router: [], peer: ["router", "peer"] },
     },
   },
@@ -190,6 +197,14 @@
     peer: {
       /// The routing strategy to use in peers. ("peer_to_peer" or "linkstate").
       mode: "peer_to_peer",
+    },
+    /// The interests-based routing configuration.
+    /// This configuration applies regardless of the mode (router, peer or client).
+    interests: {
+      /// The timeout to wait for incoming interests declarations in milliseconds.
+      /// The expiration of this timeout implies that the discovery protocol might be incomplete,
+      /// leading to potential loss of messages, queries or liveliness tokens.
+      timeout: 10000,
     },
   },
 
@@ -343,11 +358,11 @@
       open_timeout: 10000,
       /// Timeout in milliseconds when accepting a link
       accept_timeout: 10000,
-      /// Maximum number of zenoh session in pending state while accepting
+      /// Maximum number of links in pending state while performing the handshake for accepting it
       accept_pending: 100,
-      /// Maximum number of sessions that can be simultaneously alive
+      /// Maximum number of transports that can be simultaneously alive for a single zenoh sessions
       max_sessions: 1000,
-      /// Maximum number of incoming links that are admitted per session
+      /// Maximum number of incoming links that are admitted per transport
       max_links: 1,
       /// Enables the LowLatency transport
       /// This option does not make LowLatency transport mandatory, the actual implementation of transport
@@ -429,14 +444,14 @@
           /// then amount of memory being allocated for each queue is SIZE_XXX * LINK_MTU.
           /// If qos is false, then only the DATA priority will be allocated.
           size: {
-            control: 1,
-            real_time: 1,
-            interactive_high: 1,
-            interactive_low: 1,
+            control: 2,
+            real_time: 2,
+            interactive_high: 2,
+            interactive_low: 2,
             data_high: 2,
-            data: 4,
-            data_low: 4,
-            background: 4,
+            data: 2,
+            data_low: 2,
+            background: 2,
           },
           /// Congestion occurs when the queue is empty (no available batch).
           congestion_control: {
@@ -463,6 +478,12 @@
             enabled: true,
             /// The maximum time limit (in ms) a message should be retained for batching when back-pressure happens.
             time_limit: 1,
+          },
+          allocation: {
+            /// Mode for memory allocation of batches in the priority queues. 
+            /// - "init": batches are allocated at queue initialization time. 
+            /// - "lazy": batches are allocated when needed up to the maximum number of batches configured in the size configuration parameter.
+            mode: "lazy",
           },
         },
       },
