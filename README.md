@@ -154,6 +154,24 @@ For more information on the `RUST_LOG` syntax, see https://docs.rs/env_logger/la
 
 ### Known Issues
 
+### Router crashes on IPv4-only systems
+
+The default configuration shipped with `rmw_zenoh` makes the Zenoh router attempt to listen on IPv6 `ANY` only ([here](https://github.com/ros2/rmw_zenoh/blob/12f83445e00a7c25805b27f391e92a455f2d0774/rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5#L82-L84)).
+On any system without IPv6 support (either because it has been disabled or because it is non-functioning) this will cause the router to crash with an error similar to the following:
+
+<details><summary>Click to expand</summary>
+
+```
+WARN ThreadId(03) zenoh::net::runtime::orchestrator: Unable to open listener tcp/[::]:7447: Can not create a new TCP listener bound to tcp/[::]:7447: [Os { code: 97, kind: Uncategorized, message: "Address family not supported by protocol" }] at /home/buildfarm/.cargo/git/checkouts/zenoh-cc237f2570fab813/9640d22/io/zenoh-links/zenoh-link-tcp/src/unicast.rs:326.
+ERROR ThreadId(03) zenohc::session: Error opening session: Can not create a new TCP listener bound to tcp/[::]:7447: [Os { code: 97, kind: Uncategorized, message: "Address family not supported by protocol" }] at /home/buildfarm/.cargo/git/checkouts/zenoh-cc237f2570fab813/9640d22/io/zenoh-links/zenoh-link-tcp/src/unicast.rs:326.
+Error opening Session!\n[ros2run]: Process exited with failure 1
+```
+
+</details>
+
+To resolve this, either run the router on a system with IPv6 support, or update the `listen.endpoints` list in the Zenoh configuration and replace `"tcp/[::]:7447"` with `"tcp/0.0.0.0:7447"` (ie: make the router listen on IPv4 `ANY`).
+Note: the existing entry must be *replaced*, it's not sufficient to just *add* the IPv4 entry (as that would make the router attempt to listen on both IPv4 and IPv6 `ANY` and still not work).
+
 ### Crash when program terminates
 
 When a program terminates, global and static objects are destructed in the reverse order of their
