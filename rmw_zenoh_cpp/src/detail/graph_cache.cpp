@@ -461,9 +461,11 @@ void GraphCache::update_topic_map_for_del(
   GraphNode::TopicTypeMap::iterator cache_topic_type_it =
     cache_topic_it.value().find(topic_info.type_);
   if (cache_topic_type_it == cache_topic_it->second.end()) {
-    // This should not happen.
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp", "topic type %s not found in for topic %s. Report this.",
+    // If an entity is short-lived, it is possible to receive the liveliness token
+    // for its deletion before the one for its creation given that Zenoh does not
+    // guarantee ordering of liveliness tokens. This situation is harmless.
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp", "topic type %s not found in for topic %s.",
       topic_info.type_.c_str(), topic_info.name_.c_str());
     return;
   }
@@ -472,9 +474,11 @@ void GraphCache::update_topic_map_for_del(
   GraphNode::TopicQoSMap::iterator cache_topic_qos_it = cache_topic_type_it->second.find(
     qos_str);
   if (cache_topic_qos_it == cache_topic_type_it->second.end()) {
-    // This should not happen.
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp", "qos %s not found in for topic type %s. Report this.",
+    // If an entity is short-lived, it is possible to receive the liveliness token
+    // for its deletion before the one for its creation given that Zenoh does not
+    // guarantee ordering of liveliness tokens. This situation is harmless.
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp", "qos %s not found in for topic type %s.",
       qos_str.c_str(), topic_info.type_.c_str());
     return;
   }
