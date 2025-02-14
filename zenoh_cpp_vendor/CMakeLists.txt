@@ -22,9 +22,11 @@ set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memor
 #    (Add autoconnect_strategy config allowing to optimize peers interconnections)
 # - https://github.com/eclipse-zenoh/zenoh/pull/1753
 #    (Improve AdvancedSub for faster delivery of first receveived data)
+# - https://github.com/eclipse-zenoh/zenoh-cpp/pull/407, https://github.com/eclipse-zenoh/zenoh-c/pull/913
+#    (Fix potential loss of request/reply messages in case of network congestion)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION 63a24e5137569ba02959d4952a9751a75ed3e796
+  VCS_VERSION 261493682c7dc54db3a07079315e009a2e7c1573
   CMAKE_ARGS
     "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
     "-DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE"
@@ -35,7 +37,7 @@ ament_export_dependencies(zenohc)
 
 ament_vendor(zenoh_cpp_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-cpp
-  VCS_VERSION 1ad141509f6bcfe9194759a47a656dedf6334fc8
+  VCS_VERSION 5dfb68c9ac966925e59bcb52f39b9bc26c0ad6d3
   CMAKE_ARGS
     -DZENOHCXX_ZENOHC=OFF
 )
