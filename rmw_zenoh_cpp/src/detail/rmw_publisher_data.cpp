@@ -238,17 +238,10 @@ rmw_ret_t PublisherData::publish(
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
   zenoh::ZResult result;
-<<<<<<< HEAD
-  auto options = zenoh::Publisher::PutOptions::create_default();
-  options.attachment = create_map_and_set_sequence_num(
-    sequence_number_++,
-    entity_->copy_gid());
-=======
   int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
   auto opts = zenoh::ext::AdvancedPublisher::PutOptions::create_default();
   opts.put_options.attachment = rmw_zenoh_cpp::AttachmentData(
     sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
->>>>>>> 77561d8 (feat: introduce the advanced publisher and subscriber (#368))
 
   // TODO(ahcorde): shmbuf
   std::vector<uint8_t> raw_data(
@@ -256,13 +249,7 @@ rmw_ret_t PublisherData::publish(
     reinterpret_cast<const uint8_t *>(msg_bytes) + data_length);
   zenoh::Bytes payload(std::move(raw_data));
 
-<<<<<<< HEAD
-  pub_.put(std::move(payload), std::move(options), &result);
-=======
-  TRACETOOLS_TRACEPOINT(
-    rmw_publish, static_cast<const void *>(rmw_publisher_), ros_message, source_timestamp);
   pub_.put(std::move(payload), std::move(opts), &result);
->>>>>>> 77561d8 (feat: introduce the advanced publisher and subscriber (#368))
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
       RMW_ZENOH_LOG_WARN_NAMED(
@@ -297,28 +284,17 @@ rmw_ret_t PublisherData::publish_serialized_message(
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
   zenoh::ZResult result;
-<<<<<<< HEAD
-  auto options = zenoh::Publisher::PutOptions::create_default();
-  options.attachment = create_map_and_set_sequence_num(sequence_number_++, entity_->copy_gid());
-=======
   int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
   auto opts = zenoh::ext::AdvancedPublisher::PutOptions::create_default();
   opts.put_options.attachment = rmw_zenoh_cpp::AttachmentData(
     sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
->>>>>>> 77561d8 (feat: introduce the advanced publisher and subscriber (#368))
 
   std::vector<uint8_t> raw_data(
     serialized_message->buffer,
     serialized_message->buffer + data_length);
   zenoh::Bytes payload(std::move(raw_data));
 
-<<<<<<< HEAD
-  pub_.put(std::move(payload), std::move(options), &result);
-=======
-  TRACETOOLS_TRACEPOINT(
-    rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
   pub_.put(std::move(payload), std::move(opts), &result);
->>>>>>> 77561d8 (feat: introduce the advanced publisher and subscriber (#368))
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
       RMW_ZENOH_LOG_WARN_NAMED(
