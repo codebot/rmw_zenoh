@@ -173,8 +173,6 @@ bool SubscriptionData::init()
 
   // Instantiate the subscription with suitable options depending on the
   // adapted_qos_profile.
-  // TODO(Yadunund): Rely on a separate function to return the sub
-  // as we start supporting more qos settings.
   if (entity_->topic_info()->qos_.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
     // Allow this subscriber to be detected through liveliness.
     adv_sub_opts.subscriber_detection = true;
@@ -216,7 +214,7 @@ bool SubscriptionData::init()
     };
   sub_ = context_impl->session()->ext().declare_advanced_subscriber(
     sub_ke,
-    on_sample,
+    std::move(on_sample),
     zenoh::closures::none,
     std::move(adv_sub_opts),
     &result);

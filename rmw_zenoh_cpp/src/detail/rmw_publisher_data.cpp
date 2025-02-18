@@ -113,9 +113,6 @@ std::shared_ptr<PublisherData> PublisherData::make(
   if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
     // Allow this publisher to be detected through liveliness.
     adv_pub_opts.publisher_detection = true;
-  }
-
-  if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
     adv_pub_opts.cache = AdvancedPublisherOptions::CacheOptions::create_default();
     adv_pub_opts.cache->max_samples = adapted_qos_profile.depth;
   }
