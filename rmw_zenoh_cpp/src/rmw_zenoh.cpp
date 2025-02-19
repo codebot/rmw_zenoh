@@ -1522,10 +1522,6 @@ rmw_create_client(
   free_rmw_client.cancel();
   free_service_name.cancel();
 
-  TRACETOOLS_TRACEPOINT(
-    rmw_client_init,
-    static_cast<const void *>(rmw_client),
-    client_data->copy_gid().data());
   return rmw_client;
 }
 
@@ -1621,15 +1617,7 @@ rmw_take_response(
   RMW_CHECK_ARGUMENT_FOR_NULL(ros_response, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(request_header, RMW_RET_INVALID_ARGUMENT);
 
-  rmw_ret_t ret = client_data->take_response(request_header, ros_response, taken);
-  TRACETOOLS_TRACEPOINT(
-    rmw_take_response,
-    static_cast<const void *>(client),
-    static_cast<const void *>(ros_response),
-    request_header->request_id.sequence_number,
-    request_header->source_timestamp,
-    *taken);
-  return ret;
+  return client_data->take_response(request_header, ros_response, taken);
 }
 
 //==============================================================================
@@ -1851,18 +1839,10 @@ rmw_take_request(
   RMW_CHECK_ARGUMENT_FOR_NULL(request_header, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(ros_request, RMW_RET_INVALID_ARGUMENT);
 
-  rmw_ret_t ret = service_data->take_request(
+  return service_data->take_request(
     request_header,
     ros_request,
     taken);
-  TRACETOOLS_TRACEPOINT(
-    rmw_take_request,
-    static_cast<const void *>(service),
-    static_cast<const void *>(ros_request),
-    request_header->request_id.writer_guid,
-    request_header->request_id.sequence_number,
-    *taken);
-  return ret;
 }
 
 //==============================================================================
