@@ -2,6 +2,14 @@
 Changelog for package rmw_zenoh_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Introduce the advanced publisher and subscriber (`#469 <https://github.com/ros2/rmw_zenoh/issues/469>`_)
+* Add tracing instrumentation using tracetools  (`#471 <https://github.com/ros2/rmw_zenoh/issues/471>`_)
+* Switch to debug log if topic_name not in topic_map (`#464 <https://github.com/ros2/rmw_zenoh/issues/464>`_)
+* Bump Zenoh to commit id 3bbf6af (1.2.1 + few commits) (`#461 <https://github.com/ros2/rmw_zenoh/issues/461>`_)
+* Contributors: Alejandro Hernandez Cordero, Christophe Bedard, Julien Enoch, Yadunund, Yuyuan Yuan
+
 0.2.1 (2025-02-04)
 ------------------
 * Bump Zenoh to commit id e4ea6f0 (1.2.0 + few commits) (`#448 <https://github.com/ros2/rmw_zenoh/issues/448>`_)
