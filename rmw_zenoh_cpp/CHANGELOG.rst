@@ -2,8 +2,8 @@
 Changelog for package rmw_zenoh_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.2.2 (2025-02-19)
+------------------
 * Introduce the advanced publisher and subscriber (`#469 <https://github.com/ros2/rmw_zenoh/issues/469>`_)
 * Add tracing instrumentation using tracetools  (`#471 <https://github.com/ros2/rmw_zenoh/issues/471>`_)
 * Switch to debug log if topic_name not in topic_map (`#464 <https://github.com/ros2/rmw_zenoh/issues/464>`_)
