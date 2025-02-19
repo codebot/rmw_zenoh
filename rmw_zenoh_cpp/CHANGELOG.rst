@@ -2,8 +2,8 @@
 Changelog for package rmw_zenoh_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.4.0 (2025-02-19)
+------------------
 * Introduce the advanced publisher and subscriber (`#368 <https://github.com/ros2/rmw_zenoh/issues/368>`_)
 * Switch to debug log if topic_name not in topic_map (`#454 <https://github.com/ros2/rmw_zenoh/issues/454>`_)
 * Bump Zenoh to commit id 3bbf6af (1.2.1 + few commits) (`#456 <https://github.com/ros2/rmw_zenoh/issues/456>`_)
