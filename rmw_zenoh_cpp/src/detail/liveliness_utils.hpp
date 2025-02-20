@@ -289,7 +289,7 @@ struct hash<rmw_zenoh_cpp::Gid>
       hash ^= byte;
       hash *= FNV_PRIME_64;
     }
-    return hash;
+    return static_cast<std::size_t>(hash);
   }
 };
 }  // namespace std
