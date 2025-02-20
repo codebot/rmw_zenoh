@@ -225,7 +225,7 @@ rmw_ret_t PublisherData::publish(
 
   // Try to get memory from the serialization buffer pool.
   BufferPool::Buffer serialization_buffer =
-    context_impl->serialization_buffer_pool.allocate(max_data_length);
+    context_impl->serialization_buffer_pool()->allocate(max_data_length);
   if (serialization_buffer.data == nullptr) {
     void * data = allocator.allocate(max_data_length, allocator.state);
     RMW_CHECK_FOR_NULL_WITH_MSG(
@@ -275,7 +275,7 @@ rmw_ret_t PublisherData::publish(
       reinterpret_cast<const uint8_t *>(msg_bytes) + data_length);
     payload = zenoh::Bytes(std::move(raw_data));
   } else {
-    auto deleter = [buffer_pool = &context_impl->serialization_buffer_pool,
+    auto deleter = [buffer_pool = context_impl->serialization_buffer_pool(),
         buffer = serialization_buffer](uint8_t *){
         buffer_pool->deallocate(buffer);
       };
