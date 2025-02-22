@@ -37,6 +37,7 @@
 
 #include "rcpputils/scope_exit.hpp"
 #include "rmw/error_handling.h"
+#include "rmw_dds_common/security.hpp"
 #include "zenoh_utils.hpp"
 
 // Megabytes of SHM to reserve.
@@ -52,7 +53,8 @@ public:
   // Constructor.
   Data(
     std::size_t domain_id,
-    const std::string & enclave)
+    const std::string & enclave,
+    const rmw_security_options_t * security_options)
   : domain_id_(std::move(domain_id)),
     enclave_(std::move(enclave)),
     is_shutdown_(false),
@@ -67,7 +69,37 @@ public:
     if (!config.has_value()) {
       throw std::runtime_error("Error configuring Zenoh session.");
     }
+#ifdef HAVE_SECURITY
+    std::unordered_map<std::string, std::string> security_files_paths;
+    if (rmw_dds_common::get_security_files(
+        true, "", security_options->security_root_path, security_files_paths))
+    {
+      config.value().insert_json5("connect/endpoints", "[\"tls/localhost:7447\"]");
+      config.value().insert_json5("listen/endpoints", "[\"tls/localhost:0\"]");
 
+      std::string tls_config = "{\"link\": \n"
+        "\t\t{ \n"
+        "\t\t\t\"protocols\": [ \n"
+        "\t\t\t\t\"tls\" \n"
+        "\t\t\t], \n"
+        "\t\t\t\"tls\": { \n"
+        "\t\t\t\t\"enable_mtls\": true, \n"
+        "\t\t\t\t\"verify_name_on_connect\": false, \n"
+        "\t\t\t\t\"root_ca_certificate\": \"" + security_files_paths["IDENTITY_CA"] + "\",\n" +
+        "\t\t\t\t\"listen_private_key\": \"" + security_files_paths["PRIVATE_KEY"] + "\",\n" +
+        "\t\t\t\t\"listen_certificate\": \"" + security_files_paths["CERTIFICATE"] + "\",\n" +
+        "\t\t\t\t\"connect_private_key\": \"" + security_files_paths["PRIVATE_KEY"] + "\",\n" +
+        "\t\t\t\t\"connect_certificate\": \"" + security_files_paths["CERTIFICATE"] + "\",\n" +
+        "\t\t\t}, \n"
+        "\t\t}, \n"
+        "\t}\n";
+      config.value().insert_json5(
+        "transport",
+        tls_config);
+    } else {
+      std::cout << "Error getting secutiry data" << std::endl;
+    }
+#endif
     zenoh::ZResult result;
 
 #ifndef _MSC_VER
@@ -441,9 +473,10 @@ private:
 ///=============================================================================
 rmw_context_impl_s::rmw_context_impl_s(
   const std::size_t domain_id,
-  const std::string & enclave)
+  const std::string & enclave,
+  const rmw_security_options_t * security_options)
 {
-  data_ = std::make_shared<Data>(domain_id, std::move(enclave));
+  data_ = std::make_shared<Data>(domain_id, std::move(enclave), security_options);
   data_->init();
 }
 
