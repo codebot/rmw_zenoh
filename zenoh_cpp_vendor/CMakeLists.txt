@@ -26,7 +26,7 @@ set(ZENOHC_CARGO_FLAGS "--no-default-features$<SEMICOLON>--features=shared-memor
 #    (Fix potential loss of request/reply messages in case of network congestion)
 ament_vendor(zenoh_c_vendor
   VCS_URL https://github.com/eclipse-zenoh/zenoh-c.git
-  VCS_VERSION 261493682c7dc54db3a07079315e009a2e7c1573
+  VCS_VERSION fd8567b631c8836f1239714029c1f395213bb095
   CMAKE_ARGS
     "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
     "-DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE"
@@ -40,6 +40,32 @@ ament_vendor(zenoh_cpp_vendor
   VCS_VERSION 5dfb68c9ac966925e59bcb52f39b9bc26c0ad6d3
   CMAKE_ARGS
     -DZENOHCXX_ZENOHC=OFF
+)
+
+execute_process(
+  COMMAND "${PYTHON_EXECUTABLE}" -c "if True:
+    from distutils import sysconfig as sc
+    print(sc.get_python_lib(prefix='', plat_specific=True))"
+  OUTPUT_VARIABLE PYTHON_SITE
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+message("ALex: " ${OUTPUT_VARIABLE})
+message("ALex: " ${OUTPUT_STRIP_TRAILING_WHITESPACE})
+message("ALex: " ${PYTHON_SITE})
+
+ament_get_python_install_dir(PYTHON_DIR_INSTALL)
+message("ALex: " ${PYTHON_DIR_INSTALL})
+message("ALex: " ${CMAKE_INSTALL_PREFIX})
+
+include(ExternalProject)
+ExternalProject_Add(zenoh_python_vendor
+  GIT_REPOSITORY    https://github.com/eclipse-zenoh/zenoh-python
+  GIT_TAG           e117aee2af831485aefc4f51bf482e5324fe1a53
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND     maturin build --release
+  INSTALL_COMMAND   wheel unpack target/wheels/eclipse_zenoh-1.2.1-cp38-abi3-manylinux_2_34_x86_64.whl --dest ${CMAKE_INSTALL_PREFIX}/${PYTHON_DIR_INSTALL}/zenoh
+  # TEST_COMMAND      ""
+  BUILD_IN_SOURCE 1
 )
 
 externalproject_add_stepdependencies(zenoh_cpp_vendor configure zenoh_c_vendor)
