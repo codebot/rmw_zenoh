@@ -49,13 +49,7 @@ execute_process(
   OUTPUT_VARIABLE PYTHON_SITE
   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-message("ALex: " ${OUTPUT_VARIABLE})
-message("ALex: " ${OUTPUT_STRIP_TRAILING_WHITESPACE})
-message("ALex: " ${PYTHON_SITE})
-
 ament_get_python_install_dir(PYTHON_DIR_INSTALL)
-message("ALex: " ${PYTHON_DIR_INSTALL})
-message("ALex: " ${CMAKE_INSTALL_PREFIX})
 
 include(ExternalProject)
 ExternalProject_Add(zenoh_python_vendor
@@ -64,7 +58,6 @@ ExternalProject_Add(zenoh_python_vendor
   CONFIGURE_COMMAND ""
   BUILD_COMMAND     maturin build --release
   INSTALL_COMMAND   wheel unpack target/wheels/eclipse_zenoh-1.2.1-cp38-abi3-manylinux_2_34_x86_64.whl --dest ${CMAKE_INSTALL_PREFIX}/${PYTHON_DIR_INSTALL}/zenoh
-  # TEST_COMMAND      ""
   BUILD_IN_SOURCE 1
 )
 
