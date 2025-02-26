@@ -384,20 +384,6 @@ void GraphCache::parse_put(
   // Otherwise, the entity represents a node that already exists in the graph.
   // Update topic info if required below.
   update_topic_maps_for_put(node_it->second, entity);
-
-  // If the newly added entity is a publisher with transient_local qos durability,
-  // we trigger any registered querying subscriber callbacks.
-  if (entity->type() == liveliness::EntityType::Publisher &&
-    entity->topic_info().has_value() &&
-    entity->topic_info()->qos_.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL)
-  {
-    auto sub_cbs_it = querying_subs_cbs_.find(entity->topic_info()->topic_keyexpr_);
-    if (sub_cbs_it != querying_subs_cbs_.end()) {
-      for (auto sub_it = sub_cbs_it->second.begin(); sub_it != sub_cbs_it->second.end(); ++sub_it) {
-        sub_it->second(entity->zid());
-      }
-    }
-  }
 }
 
 ///=============================================================================
@@ -449,9 +435,11 @@ void GraphCache::update_topic_map_for_del(
   GraphNode::TopicMap::iterator cache_topic_it =
     topic_map.find(topic_info.name_);
   if (cache_topic_it == topic_map.end()) {
-    // This should not happen.
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp", "topic name %s not found in topic_map. Report this.",
+    // If an entity is short-lived, it is possible to receive the liveliness token
+    // for its deletion before the one for its creation given that Zenoh does not
+    // guarantee ordering of liveliness tokens. This situation is harmless.
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp", "topic name %s not found in topic_map.",
       topic_info.name_.c_str());
     return;
   }
@@ -459,9 +447,11 @@ void GraphCache::update_topic_map_for_del(
   GraphNode::TopicTypeMap::iterator cache_topic_type_it =
     cache_topic_it.value().find(topic_info.type_);
   if (cache_topic_type_it == cache_topic_it->second.end()) {
-    // This should not happen.
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp", "topic type %s not found in for topic %s. Report this.",
+    // If an entity is short-lived, it is possible to receive the liveliness token
+    // for its deletion before the one for its creation given that Zenoh does not
+    // guarantee ordering of liveliness tokens. This situation is harmless.
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp", "topic type %s not found in for topic %s.",
       topic_info.type_.c_str(), topic_info.name_.c_str());
     return;
   }
@@ -470,9 +460,11 @@ void GraphCache::update_topic_map_for_del(
   GraphNode::TopicQoSMap::iterator cache_topic_qos_it = cache_topic_type_it->second.find(
     qos_str);
   if (cache_topic_qos_it == cache_topic_type_it->second.end()) {
-    // This should not happen.
-    RMW_ZENOH_LOG_ERROR_NAMED(
-      "rmw_zenoh_cpp", "qos %s not found in for topic type %s. Report this.",
+    // If an entity is short-lived, it is possible to receive the liveliness token
+    // for its deletion before the one for its creation given that Zenoh does not
+    // guarantee ordering of liveliness tokens. This situation is harmless.
+    RMW_ZENOH_LOG_DEBUG_NAMED(
+      "rmw_zenoh_cpp", "qos %s not found in for topic type %s.",
       qos_str.c_str(), topic_info.type_.c_str());
     return;
   }
@@ -1253,38 +1245,4 @@ void GraphCache::update_event_counters(
     }
   }
 }
-
-///=============================================================================
-void GraphCache::set_querying_subscriber_callback(
-  const std::string & sub_keyexpr,
-  const std::size_t sub_keyxpr_hash,
-  QueryingSubscriberCallback cb)
-{
-  std::unordered_map<
-    std::string,
-    std::unordered_map<std::size_t, QueryingSubscriberCallback>
-  >::iterator cb_it = querying_subs_cbs_.find(sub_keyexpr);
-  if (cb_it == querying_subs_cbs_.end()) {
-    querying_subs_cbs_[sub_keyexpr] =
-      std::unordered_map<std::size_t, QueryingSubscriberCallback>{};
-    cb_it = querying_subs_cbs_.find(sub_keyexpr);
-  }
-  cb_it->second.insert(std::make_pair(sub_keyxpr_hash, std::move(cb)));
-}
-
-///=============================================================================
-void GraphCache::remove_querying_subscriber_callback(
-  const std::string & sub_keyexpr,
-  const std::size_t sub_keyexpr_hash)
-{
-  std::unordered_map<
-    std::string,
-    std::unordered_map<std::size_t, QueryingSubscriberCallback>
-  >::iterator cb_map_it = querying_subs_cbs_.find(sub_keyexpr);
-  if (cb_map_it == querying_subs_cbs_.end()) {
-    return;
-  }
-  cb_map_it->second.erase(sub_keyexpr_hash);
-}
-
 }  // namespace rmw_zenoh_cpp
