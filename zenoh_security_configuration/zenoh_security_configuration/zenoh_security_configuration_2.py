@@ -58,14 +58,15 @@ class ZenohSecutiryConfigGenerator:
                 conf.insert_json5('access_control/enabled', 'true')
                 conf.insert_json5('access_control/default_permission', "'deny'")
 
-                services_reply_allow, services_reply_deny, services_request_allow, services_request_deny = self.get_services(profile)
+                services_reply_allow, services_reply_deny, services_request_allow, services_request_deny = self.get_services(profile, node_name)
                 topics_sub_allow, topics_pub_allow, topics_sub_deny, topics_pub_deny = self.get_topics(profile)
                 rules = self.generate_rules(node_name,
                                             services_reply_allow, services_reply_deny,
                                             services_request_allow, services_request_deny,
                                             topics_sub_allow, topics_pub_allow,
                                             topics_sub_deny, topics_pub_deny)
-                rules = self.generate_liveliness(rules)
+                has_services = len(services_reply_allow) > 0 or len(services_request_allow) > 0
+                rules = self.generate_liveliness(rules, has_services)
                 conf.insert_json5('access_control/rules', json.dumps(rules))
 
                 policies = self.set_policies(rules, node_name)
@@ -81,25 +82,30 @@ class ZenohSecutiryConfigGenerator:
                     # json5.dump(str(conf), f)
                     f.write(str(conf))
 
-    def get_services(self, profile):
+    def check_service_name(self, service_name, node_name):
+        if service_name[0] == '~':
+            service_name = service_name.replace('~', node_name)
+        return service_name
+
+    def get_services(self, profile, node_name):
         services_reply_allow = set()
         services_reply_deny = set()
         services_request_allow = set()
         services_request_deny = set()
         for services in profile.iter('services'):
-            for service in profile.iter('service'):
-                service_type = list(services.attrib.keys())[0]
-                permission = list(services.attrib.values())[0]
+            service_type = list(services.attrib.keys())[0]
+            permission = list(services.attrib.values())[0]
+            for service in services.iter('service'):
                 if service_type == 'reply':
                     if permission == 'ALLOW':
-                        services_reply_allow.add(service.text)
+                        services_reply_allow.add(self.check_service_name(service.text, node_name))
                     if permission == 'DENY':
-                        services_reply_deny.add(service.text)
+                        services_reply_deny.add(self.check_service_name(service.text, node_name))
                 elif service_type == 'request':
                     if permission == 'ALLOW':
-                        services_request_allow.add(service.text)
+                        services_request_allow.add(self.check_service_name(service.text, node_name))
                     if permission == 'DENY':
-                        services_request_deny.add(service.text)
+                        services_request_deny.add(self.check_service_name(service.text, node_name))
 
         return [services_reply_allow, services_reply_deny,
                 services_request_allow, services_request_deny]
@@ -139,29 +145,37 @@ class ZenohSecutiryConfigGenerator:
                        topics_sub_deny, topics_pub_deny):
         rules = []
 
-        a = [f"0/{node_name}/**" ] + [f"0/{service}/**" for service in services_request_allow]
-        print(a)
+        if len(services_reply_allow) > 0:
+            incoming_queries = {
+                "id": "incoming_queries",
+                "messages": ["query" ],
+                "flows":["ingress"],
+                "permission": "allow",
+                "key_exprs":
+                    [f"0/{service}/**" for service in services_reply_allow]
+            }
+            rules.append(incoming_queries)
 
-        incoming_queries = {
-            "id": "incoming_queries",
-            "messages": ["query" ],
-            "flows":["ingress"],
-            "permission": "allow",
-            "key_exprs":
-                [f"0/{node_name}/**" ] + [f"0/{service}/**" for service in services_request_allow]
-        }
+            outgoing_queryables_replies = {
+                "id": "outgoing_queryables_replies",
+                "messages": ["declare_queryable", "reply" ],
+                "flows":["egress"],
+                "permission": "allow",
+                "key_exprs":
+                    [f"0/{service}/**" for service in services_reply_allow]
+            }
+            rules.append(outgoing_queryables_replies)
 
-        outgoing_queryables_replies = {
-            "id": "outgoing_queryables_replies",
-            "messages": ["declare_queryable", "reply" ],
-            "flows":["egress"],
-            "permission": "allow",
-            "key_exprs":
-                [f"0/{node_name}/**" ] + [f"0/{service}/**" for service in services_reply_allow]
-        }
+        if len(services_request_allow) > 0:
+            outgoing_queries = {
+                "id": "outgoing_queries",
+                "messages": ["query" ],
+                "flows":["egress"],
+                "permission": "allow",
+                "key_exprs": [f"0/{service}/**" for service in services_request_allow]
+            }
+            rules.append(outgoing_queries)
 
-        rules.append(incoming_queries)
-        rules.append(outgoing_queryables_replies)
 
         if len(topics_pub_allow) != 0:
             outgoing_publications = {
@@ -203,10 +217,16 @@ class ZenohSecutiryConfigGenerator:
             rules.append(incoming_publications)
         return rules
 
-    def generate_liveliness(self, rules):
+    def generate_liveliness(self, rules, has_services):
+
+        messages = ['liveliness_token', 'liveliness_query', 'declare_liveliness_subscriber' ]
+
+        if has_services:
+            messages.append('reply')
+
         liveliness = {
             'id': 'liveliness_tokens',
-            'messages': ['liveliness_token', 'liveliness_query', 'declare_liveliness_subscriber' ],
+            'messages': messages,
             'flows':['ingress', 'egress'],
             'permission': 'allow',
             'key_exprs': [ '@ros2_lv/0/**' ],
