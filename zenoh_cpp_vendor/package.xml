@@ -10,7 +10,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
 
-  <build_depend>cargo</build_depend>
+  <build_depend>rustup</build_depend>
   <build_depend>clang</build_depend>
   <build_depend>git</build_depend>
 
