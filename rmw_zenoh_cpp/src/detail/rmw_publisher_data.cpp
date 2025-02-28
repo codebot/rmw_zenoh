@@ -110,6 +110,8 @@ std::shared_ptr<PublisherData> PublisherData::make(
       RMW_SET_ERROR_MSG("unable to create zenoh publisher cache");
       return nullptr;
     }
+  } else {
+    pub_opts.reliability = Z_RELIABILITY_BEST_EFFORT;
   }
 
   // Set congestion_control to BLOCK if appropriate.
