@@ -22,7 +22,6 @@ from ament_index_python.packages import get_package_share_directory
 
 import zenoh
 import json
-import json5
 
 import xml.etree.ElementTree as ET
 
@@ -74,12 +73,9 @@ class ZenohSecutiryConfigGenerator:
                 conf.insert_json5('access_control/policies', json.dumps(policies))
                 conf.insert_json5('access_control/subjects', json.dumps(subjects))
                 # print(conf)
-                lol = json5.loads(str(conf))
                 # print(conf)
-                print(json5.dumps(lol))
                 # print(json5.dumps(str(conf), sort_keys=True))
                 with open(node_name + '.json5', 'w', encoding='utf-8') as f:
-                    # json5.dump(str(conf), f)
                     f.write(str(conf))
 
     def check_service_name(self, service_name, node_name):
@@ -175,6 +171,15 @@ class ZenohSecutiryConfigGenerator:
                 "key_exprs": [f"0/{service}/**" for service in services_request_allow]
             }
             rules.append(outgoing_queries)
+
+            incoming_queryables_replies = {
+              "id": "incoming_queryables_replies",
+                "messages": ["declare_queryable", "reply" ],
+                "flows":["ingress"],
+                "permission": "allow",
+                "key_exprs": [f"0/{service}/**" for service in services_request_allow]
+            }
+            rules.append(incoming_queryables_replies)
 
 
         if len(topics_pub_allow) != 0:
