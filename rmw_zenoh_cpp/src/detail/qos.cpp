@@ -66,9 +66,10 @@ bool QoS::is_supported(const rmw_qos_profile_t & qos_profile)
   if (qos_profile.history == RMW_QOS_POLICY_HISTORY_UNKNOWN ||
     qos_profile.reliability == RMW_QOS_POLICY_RELIABILITY_UNKNOWN ||
     qos_profile.durability == RMW_QOS_POLICY_DURABILITY_UNKNOWN ||
-    qos_profile.liveliness == RMW_QOS_POLICY_LIVELINESS_UNKNOWN) {
-      return false;
-    }
+    qos_profile.liveliness == RMW_QOS_POLICY_LIVELINESS_UNKNOWN)
+  {
+    return false;
+  }
 
   return true;
 }
