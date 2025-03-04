@@ -31,6 +31,7 @@
 
 #include <tinyxml2.h>
 
+#include <cstdint>
 #include <set>
 #include <string>
 
@@ -55,7 +56,8 @@ public:
   ZENOH_SECURITY_CONFIGURATION_TOOLS_PUBLIC
   PolicyParser(
     const std::string & filename,
-    const std::string & configfile);
+    const std::string & configfile,
+    uint16_t domain_id);
 
   void parse();
 
@@ -86,6 +88,8 @@ private:
   std::set<std::string> topics_pub_allow_;
   std::set<std::string> topics_sub_deny_;
   std::set<std::string> topics_pub_deny_;
+
+  uint16_t domain_id_;
 };
 }  // namespace zenoh
 

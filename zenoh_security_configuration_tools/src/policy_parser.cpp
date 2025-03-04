@@ -52,8 +52,9 @@ namespace zenoh
 {
 PolicyParser::PolicyParser(
   const std::string & filename,
-  const std::string & configfile)
-:configfile_path_(configfile)
+  const std::string & configfile,
+  uint16_t domain_id)
+:configfile_path_(configfile), domain_id_(domain_id)
 {
   const tinyxml2::XMLError error = doc_.LoadFile(filename.c_str());
   if (error != tinyxml2::XML_SUCCESS) {
@@ -156,7 +157,7 @@ std::string PolicyParser::to_key_exprs(std::set<std::string> key_exprs)
 {
   std::string key_exprs_str = "[";
   for(const auto & name : key_exprs) {
-    key_exprs_str += "\"0/" + name + "/**\", ";
+    key_exprs_str += "\"" + std::to_string(domain_id_) + "/" + name + "/**\", ";
   }
   key_exprs_str += "]";
 
@@ -262,7 +263,7 @@ void PolicyParser::fill_data(
     "\"messages\": " + liveliness_messages + "," +
     "\"flows\":[\"ingress\", \"egress\"], " \
     "\"permission\": \"allow\", " \
-    "\"key_exprs\": [ \"@ros2_lv/0/**\" ] " \
+    "\"key_exprs\": [ \"@ros2_lv/" + std::to_string(domain_id_) + "/**\" ] " \
     "},";
 
   policies_rules += "\"liveliness_tokens\"";

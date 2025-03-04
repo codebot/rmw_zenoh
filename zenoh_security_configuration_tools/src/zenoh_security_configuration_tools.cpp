@@ -27,6 +27,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
+#include <cstdint>
 
 #include <CLI/CLI.hpp>
 
@@ -38,8 +39,10 @@ int main(int argc, char * argv[])
 
   std::string policy_filename;
   std::string zenoh_config_filename;
+  uint16_t domain_id = 0;
   app.add_option("-f,--policy", policy_filename, "Policy file name")->required();
   app.add_option("-c,--config", zenoh_config_filename, "Zenoh config file name");
+  app.add_option("-d,--domainid", domain_id, "Domain ID");
 
   try {
     app.parse(argc, argv);
@@ -47,9 +50,10 @@ int main(int argc, char * argv[])
     return app.exit(e);
   }
 
-  std::cerr << "policy_filename: " << policy_filename << std::endl;
-
-  auto policy_parser = zenoh::PolicyParser(policy_filename, zenoh_config_filename);
+  auto policy_parser = zenoh::PolicyParser(
+    policy_filename,
+    zenoh_config_filename,
+    domain_id);
   policy_parser.parse();
   return 0;
 }
