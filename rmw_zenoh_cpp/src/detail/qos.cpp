@@ -74,7 +74,6 @@ bool QoS::is_supported(const rmw_qos_profile_t & qos_profile)
   return true;
 }
 
-
 ///=============================================================================
 rmw_ret_t QoS::best_available_qos(
   const rmw_node_t * node,
