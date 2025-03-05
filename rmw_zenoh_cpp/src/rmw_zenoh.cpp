@@ -779,6 +779,9 @@ rmw_publisher_wait_for_all_acked(
   const rmw_publisher_t * publisher,
   rmw_time_t wait_timeout)
 {
+  RMW_CHECK_FOR_NULL_WITH_MSG(
+    publisher, "publisher handle is null",
+    return RMW_RET_INVALID_ARGUMENT);
   static_cast<void>(publisher);
   static_cast<void>(wait_timeout);
 
