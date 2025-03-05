@@ -2531,6 +2531,11 @@ rmw_ret_t
 rmw_get_gid_for_publisher(const rmw_publisher_t * publisher, rmw_gid_t * gid)
 {
   RMW_CHECK_ARGUMENT_FOR_NULL(publisher, RMW_RET_INVALID_ARGUMENT);
+  RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
+    publisher,
+    publisher->implementation_identifier,
+    rmw_zenoh_cpp::rmw_zenoh_identifier,
+    return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
   RMW_CHECK_ARGUMENT_FOR_NULL(gid, RMW_RET_INVALID_ARGUMENT);
   rmw_node_t * node =
     static_cast<rmw_node_t *>(publisher->data);
@@ -2555,6 +2560,11 @@ rmw_ret_t
 rmw_get_gid_for_client(const rmw_client_t * client, rmw_gid_t * gid)
 {
   RMW_CHECK_ARGUMENT_FOR_NULL(client, RMW_RET_INVALID_ARGUMENT);
+  RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
+    client,
+    client->implementation_identifier,
+    rmw_zenoh_cpp::rmw_zenoh_identifier,
+    return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
   RMW_CHECK_ARGUMENT_FOR_NULL(gid, RMW_RET_INVALID_ARGUMENT);
   rmw_zenoh_cpp::ClientData * client_data =
     static_cast<rmw_zenoh_cpp::ClientData *>(client->data);
