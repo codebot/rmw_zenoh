@@ -779,7 +779,7 @@ rmw_publisher_wait_for_all_acked(
   const rmw_publisher_t * publisher,
   rmw_time_t wait_timeout)
 {
-  static_cast<void>(publisher);
+  RMW_CHECK_ARGUMENT_FOR_NULL(publisher, RMW_RET_INVALID_ARGUMENT);
   static_cast<void>(wait_timeout);
 
   // We are not currently tracking all published data, so we don't know what data is in flight that
