@@ -54,6 +54,11 @@ rmw_zenoh_event_type_t zenoh_event_from_rmw_event(rmw_event_type_t rmw_event_typ
   return ZENOH_EVENT_INVALID;
 }
 
+bool event_check_compatible(rmw_event_type_t rmw_event_type)
+{
+  return zenoh_event_from_rmw_event(rmw_event_type) != ZENOH_EVENT_INVALID;
+}
+
 ///=============================================================================
 rmw_zenoh_event_status_t::rmw_zenoh_event_status_t()
 : total_count(0),
