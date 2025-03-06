@@ -59,7 +59,8 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
   std::size_t subscription_id,
   const std::string & topic_name,
   const rosidl_message_type_support_t * type_support,
-  const rmw_qos_profile_t * qos_profile)
+  const rmw_qos_profile_t * qos_profile,
+  const rmw_subscription_options_t & sub_options)
 {
   rmw_qos_profile_t adapted_qos_profile = *qos_profile;
   rmw_ret_t ret = QoS::get().best_available_qos(
@@ -120,7 +121,8 @@ std::shared_ptr<SubscriptionData> SubscriptionData::make(
       std::move(entity),
       std::move(session),
       type_support->data,
-      std::move(message_type_support)
+      std::move(message_type_support),
+      sub_options
     });
 
   if (!sub_data->init()) {
@@ -138,13 +140,15 @@ SubscriptionData::SubscriptionData(
   std::shared_ptr<liveliness::Entity> entity,
   std::shared_ptr<zenoh::Session> session,
   const void * type_support_impl,
-  std::unique_ptr<MessageTypeSupport> type_support)
+  std::unique_ptr<MessageTypeSupport> type_support,
+  rmw_subscription_options_t sub_options)
 : rmw_node_(rmw_node),
   graph_cache_(std::move(graph_cache)),
   entity_(std::move(entity)),
   sess_(std::move(session)),
   type_support_impl_(type_support_impl),
   type_support_(std::move(type_support)),
+  sub_options_(std::move(sub_options)),
   last_known_published_msg_({}),
   wait_set_data_(nullptr),
   is_shutdown_(false),
@@ -153,6 +157,7 @@ SubscriptionData::SubscriptionData(
   events_mgr_ = std::make_shared<EventsManager>();
 }
 
+///=============================================================================
 // We have to use an "init" function here, rather than do this in the constructor, because we use
 // enable_shared_from_this, which is not available in constructors.
 bool SubscriptionData::init()
@@ -205,6 +210,17 @@ bool SubscriptionData::init()
       auto attachment_value = attachment.value();
 
       AttachmentData attachment_data(attachment_value);
+      // Add the message to the queue if ignore_local_publications is false.
+      if (sub_data->sub_options_.ignore_local_publications &&
+        (attachment_data.zid() == sub_data->entity_->zid()))
+      {
+        RMW_ZENOH_LOG_DEBUG_NAMED(
+          "rmw_zenoh_cpp",
+          "Ignoring message from local publisher."
+        );
+        return;
+      }
+
       sub_data->add_new_message(
         std::make_unique<SubscriptionData::Message>(
           sample.get_payload(),
