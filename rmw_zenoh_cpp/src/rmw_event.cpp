@@ -177,7 +177,7 @@ rmw_event_set_callback(
 
 ///=============================================================================
 bool
-rmw_event_check_compatible(rmw_event_type_t rmw_event_type)
+rmw_event_type_is_supported(rmw_event_type_t rmw_event_type)
 {
   return rmw_zenoh_cpp::event_check_compatible(rmw_event_type);
 }
