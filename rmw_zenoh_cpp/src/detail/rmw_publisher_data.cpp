@@ -249,7 +249,10 @@ rmw_ret_t PublisherData::publish(
   int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
   auto opts = zenoh::ext::AdvancedPublisher::PutOptions::create_default();
   opts.put_options.attachment = rmw_zenoh_cpp::AttachmentData(
-    sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
+    sequence_number_++,
+    source_timestamp,
+    entity_->copy_gid(),
+    entity_->zid()).serialize_to_zbytes();
 
   // TODO(ahcorde): shmbuf
   std::vector<uint8_t> raw_data(
@@ -297,7 +300,10 @@ rmw_ret_t PublisherData::publish_serialized_message(
   int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
   auto opts = zenoh::ext::AdvancedPublisher::PutOptions::create_default();
   opts.put_options.attachment = rmw_zenoh_cpp::AttachmentData(
-    sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
+    sequence_number_++,
+    source_timestamp,
+    entity_->copy_gid(),
+    entity_->zid()).serialize_to_zbytes();
 
   std::vector<uint8_t> raw_data(
     serialized_message->buffer,

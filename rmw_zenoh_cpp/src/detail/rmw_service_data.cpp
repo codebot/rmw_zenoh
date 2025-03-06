@@ -443,7 +443,10 @@ rmw_ret_t ServiceData::send_response(
   memcpy(writer_gid.data(), request_id->writer_guid, RMW_GID_STORAGE_SIZE);
   int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
   options.attachment = rmw_zenoh_cpp::AttachmentData(
-    request_id->sequence_number, source_timestamp, writer_gid).serialize_to_zbytes();
+    request_id->sequence_number,
+    source_timestamp,
+    writer_gid,
+    entity_->zid()).serialize_to_zbytes();
 
   std::vector<uint8_t> raw_bytes(
     reinterpret_cast<const uint8_t *>(response_bytes),

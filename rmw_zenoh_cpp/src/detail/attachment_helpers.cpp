@@ -29,21 +29,27 @@
 namespace rmw_zenoh_cpp
 {
 
+///=============================================================================
 AttachmentData::AttachmentData(
   const int64_t sequence_number,
   const int64_t source_timestamp,
-  const std::array<uint8_t, RMW_GID_STORAGE_SIZE> source_gid)
+  const std::array<uint8_t, RMW_GID_STORAGE_SIZE> source_gid,
+  const std::string & zid)
 : sequence_number_(sequence_number),
   source_timestamp_(source_timestamp),
-  source_gid_(source_gid)
+  source_gid_(source_gid),
+  zid_(std::move(zid))
 {
+  // Do nothing.
 }
 
+///=============================================================================
 AttachmentData::AttachmentData(AttachmentData && data)
 {
   sequence_number_ = std::move(data.sequence_number_);
   source_timestamp_ = std::move(data.source_timestamp_);
   source_gid_ = data.source_gid_;
+  zid_ = std::move(data.zid_);
 }
 
 ///=============================================================================
@@ -64,6 +70,13 @@ std::array<uint8_t, RMW_GID_STORAGE_SIZE> AttachmentData::copy_gid() const
   return source_gid_;
 }
 
+///=============================================================================
+std::string AttachmentData::zid() const
+{
+  return zid_;
+}
+
+///=============================================================================
 zenoh::Bytes AttachmentData::serialize_to_zbytes()
 {
   auto serializer = zenoh::ext::Serializer();
@@ -73,9 +86,12 @@ zenoh::Bytes AttachmentData::serialize_to_zbytes()
   serializer.serialize(this->source_timestamp_);
   serializer.serialize(std::string("source_gid"));
   serializer.serialize(this->source_gid_);
+  serializer.serialize(std::string("zid"));
+  serializer.serialize(this->zid_);
   return std::move(serializer).finish();
 }
 
+///=============================================================================
 AttachmentData::AttachmentData(const zenoh::Bytes & bytes)
 {
   zenoh::ext::Deserializer deserializer(bytes);
@@ -96,5 +112,11 @@ AttachmentData::AttachmentData(const zenoh::Bytes & bytes)
     throw std::runtime_error("source_gid is not found in the attachment.");
   }
   this->source_gid_ = deserializer.deserialize<std::array<uint8_t, RMW_GID_STORAGE_SIZE>>();
+
+  const std::string zid_str = deserializer.deserialize<std::string>();
+  if (zid_str != "zid") {
+    throw std::runtime_error("zid is not found in the attachment.");
+  }
+  this->zid_ = deserializer.deserialize<std::string>();
 }
 }  // namespace rmw_zenoh_cpp

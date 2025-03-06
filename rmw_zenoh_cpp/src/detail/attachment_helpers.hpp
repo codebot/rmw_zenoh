@@ -17,6 +17,7 @@
 
 #include <array>
 #include <cstdint>
+#include <string>
 
 #include <zenoh.hxx>
 
@@ -28,10 +29,16 @@ namespace rmw_zenoh_cpp
 class AttachmentData final
 {
 public:
+  /// @brief Constructor.
+  /// @param sequence_number A monotonically increasing count.
+  /// @param source_timestamp The time when the attachment was originally created.
+  /// @param source_gid GID of the entity that originally created this attachment.
+  /// @param zid The zenoh session id of the entity that originally created this attachment.
   AttachmentData(
     const int64_t sequence_number,
     const int64_t source_timestamp,
-    const std::array<uint8_t, RMW_GID_STORAGE_SIZE> source_gid);
+    const std::array<uint8_t, RMW_GID_STORAGE_SIZE> source_gid,
+    const std::string & zid);
 
   explicit AttachmentData(const zenoh::Bytes & bytes);
   explicit AttachmentData(AttachmentData && data);
@@ -39,6 +46,7 @@ public:
   int64_t sequence_number() const;
   int64_t source_timestamp() const;
   std::array<uint8_t, RMW_GID_STORAGE_SIZE> copy_gid() const;
+  std::string zid() const;
 
   zenoh::Bytes serialize_to_zbytes();
 
@@ -46,6 +54,7 @@ private:
   int64_t sequence_number_;
   int64_t source_timestamp_;
   std::array<uint8_t, RMW_GID_STORAGE_SIZE> source_gid_;
+  std::string zid_;
 };
 }  // namespace rmw_zenoh_cpp
 
