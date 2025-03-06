@@ -16,6 +16,7 @@
 
 #include <fastcdr/FastBuffer.h>
 
+#include <algorithm>
 #include <cinttypes>
 #include <limits>
 #include <memory>
@@ -504,11 +505,15 @@ void SubscriptionData::add_new_message(
     const int64_t seq_increment = std::abs(
       msg->attachment.sequence_number() -
       last_known_pub_it->second);
-    if (seq_increment > 1) {
+
+      if (seq_increment > 1) {
       const size_t num_msg_lost = seq_increment - 1;
       events_mgr_->update_event_status(
         ZENOH_EVENT_MESSAGE_LOST,
-        num_msg_lost);
+        static_cast<int32_t>(std::clamp<size_t>(
+          num_msg_lost,
+          std::numeric_limits<int32_t>::min(),
+          std::numeric_limits<int32_t>::max())));
     }
   }
   // Always update the last known sequence number for the publisher.
