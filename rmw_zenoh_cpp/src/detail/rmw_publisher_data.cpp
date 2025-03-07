@@ -351,9 +351,21 @@ rmw_ret_t PublisherData::publish_serialized_message(
 
       pub_.put(std::move(payload), std::move(options), &result);
     } else {
-      // TODO(Yadunund): Should we revert to regular allocation and not return an error?
-      RMW_SET_ERROR_MSG("Failed to allocate a SHM buffer, even after GCing.");
-      return RMW_RET_ERROR;
+      // Print a warning and revert to regular allocation
+      RMW_ZENOH_LOG_DEBUG_NAMED(
+        "rmw_zenoh_cpp", "Failed to allocate a SHM buffer, fallback to non-SHM");
+
+      // TODO(yellowhatter): split the whole publish method onto shm and non-shm versions
+      std::vector<uint8_t> raw_image(
+        serialized_message->buffer,
+        serialized_message->buffer + data_length);
+      zenoh::Bytes payload(raw_image);
+
+      TRACETOOLS_TRACEPOINT(
+        rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message,
+          source_timestamp);
+
+      pub_.put(std::move(payload), std::move(options), &result);
     }
   } else {
     std::vector<uint8_t> raw_image(
