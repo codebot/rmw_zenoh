@@ -159,20 +159,6 @@ bool SubscriptionData::init()
 
   sess_ = context_impl->session();
 
-<<<<<<< HEAD
-=======
-  using AdvancedSubscriberOptions = zenoh::ext::SessionExt::AdvancedSubscriberOptions;
-  auto adv_sub_opts = AdvancedSubscriberOptions::create_default();
-
-  // By default, this subscription will receive publications from publishers within and outside of
-  // the same Zenoh session as this subscription.
-  // If ignore_local_publications is true, we restrict this subscription to only receive samples
-  // from publishers in remote sessions.
-  if (sub_options_.ignore_local_publications) {
-    adv_sub_opts.subscriber_options.allowed_origin = ZC_LOCALITY_REMOTE;
-  }
-
->>>>>>> f6a4fde (Honor ignore_local_publications in subscription options (#508))
   // Instantiate the subscription with suitable options depending on the
   // adapted_qos_profile.
   // TODO(Yadunund): Rely on a separate function to return the sub
@@ -182,6 +168,15 @@ bool SubscriptionData::init()
       zenoh::ext::SessionExt::QueryingSubscriberOptions::create_default();
     const std::string selector = "*/" + entity_->topic_info()->topic_keyexpr_;
     zenoh::KeyExpr selector_ke(selector);
+
+    // By default, this subscription will receive publications from publishers within and outside of
+    // the same Zenoh session as this subscription.
+    // If ignore_local_publications is true, we restrict this subscription to only receive samples
+    // from publishers in remote sessions.
+    if (sub_options_.ignore_local_publications) {
+      sub_options.allowed_origin = ZC_LOCALITY_REMOTE;
+    }
+
     sub_options.query_keyexpr = std::move(selector_ke);
     // Tell the PublicationCache's Queryable that the query accepts any key expression as a reply.
     // By default a query accepts only replies that matches its query selector.
