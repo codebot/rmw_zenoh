@@ -349,7 +349,7 @@ rmw_ret_t PublisherData::publish_serialized_message(
         rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message,
         source_timestamp);
 
-      pub_.put(std::move(payload), std::move(options), &result);
+      pub_.put(std::move(payload), std::move(opts), &result);
     } else {
       // Print a warning and revert to regular allocation
       RMW_ZENOH_LOG_DEBUG_NAMED(
@@ -365,7 +365,7 @@ rmw_ret_t PublisherData::publish_serialized_message(
         rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message,
           source_timestamp);
 
-      pub_.put(std::move(payload), std::move(options), &result);
+      pub_.put(std::move(payload), std::move(opts), &result);
     }
   } else {
     std::vector<uint8_t> raw_image(
@@ -376,7 +376,7 @@ rmw_ret_t PublisherData::publish_serialized_message(
     TRACETOOLS_TRACEPOINT(
       rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
 
-    pub_.put(std::move(payload), std::move(options), &result);
+    pub_.put(std::move(payload), std::move(opts), &result);
   }
 
   if (result != Z_OK) {
