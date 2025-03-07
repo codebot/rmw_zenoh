@@ -205,7 +205,10 @@
   },
 
   /// The default timeout to apply to queries in milliseconds.
-  queries_default_timeout: 10000,
+  /// ROS setting: increase the value to avoid timeout at launch time with a large number of Nodes starting all together.
+  ///              Note: the requests to services and actions are hard-coded with an infinite timeout. Hence, this setting
+  ///              only applies to the queries made by the Advanced Subscriber for TRANSIENT_LOCAL implementation.
+  queries_default_timeout: 60000,
 
   /// The routing strategy to use and it's configuration.
   routing: {
@@ -366,6 +369,8 @@
   //   [
   //      /// Each policy associates one or multiple rules to one or multiple subject combinations
   //      {
+  //         /// Id is optional. If provided, it has to be unique within the policies list
+  //         "id": "policy1",
   //         /// Rules and Subjects are identified with their unique IDs declared above
   //         "rules": ["rule1"],
   //         "subjects": ["subject1", "subject2"],
@@ -381,13 +386,17 @@
   transport: {
     unicast: {
       /// Timeout in milliseconds when opening a link
-      open_timeout: 10000,
+      /// ROS setting: increase the value to avoid timeout at launch time with a large number of Nodes starting all together
+      open_timeout: 60000,
       /// Timeout in milliseconds when accepting a link
-      accept_timeout: 10000,
+      /// ROS setting: increase the value to avoid timeout at launch time with a large number of Nodes starting all together
+      accept_timeout: 60000,
       /// Maximum number of links in pending state while performing the handshake for accepting it
-      accept_pending: 100,
+      /// ROS setting: increase the value to support a large number of Nodes starting all together
+      accept_pending: 10000,
       /// Maximum number of transports that can be simultaneously alive for a single zenoh sessions
-      max_sessions: 1000,
+      /// ROS setting: increase the value to support a large number of Nodes starting all together
+      max_sessions: 10000,
       /// Maximum number of incoming links that are admitted per transport
       max_links: 1,
       /// Enables the LowLatency transport
@@ -446,7 +455,8 @@
         /// Accepted values: 8bit, 16bit, 32bit, 64bit.
         sequence_number_resolution: "32bit",
         /// Link lease duration in milliseconds to announce to other zenoh nodes
-        lease: 10000,
+        /// ROS setting: increase the value to avoid lease expiration at launch time with a large number of Nodes starting all together
+        lease: 60000,
         /// Number of keep-alive messages in a link lease duration. If no data is sent, keep alive
         /// messages will be sent at the configured time interval.
         /// NOTE: In order to consider eventual packet loss and transmission latency and jitter,
@@ -456,7 +466,9 @@
         ///       This is in-line with the ITU-T G.8013/Y.1731 specification on continuous connectivity
         ///       check which considers a link as failed when no messages are received in 3.5 times the
         ///       target interval.
-        keep_alive: 4,
+        /// ROS setting: decrease the value since Nodes are communicating over the loopback
+        ///              where keep-alive messages have less chances to be lost.
+        keep_alive: 2,
         /// Batch size in bytes is expressed as a 16bit unsigned integer.
         /// Therefore, the maximum batch size is 2^16-1 (i.e. 65535).
         /// The default batch size value is the maximum batch size: 65535.
@@ -492,6 +504,9 @@
             block: {
               /// The maximum time in microseconds to wait for an available batch before closing the transport session when sending a blocking message
               /// if still no batch is available.
+              /// ROS setting: unlike DEFAULT_RMW_ZENOH_SESSION_CONFIG.json5, no change here:
+              ///              as the router is routing messages to outside the robot, possibly over WiFi,
+              ///              keeping a lower value ensure the router is not blocked for too long in case of congestioned WiFi.
               wait_before_close: 5000000,
             },
           },
