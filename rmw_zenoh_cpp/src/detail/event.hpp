@@ -53,8 +53,6 @@ enum rmw_zenoh_event_type_t
 
 rmw_zenoh_event_type_t zenoh_event_from_rmw_event(rmw_event_type_t rmw_event_type);
 
-bool event_check_compatible(rmw_event_type_t rmw_event_type);
-
 ///=============================================================================
 /// A struct to store status changes which can be mapped to rmw event statuses.
 struct rmw_zenoh_event_status_t
