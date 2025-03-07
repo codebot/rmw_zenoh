@@ -30,10 +30,13 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
+<<<<<<< HEAD
 zenoh::Bytes create_map_and_set_sequence_num(
   int64_t sequence_number, std::array<uint8_t, 16> gid);
 
 ///=============================================================================
+=======
+>>>>>>> e12b380 (Backport #294 to jazzy  (#471))
 // A class to store the replies to service requests.
 class ZenohReply final
 {
