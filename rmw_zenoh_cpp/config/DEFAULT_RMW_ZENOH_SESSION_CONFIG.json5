@@ -141,6 +141,21 @@
       /// or different values for router, peer and client (e.g. autoconnect: { router: [], peer: ["router", "peer"] }).
       /// Each value is a list of: "peer", "router" and/or "client".
       autoconnect: { router: [], peer: ["router", "peer"], client: ["router"] },
+      /// Strategy for autoconnection, mainly to avoid nodes connecting to each other redundantly.
+      /// Possible options are:
+      /// - "always": always attempt to autoconnect, may result in redundant connections.
+      /// - "greater-zid": attempt to connect to another node only if its own zid is greater than the other's.
+      ///   If both nodes use this strategy, only one will attempt the connection.
+      ///   This strategy may not be suited if one of the nodes is not reachable by the other one, for example
+      ///   because of a private IP.
+      /// Accepts a single value (e.g. autoconnect: "always") which applies whatever node would be auto-connected to,
+      /// or different values for router and/or peer depending on the type of node detected
+      /// (e.g. autoconnect_strategy : { to_router:  "always", to_peer: "greater-zid" }),
+      /// or different values for router or peer mode
+      /// (e.g. autoconnect_strategy : { peer: { to_router:  "always", to_peer: "greater-zid" } }).
+      /// ROS setting: by default all peers rely on the router to discover each other. Thus configuring the peer to send gossip
+      ///              messages only to the router is sufficient and avoids unecessary traffic between Nodes at launch time.
+      autoconnect_strategy: { peer: { to_router: "always", to_peer: "greater-zid" } },
       /// Whether or not to listen for scout messages on UDP multicast and reply to them.
       listen: true,
     },
@@ -159,13 +174,29 @@
       /// or different values for router or peer mode (e.g. target: { router: ["router", "peer"], peer: ["router"] }).
       /// Each value is a list of "peer" and/or "router".
       /// ROS setting: by default all peers rely on the router to discover each other. Thus configuring the peer to send gossip
-      ///               messages only to the router is sufficient and avoids unecessary traffic between Nodes at launch time.
+      ///              messages only to the router is sufficient and avoids unecessary traffic between Nodes at launch time.
       target: { router: ["router", "peer"], peer: ["router"]},
       /// Which type of Zenoh instances to automatically establish sessions with upon discovery on gossip.
       /// Accepts a single value (e.g. autoconnect: ["router", "peer"])
       /// or different values for router or peer mode (e.g. autoconnect: { router: [], peer: ["router", "peer"] }).
       /// Each value is a list of: "peer" and/or "router".
       autoconnect: { router: [], peer: ["router", "peer"] },
+      /// Strategy for autoconnection, mainly to avoid nodes connecting to each other redundantly.
+      /// Possible options are:
+      /// - "always": always attempt to autoconnect, may result in redundant connections.
+      /// - "greater-zid": attempt to connect to another node only if its own zid is greater than the other's.
+      ///   If both nodes use this strategy, only one will attempt the connection.
+      ///   This strategy may not be suited if one of the nodes is not reachable by the other one, for example
+      ///   because of a private IP.
+      /// Accepts a single value (e.g. autoconnect: "always") which applies whatever node would be auto-connected to,
+      /// or different values for router and/or peer depending on the type of node detected
+      /// (e.g. autoconnect_strategy : { to_router:  "always", to_peer: "greater-zid" }),
+      /// or different values for router or peer mode
+      /// (e.g. autoconnect_strategy : { peer: { to_router:  "always", to_peer: "greater-zid" } }).
+      /// ROS setting: as by default all peers will interconnect to each other over the loopback interface,
+      ///              they are all reachable to each other. Hence using "greater-zid" for peers connecting to
+      ///              other peers is sufficient and avoids unecessary double connections between peers at startup.
+      autoconnect_strategy: { peer: { to_router: "always", to_peer: "greater-zid" } },
     },
   },
 
@@ -184,7 +215,10 @@
   },
 
   /// The default timeout to apply to queries in milliseconds.
-  queries_default_timeout: 10000,
+  /// ROS setting: increase the value to avoid timeout at launch time with a large number of Nodes starting all together.
+  ///              Note: the requests to services and actions are hard-coded with an infinite timeout. Hence, this setting
+  ///              only applies to the queries made by the Advanced Subscriber for TRANSIENT_LOCAL implementation.
+  queries_default_timeout: 60000,
 
   /// The routing strategy to use and it's configuration.
   routing: {
@@ -343,6 +377,8 @@
   //   [
   //      /// Each policy associates one or multiple rules to one or multiple subject combinations
   //      {
+  //         /// Id is optional. If provided, it has to be unique within the policies list
+  //         "id": "policy1",
   //         /// Rules and Subjects are identified with their unique IDs declared above
   //         "rules": ["rule1"],
   //         "subjects": ["subject1", "subject2"],
@@ -358,13 +394,17 @@
   transport: {
     unicast: {
       /// Timeout in milliseconds when opening a link
-      open_timeout: 10000,
+      /// ROS setting: increase the value to avoid timeout at launch time with a large number of Nodes starting all together
+      open_timeout: 60000,
       /// Timeout in milliseconds when accepting a link
-      accept_timeout: 10000,
+      /// ROS setting: increase the value to avoid timeout at launch time with a large number of Nodes starting all together
+      accept_timeout: 60000,
       /// Maximum number of links in pending state while performing the handshake for accepting it
-      accept_pending: 100,
+      /// ROS setting: increase the value to support a large number of Nodes starting all together
+      accept_pending: 10000,
       /// Maximum number of transports that can be simultaneously alive for a single zenoh sessions
-      max_sessions: 1000,
+      /// ROS setting: increase the value to support a large number of Nodes starting all together
+      max_sessions: 10000,
       /// Maximum number of incoming links that are admitted per transport
       max_links: 1,
       /// Enables the LowLatency transport
@@ -423,7 +463,8 @@
         /// Accepted values: 8bit, 16bit, 32bit, 64bit.
         sequence_number_resolution: "32bit",
         /// Link lease duration in milliseconds to announce to other zenoh nodes
-        lease: 10000,
+        /// ROS setting: increase the value to avoid lease expiration at launch time with a large number of Nodes starting all together
+        lease: 60000,
         /// Number of keep-alive messages in a link lease duration. If no data is sent, keep alive
         /// messages will be sent at the configured time interval.
         /// NOTE: In order to consider eventual packet loss and transmission latency and jitter,
@@ -433,7 +474,9 @@
         ///       This is in-line with the ITU-T G.8013/Y.1731 specification on continuous connectivity
         ///       check which considers a link as failed when no messages are received in 3.5 times the
         ///       target interval.
-        keep_alive: 4,
+        /// ROS setting: decrease the value since Nodes are communicating over the loopback
+        ///              where keep-alive messages have less chances to be lost.
+        keep_alive: 2,
         /// Batch size in bytes is expressed as a 16bit unsigned integer.
         /// Therefore, the maximum batch size is 2^16-1 (i.e. 65535).
         /// The default batch size value is the maximum batch size: 65535.
@@ -469,7 +512,9 @@
             block: {
               /// The maximum time in microseconds to wait for an available batch before closing the transport session when sending a blocking message
               /// if still no batch is available.
-              wait_before_close: 5000000,
+              /// ROS setting: increase the value to avoid unecessary link closure at launch time where congestion is likely
+              ///              to occur even over the loopback since all the Nodes are starting at the same time.
+              wait_before_close: 60000000,
             },
           },
           /// Perform batching of messages if they are smaller of the batch_size

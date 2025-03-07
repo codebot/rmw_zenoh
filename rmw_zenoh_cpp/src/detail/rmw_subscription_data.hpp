@@ -72,7 +72,8 @@ public:
     std::size_t Subscription_id,
     const std::string & topic_name,
     const rosidl_message_type_support_t * type_support,
-    const rmw_qos_profile_t * qos_profile);
+    const rmw_qos_profile_t * qos_profile,
+    const rmw_subscription_options_t & sub_options);
 
   // Get a copy of the keyexpr_hash of this SubscriptionData's liveliness::Entity.
   std::size_t keyexpr_hash() const;
@@ -125,7 +126,8 @@ private:
     std::shared_ptr<liveliness::Entity> entity,
     std::shared_ptr<zenoh::Session> session,
     const void * type_support_impl,
-    std::unique_ptr<MessageTypeSupport> type_support);
+    std::unique_ptr<MessageTypeSupport> type_support,
+    rmw_subscription_options_t sub_options);
 
   bool init();
 
@@ -139,13 +141,15 @@ private:
   std::shared_ptr<liveliness::Entity> entity_;
   // A shared session
   std::shared_ptr<zenoh::Session> sess_;
-  // An owned subscriber or querying_subscriber depending on the QoS settings.
-  std::optional<std::variant<zenoh::Subscriber<void>, zenoh::ext::QueryingSubscriber<void>>> sub_;
+  // An owned advanced subscriber.
+  std::optional<zenoh::ext::AdvancedSubscriber<void>> sub_;
   // Liveliness token for the subscription.
   std::optional<zenoh::LivelinessToken> token_;
   // Type support fields
   const void * type_support_impl_;
   std::unique_ptr<MessageTypeSupport> type_support_;
+  // Subscription options.
+  rmw_subscription_options_t sub_options_;
   std::deque<std::unique_ptr<Message>> message_queue_;
   // Map GID of a subscription to the sequence number of the message it published.
   std::unordered_map<size_t, int64_t> last_known_published_msg_;
