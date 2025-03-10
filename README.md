@@ -194,3 +194,10 @@ One way to ensure this is to call `rclcpp::shutdown()` when the program exits.
 Note that composable nodes should *never* call `rclcpp::shutdown()`, as the composable node container will automatically do this.
 
 For more details, see https://github.com/ros2/rmw_zenoh/issues/170.
+
+## Quality Declaration files
+
+Quality Declarations for each package in this repository:
+
+* [`rmw_zenoh_cpp`](rmw_zenoh_cpp/QUALITY_DECLARATION.md)
+* [`zenoh_cpp_vendor`](zenoh_cpp_vendor/QUALITY_DECLARATION.md)
